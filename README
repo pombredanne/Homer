@@ -1,0 +1,25 @@
+Author: Iroiso Ikpokonte (iroiso@live.com)
+Module Description: Homer SDK.
+Copyright 2011, Iroiso Ikpokonte
+License: Apache 2.0
+
+Description:
+A modeling framework that maps new-style python classes to key-value datastores
+(with built in support for Apache Cassandra, and Redis). Homer will allow to describe
+your model in a new-style class and use it with many different key-value stores with 
+little or no configuration. 
+
+Installation:
+To install you can use pip or download the latest build from 
+[github](http://github.com/iroiso/homer)
+pip:
+$ sudo pip install homer-sdk
+
+from source:
+Download the latest build by cloning master repository
+
+$ git clone git://github.com/iroiso/homer.git
+$ cd homer
+$ sudo python setup.py install
+
+
