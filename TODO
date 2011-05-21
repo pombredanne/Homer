@@ -1,0 +1,35 @@
+Refactoring the Things SDK to Homer SDK.
+
+1. Add a __call__ method to DataProperty this will allow me write something like
+   this (look below); truly unifying descriptors and data; Rename DataProperty to
+   Type()    
+   """
+   @key("name")
+   class Person(Record):
+       name = Set(String)
+       
+   """
+
+2. Change transient to omit() in Type this is shorter. e.g.
+   """
+   @key("name")
+   class Person(Record):
+       name = Set(String)
+       password = SHADigest(size = 512, omit = True)
+   """
+   
+3. Add the Md5Digest,SHADigest Descriptor to commons.
+   """ Look up for usage description """
+
+4. Marshalling code like toString() and fromString() should probably be added 
+   to DataProperty to support basic unicode based or JSON based serialization.
+   wait a minute why not simply use the constructor and __str__; this is consistent
+   with the coercion like behaviour of Type()
+
+5. Pycassa uses struct.Struct to pack and unpack binary data to/from cassandra.
+   study it and find lazyboy's mechanism ; ####
+   
+6. I need to understand indexes in cassandra; I think I can find it when I try to
+   configure the damned server....study pycassa's implementation too. 
+   
+7. Add format to commons.DateTime, Time and Date...
