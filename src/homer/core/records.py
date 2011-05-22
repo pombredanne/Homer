@@ -8,10 +8,9 @@ Copyright 2011, June inc.
 Description:
 Provides Record, Descriptor and Type
 """
-from homer.core import options
+from homer.core.options import options
 
 __all__ = ["Record", "Type", ]
-
 
 """
 Record:

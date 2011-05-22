@@ -12,6 +12,10 @@ from homer.core.records import Record
 
 __all__ = ["key", "tag", "deleted", "modified", "added", "all"]
 
+""" #Singletons """
+DiffObserver = RecordObserver()
+
+
 """
 @key:
 
@@ -66,4 +70,14 @@ all:
 def all(object):
     """Yields all the attributes that exists on this object; """
     pass
+
+"""
+Buitin Types:
+RecordObserver - Default Observer that functions (modified, deleted etc. use to 
+track the state of objects.)
+
+"""
+class RecordObserver(Observer):
+    pass
+
 

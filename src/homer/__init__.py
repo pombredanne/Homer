@@ -16,7 +16,4 @@ class Shinobi(Record):
     rank = String(choices = ["Genin","Chounin","Jonin", "Sanin", "Kage"])
     
 """
-from core import key, Record, Type
-from core import commons 
-
 version = "0.5.0"
