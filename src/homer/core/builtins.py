@@ -10,7 +10,7 @@ builtin functions from the core
 """
 from homer.core.records import Record
 
-__all__ = ["key", "tag", "deleted", "modified", "added", "all"]
+__all__ = ["key", "tag", "deleted", "modified", "added", "view"]
 
 """ #Singletons """
 DiffObserver = RecordObserver()
@@ -64,20 +64,12 @@ def tag(object):
         raise ValueError("%s : must be a subclass of Record" % object)
     
 """
-all:
+view:
 
 """
-def all(object):
+def view(object):
     """Yields all the attributes that exists on this object; """
     pass
 
-"""
-Buitin Types:
-RecordObserver - Default Observer that functions (modified, deleted etc. use to 
-track the state of objects.)
-
-"""
-class RecordObserver(Observer):
-    pass
 
 
