@@ -15,7 +15,7 @@ class TestOptions(TestCase):
     """Test for the options.options"""
     
     def testLogger(self):
-        """Test options.logger()"""
+        """Tests options.logger() to make sure its not none"""
         assert options.logger() is not None, "options.logger() should not return\
             None"
-            
+

@@ -17,15 +17,18 @@ import time
 
 """
 Options:
-Uses "commons" to specify the configuration options for Homer
+Uses "commons" to specify the configuration options for Homer;
+Todo:
+
 """
 class Options(object):
     """ Specifies configuration for logging, """
     
-    def logger(self):
+    def logger(self, name = "Default::Logger"):
         """Creates a new logger everytime from the attributes that are set in this logger"""
-        log = logging.getLogger("Stub: Logger")
+        log = logging.getLogger(name)
         log.setLevel(logging.DEBUG)
+        log.addHandler(logging.NullHandler())
         return log
        
         
