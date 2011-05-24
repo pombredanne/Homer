@@ -86,6 +86,14 @@ class TestObservable(TestCase):
         self.assertRaises(AssertionError, lambda: observable.propagate(object))
         self.assertRaises(BadEventError, lambda: 
             observable.propagate(Event(self, "OPEN")))
+            
+    def testPoll(self):
+        """Tests if an observer poll is accurate"""
+        observable = Observable("SET", "GET", "DELETE")
+        observer = PrintObserver()
+        observable.add(observer, "SET", "GET")
+        events = [ Event(self, "SET", value = 12), Event(self, "GET", value = 12), ]
+        for evt in events:
+            observable.propagate(evt)
+        self.assertEqual(observable.poll, events)
         
-    
-    

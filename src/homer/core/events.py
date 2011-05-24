@@ -73,6 +73,7 @@ class Observable(object):
     def __init__(self, *events ):
         self.map = { name : set() for name in events }
         self.lock = RLock()
+        self._poll = []
     
     def propagate(self, event):
         """Notify all registered Observers of this event"""
@@ -81,6 +82,7 @@ class Observable(object):
         if event.id not in self.map.keys():
             raise BadEventError("This Observable cannot deal with this event")
         log.info("Propagating Event: %s" % event)
+        self._poll.append(event)
         for ob in self.map[event.id]:
             ob.observe(event)
         
@@ -88,7 +90,7 @@ class Observable(object):
         """Add an Observer to this Observable"""
         assert isinstance(observer, Observer), "Parameter %s is invalid add a sub\
             class of Observer " % observer
-        assert len(events) > 0, "You must pass in events"
+        assert len(events) > 0, "You must pass in valid events"
         for i in events:
             assert i in self.map.keys(), "Events: %s are invalid" % str(events)
         with self.lock:
@@ -120,7 +122,12 @@ class Observable(object):
             log.info("Removing all registered observers")
             for set in self.map.values():
                 set.clear()
-            
+    
+    @property
+    def poll(self):
+        """An ordered list of events this Observable has propapagated"""
+        return self._poll
+              
     def empty(self):
         """Is this Observable empty ? """
         for set in self.map.values():
