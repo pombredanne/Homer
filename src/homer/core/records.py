@@ -36,6 +36,7 @@ Events:
 class Record(object):
     """Unit of Persistence..."""
     observable = Observable(*RecordEvents)
+    
     def __init__(self, **arguments):
         """Fills the attributes in this record with **arguments"""
         log.info("Creating Record with @id: %s" % id(self))
@@ -171,16 +172,42 @@ class Descriptor(object):
    
 """
 Type:
-A Descriptor that does type coercion, checking and validation.
+A Descriptor that does type coercion, checking and validation. This is base
+class for all the common descriptors. If you intend to write a new descriptor
+start from here unless you know what you're doing...
 #..
 
 class Story(Record):
     source = Type(Blog)
     
+#..
+The snippet above will make sure that you can only set Blog objects on the on
+source. If you try to set a different type of object; Type will attempt to
+convert this object to a blog by coercion i.e calling Blog(object). if this
+fails this raises an exception.
+
+Keywords:
+type = The type that will be used during type checking and coercion
+omit = Tells the SDK that you do not want to the property to be persisted or marshalled.
 """
 class Type(Descriptor):
     """A Descriptor that does coercion and validation"""
-    pass
+    
+    def __init__(self, *arguments, **keywords):
+        """Generally like Descriptor.__init__ 'cept it accepts type and omit"""
+        Descriptor.__init__(self,*arguments, **keywords)
+        self.type = keywords.get("type", None)
+        self.omit = keywords.get("omit", False)
+    
+    def validate(self, value):
+        """overrides Descriptor.validate() to add type checking and coercion"""
+        assert value.__class__ is not self.__class__,"You cannot do Type(Type)"
+        value = Descriptor.validate(self, value)
+        if self.type is None:
+            return value
+        if value is not None and not isinstance(value,self.type):
+            value = self.type(value)
+        return value
     
 
 

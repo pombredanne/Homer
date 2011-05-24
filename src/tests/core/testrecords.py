@@ -9,10 +9,33 @@ Description:
 Unittests for the records module...
 """
 from unittest import TestCase
-from homer.core.records import Record, Descriptor
+from homer.core.records import Record, Descriptor, Type
 from homer.core.records import READWRITE, READONLY, BadValueError
 from homer.core.events import Observer
+from datetime import datetime, date
 
+"""#.. Tests for homer.core.record.Type"""
+class TestType(TestCase):
+    """Sanity Checks for Type"""
+    def setUp(self):
+        """Creates a Type"""
+        class Bug(object):
+            name = Type(type = str )
+            filed = Type(type = date ) 
+        self.bug = Bug()
+            
+    def testTypeSanity(self):
+        """Makes sure that Type doe type checking"""
+        self.assertRaises(Exception, lambda: 
+            setattr(self.bug, "filed", "Today"))
+        now = datetime.now().date()
+        self.bug.filed = now
+   
+    def testTypeCoercion(self):
+        """Does Type do coercion? """
+        self.bug.name = 23
+        self.assertEqual(self.bug.name, "23")
+            
 """#.. Tests for homer.core.record.Descriptor"""
 class TestDescriptor(TestCase):
     def setUp(self):
