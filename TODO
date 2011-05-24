@@ -1,22 +1,4 @@
-Refactoring the Things SDK to Homer SDK.
-
-1. Add a __call__ method to DataProperty this will allow me write something like
-   this (look below); truly unifying descriptors and data; Rename DataProperty to
-   Type()    
-   """
-   @key("name")
-   class Person(Record):
-       name = Set(String)
-       
-   """
-
-2. Change transient to omit() in Type this is shorter. e.g.
-   """
-   @key("name")
-   class Person(Record):
-       name = Set(String)
-       password = SHADigest(size = 512, omit = True)
-   """
+TODO for Homer SDK
    
 3. Add the Md5Digest,SHADigest Descriptor to commons.
    """ Look up for usage description """

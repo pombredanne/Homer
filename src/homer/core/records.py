@@ -87,7 +87,7 @@ class Descriptor(object):
         self.choices = keywords.get("choices", [])
         self.name = None
         self.deleted = False
-        self.default = None
+        self.default = default
         """Check for validators and default values"""
         if "validator" in keywords and callable(keywords["validator"]):
             self.validator = keywords["validator"]
@@ -192,17 +192,19 @@ omit = Tells the SDK that you do not want to the property to be persisted or mar
 """
 class Type(Descriptor):
     """A Descriptor that does coercion and validation"""
-    
-    def __init__(self, *arguments, **keywords):
+    type = None
+    def __init__(self, default = None, mode = READWRITE, type = None, **keywords):
         """Generally like Descriptor.__init__ 'cept it accepts type and omit"""
-        Descriptor.__init__(self,*arguments, **keywords)
-        self.type = keywords.get("type", None)
+        Descriptor.__init__(self, default, mode, **keywords)
+        if self.type is None:
+            self.type = type
         self.omit = keywords.get("omit", False)
     
+        
     def validate(self, value):
         """overrides Descriptor.validate() to add type checking and coercion"""
         assert value.__class__ is not self.__class__,"You cannot do Type(Type)"
-        value = Descriptor.validate(self, value)
+        value = super(Type,self).validate(value)
         if self.type is None:
             return value
         if value is not None and not isinstance(value,self.type):
