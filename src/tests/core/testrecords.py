@@ -9,11 +9,72 @@ Description:
 Unittests for the records module...
 """
 from unittest import TestCase
-from homer.core.records import Record
+from homer.core.records import Record, Descriptor
+from homer.core.records import READWRITE, READONLY, BadValueError
 from homer.core.events import Observer
 
+"""#.. Tests for homer.core.record.Descriptor"""
+class TestDescriptor(TestCase):
+    def setUp(self):
+        """Creates a new Bug class everytime"""
+        class Bug(object):
+            """No bugs..."""
+            name = Descriptor()
+            email = Descriptor("iroiso@live.com", mode = READONLY)
+            girlfriend = Descriptor("gwen", choices = ["amy","stacy","gwen"],required = True)   
+        self.bug = Bug()
+         
+    def testReadWriteDescriptor(self):
+        """Makes sure that ReadWrites can be read,written and deleted"""
+        setattr(self.bug,"name","Emeka")
+        self.assertEqual(self.bug.name , "Emeka")
+        delattr(self.bug, "name")
+        with self.assertRaises(AttributeError):
+            print self.bug.name
+    
+    def testSetDeleteSetGetWorks(self):
+        """Tests this sequence, Delete,Set,Get does it work; Yup I know its crap"""
+        setattr(self.bug,"name","First name")
+        delattr(self.bug,"name")
+        self.assertRaises(AttributeError, lambda: getattr(self.bug,"name"))
+        setattr(self.bug,"name","NameAgain")
+        self.assertEquals(self.bug.name,"NameAgain")
+        delattr(self.bug,"name")
+        self.assertRaises(AttributeError, lambda: getattr(self.bug, "name"))
+        setattr(self.bug,"name","AnotherNameAgain")
+        self.assertEquals(self.bug.name,"AnotherNameAgain")
+    
+    def testDelete(self):
+        """Tests if the del keyword works on READWRITE attributes"""
+        self.bug.name = "Emeka"
+        del self.bug.name
+        self.assertRaises(Exception,lambda:getattr(self.bug,"name"))
+            
+    def testChoices(self):
+        """Tries to set a value that is not a amongst the properties choices"""
+        with self.assertRaises(BadValueError):
+            self.bug.girlfriend = "steph"
+            
+    def testRequired(self):
+        """Asserts that a required Descriptor cannot be set to an empty value"""
+        with self.assertRaises(BadValueError):
+            self.bug.girlfriend = None
+       
+    def testReadOnlyDescriptor(self):
+        """Makes sure that ReadOnlies are immutable """
+        with self.assertRaises(ValueError):
+            self.readOnly = Descriptor(mode = READONLY)
+        with self.assertRaises(AttributeError):
+            print("You cannot write to a read only Descriptor")
+            setattr(self.bug,"email",100)
+        with self.assertRaises(AttributeError):
+            print("You cannot delete a read only Descriptor")
+            delattr(self.bug,"email")
+    
+    
+    
 """#.. Tests for homer.core.record.Record """  
-class PrintObserver(Observer):
+class CountObserver(Observer):
     """A simple observer that print events"""
     count = 0
     def clear(self):
@@ -23,7 +84,6 @@ class PrintObserver(Observer):
     def observe(self, event):
         """Increments the count variable and prints the event"""
         self.count += 1
-        print str(event)
 
 class OrderObserver(Observer):
     """ An observer that records the order in which events have occurred"""
@@ -48,7 +108,7 @@ class TestRecord(TestCase):
             
     def testRecordFiresEvents(self):
         """Tests if a Record will fire events on SET and DELETE"""
-        observer = PrintObserver()
+        observer = CountObserver()
         person = Record()
         diction = { "name": "iroiso", "position" : "CEO", "nickname" : "I.I"}
         person.observable.add(observer, "ADD", "SET", "DEL")
