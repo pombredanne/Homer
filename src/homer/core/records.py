@@ -8,16 +8,90 @@ Copyright 2011, June inc.
 Description:
 Provides Record, Descriptor and Type
 """
+import time
 from homer.core.options import options
 from homer.core.events import Observable, Observer, Event
 
-__all__ = ["Record", "Type", ]
+__all__ = ["Record", "Type", "key", "Key"]
 
 """# Default Module Wide Objects """
 log = options.logger("homer::core::records")
 RecordEvents = ("SET", "ADD", "DEL", )
 READWRITE, READONLY = 1, 2
 
+
+"""
+@key:
+This decorator creates a 'Key' for your Record automatically.
+You can get the 'Key' of a Record instance by using Record.key; If you pass an
+object that is not a subclass of Record a TypeError Exception is raised.
+
+@key("link", namespace = "com.twitter.base")
+class Profile(Record):
+    link = URL()
+    name = String()
+    bio =  String(length = 200)
+  
+"""
+def key(name, namespace = None):
+    """The @key decorator""" 
+    def inner(cls):
+        if issubclass(cls, Record):
+            log.info("Adding key for Record: %s " % object)
+            assert hasattr(cls, name), "Record: %s must have an attribute: %s" % (cls, name)
+            key = Key(namespace = namespace, kind = cls.__name__, key = name)
+            cls.__kind__ = Descriptor(default = key, mode = READONLY)
+            return cls
+        else:
+            raise TypeError("You must pass in a subclass of Record not:\
+            %s" % cls)
+    return inner
+    
+"""
+Key:
+Represents the Key of an entity that should be stored in KV datastore;
+Should a Key Object store the value
+"""
+class Key(object):
+    """A unique identifier for Records"""
+    namespace, kind, key, id = None, None, None, None
+    
+    def __init__(self, **arguments ):
+        """Creates the Key from keyword arguments"""
+        log.info("Creating a new Key with arguments %s" % str(arguments))
+        for i in ["namespace", "kind", "key", "id", ]:
+            assert isinstance(i, str), "Arguments must be Strings"
+            setattr(self, i, arguments.get(i, None))
+        self.timestamp = time.time()
+    
+    @property
+    def complete(self):
+        """Checks if all the parts of this key are complete"""
+        for i in ["namespace", "kind", "key", "id"]:
+            part = getattr(self, i)
+            if part is None:
+                return False
+        return True
+        
+    def clone(self, **arguments):
+        """
+        Create a clone of this key while filling up missing parts with
+        values from @arguments
+        """
+        clone = Key()
+        for i in ["namespace", "kind", "key", "id", ]:
+            value = getattr(self, i)
+            if value is None:
+                setattr(clone, i, arguments.get( i, None))
+            else:
+                setattr(clone, i, value)
+        return clone  
+                
+    def __str__(self):
+        '''Creates and returns a TagURI based key string '''
+        format = "key: {self.namespace}, {self.kind}: {self.key}[{self.id}]"
+        return format.format(self = self)
+        
 """Exceptions"""
 class BadValueError(Exception):
     """An exception that signifies that a validation error has occurred"""
@@ -42,8 +116,32 @@ class Record(object):
         log.info("Creating Record with @id: %s" % id(self))
         for name,value in arguments.items():
             setattr(self, name, value)
+        self.__key__ = None
         log.info("Created Record with @id: %s" % id(self))
-
+    
+    @property
+    def key(self):
+        """Returns the Key of this Record else return None"""
+        if hasattr(self, "__kind__"):
+            """Check if the key attribute of this instance is set"""
+            name = self.__kind__.key
+            if hasattr(self,name):
+                val = getattr(self,name)
+                if val is not None:
+                    self.__key__ = self.__kind__.clone(id = val)
+                    return self.__key__
+                else:
+                    return None
+            else:
+                return None
+        else:
+            return None
+    
+    @property
+    def kind(self):
+        """Returns the Parent Key of this object.."""
+        return self.__kind__
+                
     def __setattr__(self, name, value):
         """Do comparisons and propagate() an ADD or SET Event to observers"""
         log.debug("Attempting to SET attribute: %s  with value: %s" % 
@@ -78,10 +176,10 @@ class Descriptor(object):
         """Initializes the Descriptor"""
         if mode not in [READWRITE, READONLY]:
             raise ValueError("mode must be one of READONLY,\
-                READWRITE")
+            READWRITE")
         if mode == READONLY and default is None:
             raise ValueError("You must provide a default value\
-                in READONLY mode")
+            in READONLY mode")
         self.mode = mode
         self.required = keywords.get("required", False)
         self.choices = keywords.get("choices", [])
@@ -210,10 +308,4 @@ class Type(Descriptor):
         if value is not None and not isinstance(value,self.type):
             value = self.type(value)
         return value
-    
-
-
-
-
-    
 

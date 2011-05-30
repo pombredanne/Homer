@@ -17,17 +17,6 @@ DiffObserver = RecordObserver()
 
 
 """
-@key:
-
-
-"""
-def key(cls):
-    """ A decorator that specifies the key attribute of a Record """
-    if not issubclass(cls, Record):
-        raise ValueError("%s : must be a subclass of Record" % cls)
-    
-
-"""
 added:
 
 """

@@ -9,11 +9,44 @@ Description:
 Unittests for the records module...
 """
 from unittest import TestCase
-from homer.core.records import Record, Descriptor, Type
+from homer.core.records import Record, Descriptor, Type, key, Key
 from homer.core.records import READWRITE, READONLY, BadValueError
 from homer.core.events import Observer
 from datetime import datetime, date
 
+"""#.. Tests for homer.core.record.key"""
+class TestKeyDecorator(TestCase):
+    """Tests for the @key decorator"""
+    
+    def testkeySanity(self):
+        """Makes sure that basic usage for @key works"""
+        @key("name")
+        class Person(Record):
+            name = "Iroiso Ikpokonte"
+        assert isinstance(Person, type)
+        person = Person()
+        assert person.kind is not None, "This cannot be None"
+        assert person.key is not None, "This should not be None"
+        assert person.name == "Iroiso Ikpokonte", "Yup, this should not happen too"
+        person.name = None
+        assert person.key is None, "Yup, this should be None"
+        
+    def testkeyAcceptsOnlyRecords(self):
+        """Asserts that @key only works on subclasses of Record"""
+        with self.assertRaises(TypeError):
+            @key("name")
+            class House(object):
+                name = "House M.D"
+    
+    def testkeyChecksifKeyAttributeExists(self):
+        """Asserts that the attribute passed in to @key must exist in the class"""
+        with self.assertRaises(AssertionError):
+            @key("name")
+            class House(Record):
+                pass
+    
+    
+        
 """#.. Tests for homer.core.record.Type"""
 class TestType(TestCase):
     """Sanity Checks for Type"""
@@ -128,7 +161,17 @@ class TestRecord(TestCase):
         person = Record(**diction)
         for name in diction:
             self.assertTrue(hasattr(person, name))
-            
+    
+    def testRecordKey(self):
+        """Tests that Record.key works"""
+        @key("name", namespace = "com.june.news")
+        class Story(Record):
+            name = "No time dimension" 
+        story = Story()
+        assert story.key is not None, "You should have a key"
+        self.assertTrue(story.key.complete)
+        print "'" + str(story.key) + "'"
+        
     def testRecordFiresEvents(self):
         """Tests if a Record will fire events on SET and DELETE"""
         observer = CountObserver()
