@@ -9,11 +9,9 @@ Description:
 builtin functions from the core
 """
 from homer.core.records import Record
+from homer.core.events import Observer
 
-__all__ = ["key", "tag", "deleted", "modified", "added", "view"]
-
-""" #Singletons """
-DiffObserver = RecordObserver()
+__all__ = ["key", "tag", "deleted", "modified", "added", "view",]
 
 
 """
@@ -60,5 +58,15 @@ def view(object):
     """Yields all the attributes that exists on this object; """
     pass
 
+"""
+RecordObserver:
+"""
+class RecordObserver(Observer):
+
+    def observe(self, event):
+        print "Got: %s" % event.id
+
+""" #Singletons """
+DiffObserver = RecordObserver()
 
 

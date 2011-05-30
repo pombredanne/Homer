@@ -12,11 +12,13 @@ import time
 from homer.core.options import options
 from homer.core.events import Observable, Observer, Event
 
+
 __all__ = ["Record", "Type", "key", "Key"]
 
 """# Default Module Wide Objects """
 log = options.logger("homer::core::records")
 RecordEvents = ("SET", "ADD", "DEL", )
+KeyEvents = ("KADD", "KSET", "KDEL")
 READWRITE, READONLY = 1, 2
 
 
@@ -102,21 +104,19 @@ Record:
 Unit of Persistence; Any class you want to be persistable should extend this 
 class
 Events:
-1."SET" =  source, "SET", name, old, new
+1."SET" =  source, "SET", name, old, new ;
 2."ADD" =  source, "ADD", name, value
 3."DEL" =  source, "DEL", name
 
 """
 class Record(object):
     """Unit of Persistence..."""
-    observable = Observable(*RecordEvents)
-    
+  
     def __init__(self, **arguments):
         """Fills the attributes in this record with **arguments"""
         log.info("Creating Record with @id: %s" % id(self))
         for name,value in arguments.items():
             setattr(self, name, value)
-        self.__key__ = None
         log.info("Created Record with @id: %s" % id(self))
     
     @property
@@ -128,8 +128,7 @@ class Record(object):
             if hasattr(self,name):
                 val = getattr(self,name)
                 if val is not None:
-                    self.__key__ = self.__kind__.clone(id = val)
-                    return self.__key__
+                    return self.__kind__.clone(id = val)
                 else:
                     return None
             else:
@@ -144,27 +143,77 @@ class Record(object):
                 
     def __setattr__(self, name, value):
         """Do comparisons and propagate() an ADD or SET Event to observers"""
-        log.debug("Attempting to SET attribute: %s  with value: %s" % 
-            (name, value))
+        log.debug("Setting attribute: %s  with value: %s" % (name, value))
         old = getattr(self, name, None)
         object.__setattr__(self, name, value)
         if old is None:
-            self.observable.propagate(Event(self, "ADD", name = name,
+            EventSource.Observable().propagate(Event(self, "ADD", name = name,
                 value = value))
+            if getattr(self,"kind", None):
+                if name == self.kind.key:
+                    EventSource.Observable().propagate(Event(self, "KADD", 
+                        name = name,  value = value))
         elif old != value:
             """I only propagate a set when there is a difference in values"""
-            self.observable.propagate(Event(self, "SET", name = name, old = old,
-                new = value))
-        log.debug("Successfully SET attribute: %s  with value: %s" % 
+            EventSource.Observable().propagate(Event(self, "SET", name = name, 
+                old = old, new = value))
+            if getattr(self,"kind", None):
+                if name == self.kind.key:
+                    EventSource.Observable().propagate(Event(self, "KSET", name=
+                        name, old = old, new = value))
+        log.debug("successful set attribute: %s  with value: %s" % 
             (name, value))
     
     def __delattr__(self, name ):
         """Try to DELETE attribute if successful fire the DEL Event """
         log.debug("Attempting to DEL attribute: %s" % name)
         object.__delattr__(self, name)
-        self.observable.propagate(Event(self, "DEL", name = name))
+        EventSource.Observable().propagate(Event(self, "DEL", name = name))
+        if getattr(self, "kind", None):
+            if name == self.kind.key:
+                EventSource.Observable().propagate(Event(self, "KDEL", 
+                    name = name))
         log.debug("Successfully DEL attribute: %s" % name)
+ 
+"""
+EventSource:  
+Basically this is the point of coupling with the extension and options module.
+"""
+class EventSource(object):
+    default = None
     
+    @classmethod
+    def Observable(cls):
+        """Returns an observer that has observers from the extension module"""
+        if options.debug:
+            'in debug mode an observer with only the DiffObserver'
+            log.info("Debug Mode: loading only default Observers")
+            if cls.default is not None:
+                return cls.default
+            else:
+                'Create the default if it does not exist'
+                from homer.core.builtins import DiffObserver
+                evs = RecordEvents + KeyEvents
+                obs = Observable(*evs)
+                obs.add(DiffObserver, *evs )
+                cls.default = obs
+                return cls.default
+            
+        else:
+            'Return all the observers that the extension module provides'
+            log.info("About to load extension from the plugins module")
+            evs = RecordEvents + KeyEvents
+            obs = Observable(*evs)
+            for obs, evts in Plugins.all():
+                try:
+                    log.info("Adding Observer: %s with Events: %s" % (obs,evts))
+                    observable.add(obs, evts)
+                except error:
+                    log.info("Exception occured: %s when adding plugin: %s"
+                        % (error, obs))
+            return observable 
+                    
+
 """
 Property:
 Base class for all data descriptors; 
@@ -297,7 +346,6 @@ class Type(Descriptor):
         if self.type is None:
             self.type = type
         self.omit = keywords.get("omit", False)
-    
         
     def validate(self, value):
         """overrides Descriptor.validate() to add type checking and coercion"""

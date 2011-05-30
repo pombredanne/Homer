@@ -23,6 +23,7 @@ Todo:
 """
 class Options(object):
     """ Specifies configuration for logging, """
+    debug = True
     
     def logger(self, name = "Default::Logger"):
         """Creates a new logger everytime from the attributes that are set in this logger"""
