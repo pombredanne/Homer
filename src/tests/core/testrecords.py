@@ -9,8 +9,8 @@ Description:
 Unittests for the records module...
 """
 from unittest import TestCase,expectedFailure
-from homer.core.records import Record, Descriptor, Type, key, Key
-from homer.core.records import READWRITE, READONLY, BadValueError
+from homer.core.records import Record,key, Key
+from homer.core.types import Descriptor, Type, READWRITE, READONLY, BadValueError
 from homer.core.events import Observer
 from datetime import datetime, date
 
