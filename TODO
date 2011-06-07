@@ -1,4 +1,12 @@
 TODO for Homer SDK
+ 
+1. What if you can check for deleted, modified, added properties even for complex
+   embedded objects by decorating or wrapping its special methods when Type(Class) 
+   occurs; look at DebugConnection for a Reference...This will allow me to look into
+   complex types if they are set with Type(ComplexType)
+   
+2. Add a Hashable common type that only accepts dict or hashables and decorates
+   __setitem__ and __delitem__ to add modification notification.
    
 3. Add the Md5Digest,SHADigest Descriptor to commons.
    """ Look up for usage description """

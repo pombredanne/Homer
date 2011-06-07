@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env pythons
 """
 Author : Iroiso . I (iroiso@live.com)
 Project: Homer SDK

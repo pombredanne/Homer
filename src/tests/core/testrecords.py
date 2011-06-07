@@ -51,7 +51,7 @@ class TestKeyAndRecord(TestCase):
         person = Record(**diction)
         for name in diction:
             self.assertTrue(hasattr(person, name))
-    
+  
     def testRecordKey(self):
         """Tests that Record.key works"""
         @key("name", namespace = "com.june.news")

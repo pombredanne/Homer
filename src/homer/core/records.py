@@ -18,7 +18,6 @@ __all__ = ["Record", "Type", "key", "Key"]
 """# Default Module Wide Objects """
 log = options.logger("homer::core::records")
 RecordEvents = ("SET", "ADD", "DEL", )
-KeyEvents = ("KADD", "KSET", "KDEL")
 READWRITE, READONLY = 1, 2
 
 
@@ -64,7 +63,7 @@ class Key(object):
         for i in ["namespace", "kind", "key", "id", ]:
             assert isinstance(i, str), "Arguments must be Strings"
             setattr(self, i, arguments.get(i, None))
-        self.timestamp = time.time()
+        self.timestamp = int(time.time())
     
     @property
     def complete(self):
@@ -104,10 +103,9 @@ Record:
 Unit of Persistence; Any class you want to be persistable should extend this 
 class
 Events:
-1."SET" =  source, "SET", name, old, new ;
-2."ADD" =  source, "ADD", name, value
-3."DEL" =  source, "DEL", name
-
+1."SET" =  source, "SET", name, old, new ::: fired when an attribute modification occurs
+2."ADD" =  source, "ADD", name, value ::: fired when an new attribute is added to a record
+3."DEL" =  source, "DEL", name ::: fired when an attribute is deleted
 """
 class Record(object):
     """Unit of Persistence..."""
@@ -143,41 +141,16 @@ class Record(object):
                 
     def __setattr__(self, name, value):
         """Do comparisons and propagate() an ADD or SET Event to observers"""
-        log.debug("Setting attribute: %s  with value: %s" % (name, value))
-        old = getattr(self, name, None)
-        object.__setattr__(self, name, value)
-        if old is None:
-            EventSource.Observable().propagate(Event(self, "ADD", name = name,
-                value = value))
-            if getattr(self,"kind", None):
-                if name == self.kind.key:
-                    EventSource.Observable().propagate(Event(self, "KADD", 
-                        name = name,  value = value))
-        elif old != value:
-            """I only propagate a set when there is a difference in values"""
-            EventSource.Observable().propagate(Event(self, "SET", name = name, 
-                old = old, new = value))
-            if getattr(self,"kind", None):
-                if name == self.kind.key:
-                    EventSource.Observable().propagate(Event(self, "KSET", name=
-                        name, old = old, new = value))
-        log.debug("successful set attribute: %s  with value: %s" % 
-            (name, value))
+        pass
     
     def __delattr__(self, name ):
         """Try to DELETE attribute if successful fire the DEL Event """
-        log.debug("Attempting to DEL attribute: %s" % name)
-        object.__delattr__(self, name)
-        EventSource.Observable().propagate(Event(self, "DEL", name = name))
-        if getattr(self, "kind", None):
-            if name == self.kind.key:
-                EventSource.Observable().propagate(Event(self, "KDEL", 
-                    name = name))
-        log.debug("Successfully DEL attribute: %s" % name)
- 
+        pass
+        
 """
 EventSource:  
 Basically this is the point of coupling with the extension and options module.
+EventSource always makes sure that you get upto date watchers from the system.
 """
 class EventSource(object):
     default = None
@@ -192,26 +165,14 @@ class EventSource(object):
                 return cls.default
             else:
                 'Create the default if it does not exist'
-                from homer.core.builtins import DiffObserver
-                evs = RecordEvents + KeyEvents
-                obs = Observable(*evs)
-                obs.add(DiffObserver, *evs )
+                from homer.core.builtins import RecordObserver
+                obs = Observable(*RecordEvents)
+                obs.add(RecordObserver, *RecordEvents )
                 cls.default = obs
-                return cls.default
-            
+                return cls.default   
         else:
             'Return all the observers that the extension module provides'
-            log.info("About to load extension from the plugins module")
-            evs = RecordEvents + KeyEvents
-            obs = Observable(*evs)
-            for obs, evts in Plugins.all():
-                try:
-                    log.info("Adding Observer: %s with Events: %s" % (obs,evts))
-                    observable.add(obs, evts)
-                except error:
-                    log.info("Exception occured: %s when adding plugin: %s"
-                        % (error, obs))
-            return observable 
+            return None
                     
 
 """
@@ -266,7 +227,6 @@ class Descriptor(object):
                 found = instance.__dict__[self.name] 
                 return found  
             except (AttributeError,KeyError) as error:
-                # Notifications will occur even default values are returned.
                 if not self.deleted:
                     return self.default
                 else:
