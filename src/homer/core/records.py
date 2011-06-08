@@ -8,169 +8,154 @@ Copyright 2011, June inc.
 Description:
 Provides Record, Descriptor and Type
 """
-import time
-from homer.core.options import options
-from homer.core.events import Observable, Observer, Event
-from homer.core.types import Descriptor, READONLY
+import datetime
+from threading import Lock
+from homer.util import Validator
 
 
-__all__ = ["Record", "key", "Key"]
+__all__ = ["Record", "key", ]
 
-"""# Default Module Wide Objects """
-log = options.logger("homer::core::records")
-RecordEvents = ("SET", "ADD", "DEL", )
-
-
+"""Exceptions """
+class BadKeyError(Exception):
+    pass
 
 """
 @key:
-This decorator creates a 'Key' for your Record automatically.
+This decorator creates a 'Key' for your Record automatically. 
 You can get the 'Key' of a Record instance by using Record.key; If you pass an
 object that is not a subclass of Record a TypeError Exception is raised.
 
-@key("link", namespace = "com.twitter.base")
+@key("link", namespace = "June:Homer")
 class Profile(Record):
     link = URL()
     name = String()
     bio =  String(length = 200)
   
 """
-def key(name, namespace = None):
+def key(name, namespace = "June"):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Record):
-            log.info("Adding key for Record: %s " % object)
-            assert hasattr(cls, name), "Record: %s must have an attribute: %s" % (cls, name)
-            key = Key(namespace = namespace, kind = cls.__name__, key = name)
-            cls.__kind__ = Descriptor(default = key, mode = READONLY)
+            if hasattr(cls, name):
+                KindMap.putKey(cls, name, namespace)
+            else:
+                raise BadKeyError("There is no attribute with this name in %s" % cls)
             return cls
         else:
-            raise TypeError("You must pass in a subclass of Record not:\
-            %s" % cls)
+            raise TypeError("You must pass in a subclass of Record not: %s" % cls)
     return inner
-    
-"""
-Key:
-Represents the Key of an entity that should be stored in KV datastore;
-Should a Key Object store the value
-"""
-class Key(object):
-    """A unique identifier for Records"""
-    namespace, kind, key, id = None, None, None, None
-    
-    def __init__(self, **arguments ):
-        """Creates the Key from keyword arguments"""
-        log.info("Creating a new Key with arguments %s" % str(arguments))
-        for i in ["namespace", "kind", "key", "id", ]:
-            assert isinstance(i, str), "Arguments must be Strings"
-            setattr(self, i, arguments.get(i, None))
-        self.timestamp = int(time.time())
-    
-    @property
-    def complete(self):
-        """Checks if all the parts of this key are complete"""
-        for i in ["namespace", "kind", "key", "id"]:
-            part = getattr(self, i)
-            if part is None:
-                return False
-        return True
-        
-    def clone(self, **arguments):
-        """
-        Create a clone of this key while filling up missing parts with
-        values from @arguments
-        """
-        clone = Key()
-        for i in ["namespace", "kind", "key", "id", ]:
-            value = getattr(self, i)
-            if value is None:
-                setattr(clone, i, arguments.get( i, None))
-            else:
-                setattr(clone, i, value)
-        return clone  
-                
-    def __str__(self):
-        '''Creates and returns a TagURI based key string '''
-        format = "key: {self.namespace}, {self.kind}: {self.key}[{self.id}]"
-        return format.format(self = self)
-        
+
 
 """
-Record:
-Unit of Persistence; Any class you want to be persistable should extend this 
-class
-Events:
-1."SET" =  source, "SET", name, old, new ::: fired when an attribute modification occurs
-2."ADD" =  source, "ADD", name, value ::: fired when an new attribute is added to a record
-3."DEL" =  source, "DEL", name ::: fired when an attribute is deleted
+KindMap(implementation detail):
+A class that maps classes to their key attributes in a thread safe manner; 
+This is an impl detail that may go away in subsequent releases.
+"""
+class KindMap(object):
+    """Maps classes to attributes which will store their keys"""
+    lock, keyMap, typeMap = Lock(), {}, {}
+   
+    @classmethod
+    def putKey(cls, kind, key, namespace = None):
+        """Thread safe class that maps kind to key and namespace"""
+        with cls.lock: 
+            assert isinstance(kind, type), "Kind has to be a class; Got: %s instead" % kind
+            name = kind.__name__
+            cls.keyMap[name] = key, namespace
+            cls.typeMap[name] = kind
+    
+    @classmethod
+    def getKey(cls, kind):
+        """Returns a tuple (key, namespace) for this kind or None if non-existent"""
+        with cls.lock:
+            name = kind.__class__.__name__
+            return cls.keyMap.get(name, None)
+    
+    @classmethod
+    def classForKind(cls, name):
+        """Returns the class object for this name"""
+        with cls.lock:
+            return cls.typeMap.get(name, None)
+
+"""
+Key:
+A GUID for Record objects. A Key contains all the information required to retreive
+a Record from the datastore; 
+"""
+class Key(object):
+    """A GUID for Records"""
+    namespace, kind, key = None, None, None
+    
+    def __init__(self, namespace, kind = None, key = None):
+        """Creates a key with keywords"""
+        if kind is None:
+            """Tries to create a key from a serialized representation"""
+            try:
+                key, repr = namespace.split(":")
+                assert key == "key", "Key representation should start with 'key:'"
+                namespace, kind, key = repr.split(",")
+            except:
+                raise BadKeyError("Expected String of format 'key: namespace, kind, key',\
+                Got: %s" % namespace)
+        validate = Validator.ValidateString
+        self.namespace, self.kind, self.key = validate(namespace), validate(kind), validate(key)
+          
+    def complete(self):
+        """Checks if this key has all its parts"""
+        if self.namespace and self.kind and self.key:
+            return True
+        return False
+    
+    def toTagURI(self):
+        """
+        Returns a tag: URI for this entity for use in XML output
+        
+        Foreign keys for entities may be represented in XML output as tag URIs.
+        RFC 4151 describes the tag URI scheme. From http://taguri.org/.
+        Key tags take this format: "tag:<namespace>, date:<kind>[<key>]" e.g.
+        
+            tag:June,2006-08-29:Profile[Jack]
+            
+        Raises a BadKeyError if this key is incomplete.
+        """ 
+        date = datetime.date.today().isoformat()
+        return u"tag:{self.namespace},{date}:{self.kind}[self.key]".format(self = self, date = date)
+        
+       
+    def __unicode__(self):
+        """Unicode representation of a key"""
+        format = u"key: {self.namespace}, {self.kind}, {self.key}"
+        return format.format(self = self)
+    
+    def __str__(self):
+        """String representation of a key"""
+        return unicode(self)
+            
+"""
+Record(unit of persistence):
+Any class you want to store should extend this class. Record keeps track of 
+changes which you make to it.
+
+@key("name")
+class Profile(Record):
+    name = String("John Bull")
+    
 """
 class Record(object):
     """Unit of Persistence..."""
-  
-    def __init__(self, **arguments):
-        """Fills the attributes in this record with **arguments"""
-        log.info("Creating Record with @id: %s" % id(self))
-        for name,value in arguments.items():
-            setattr(self, name, value)
-        log.info("Created Record with @id: %s" % id(self))
     
     @property
     def key(self):
-        """Returns the Key of this Record else return None"""
-        if hasattr(self, "__kind__"):
-            """Check if the key attribute of this instance is set"""
-            name = self.__kind__.key
-            if hasattr(self,name):
-                val = getattr(self,name)
-                if val is not None:
-                    return self.__kind__.clone(id = val)
-                else:
-                    return None
-            else:
-                return None
-        else:
-            return None
-    
-    @property
-    def kind(self):
-        """Returns the Parent Key of this object.."""
-        return self.__kind__
-                
-    def __setattr__(self, name, value):
-        """Do comparisons and propagate() an ADD or SET Event to observers"""
-        pass
-    
-    def __delattr__(self, name ):
-        """Try to DELETE attribute if successful fire the DEL Event """
-        pass
+        """Returns a Key (If it is complete) for this Record else return None"""
+        name, namespace = KindMap.getKey(self)
+        kind = self.__class__.__name__
+        if getattr(self, name, None) is not None:
+            return Key(namespace, kind, getattr(self, name))
+        return None
+   
+   
         
-"""
-EventSource:  
-Basically this is the point of coupling with the extension and options module.
-EventSource always makes sure that you get upto date watchers from the system.
-"""
-class EventSource(object):
-    default = None
-    
-    @classmethod
-    def Observable(cls):
-        """Returns an observer that has observers from the extension module"""
-        if options.debug:
-            'in debug mode an observer with only the DiffObserver'
-            log.info("Debug Mode: loading only default Observers")
-            if cls.default is not None:
-                return cls.default
-            else:
-                'Create the default if it does not exist'
-                from homer.core.builtins import RecordObserver
-                obs = Observable(*RecordEvents)
-                obs.add(RecordObserver, *RecordEvents )
-                cls.default = obs
-                return cls.default   
-        else:
-            'Return all the observers that the extension module provides'
-            return None
-                    
+
 
 
 

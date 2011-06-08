@@ -8,25 +8,25 @@ Copyright 2011, June inc.
 Description:
 Unittests for the records module...
 """
-from unittest import TestCase,expectedFailure
-from homer.core.records import Record,key, Key
+from unittest import TestCase,expectedFailure,skip
+from homer.core.records import key, Record
 
-"""#.. Tests for homer.core.record.key"""
 class TestKeyAndRecord(TestCase):
-    """Tests for the @key decorator"""
-    @expectedFailure
+    """Keys and Record where built to work together; they should be tested together"""
+    
     def testkeySanity(self):
         """Makes sure that basic usage for @key works"""
         @key("name")
         class Person(Record):
-            name = "Iroiso Ikpokonte"
+            name = "JohnBull"
         assert isinstance(Person, type)
         person = Person()
-        assert person.kind is not None, "This cannot be None"
-        assert person.key is not None, "This should not be None"
-        assert person.name == "Iroiso Ikpokonte", "Yup, this should not happen too"
+        assert person.key is not None, "Key Must not be None when its attribute is non null"
+        self.assertTrue(person.name == "JohnBull")
+        print "'" + str(person.key) + "'"
+        print person.key.toTagURI()
         person.name = None
-        assert person.key is None, "Yup, this should be None"
+        assert person.key is None, "Key Should be None when its attribute is not set"
         
     def testkeyAcceptsOnlyRecords(self):
         """Asserts that @key only works on subclasses of Record"""
@@ -37,7 +37,7 @@ class TestKeyAndRecord(TestCase):
     
     def testkeyChecksifKeyAttributeExists(self):
         """Asserts that the attribute passed in to @key must exist in the class"""
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(Exception):
             @key("name")
             class House(Record):
                 pass
@@ -50,17 +50,6 @@ class TestKeyAndRecord(TestCase):
         for name in diction:
             self.assertTrue(hasattr(person, name))
   
-    def testRecordKey(self):
-        """Tests that Record.key works"""
-        @key("name", namespace = "com.june.news")
-        class Story(Record):
-            name = "No time dimension" 
-        story = Story()
-        assert story.key is not None, "You should have a key"
-        self.assertTrue(story.key.complete)
-        print "'" + str(story.key) + "'"
-        story.name = "Michael Jackson Dies"    
-     
         
                
 
