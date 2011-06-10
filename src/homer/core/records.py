@@ -10,6 +10,7 @@ Provides Record, Descriptor and Type
 """
 import datetime
 from threading import Lock
+from contextlib import contextmanager as context
 from homer.util import Validator
 
 
@@ -42,7 +43,8 @@ def key(name, namespace = "June"):
                 raise BadKeyError("There is no attribute with this name in %s" % cls)
             return cls
         else:
-            raise TypeError("You must pass in a subclass of Record not: %s" % cls)
+            raise TypeError("You must pass in a subclass of \
+                Record not: %s" % cls)
     return inner
 
 
@@ -59,14 +61,15 @@ class KindMap(object):
     def putKey(cls, kind, key, namespace = None):
         """Thread safe class that maps kind to key and namespace"""
         with cls.lock: 
-            assert isinstance(kind, type), "Kind has to be a class; Got: %s instead" % kind
+            assert isinstance(kind, type), "Kind has to be a\
+                class; Got: %s instead" % kind
             name = kind.__name__
             cls.keyMap[name] = key, namespace
             cls.typeMap[name] = kind
     
     @classmethod
     def getKey(cls, kind):
-        """Returns a tuple (key, namespace) for this kind or None if non-existent"""
+        """Returns a tuple (key, namespace) for this kind or None"""
         with cls.lock:
             name = kind.__class__.__name__
             return cls.keyMap.get(name, None)
@@ -79,24 +82,23 @@ class KindMap(object):
 
 """
 Key:
-A GUID for Record objects. A Key contains all the information required to retreive
-a Record from the datastore; 
+A GUID for Record objects. A Key contains all the information 
+required to retreive a Record from the datastore; Key is serialized
+to this String format "key: {namespace}, {kind}, {key}"
 """
 class Key(object):
     """A GUID for Records"""
     namespace, kind, key = None, None, None
     
     def __init__(self, namespace, kind = None, key = None):
-        """Creates a key with keywords"""
-        if kind is None:
-            """Tries to create a key from a serialized representation"""
+        """Creates a key from keywords or from a str representation"""
+        if kind is None and key is None:
             try:
                 key, repr = namespace.split(":")
                 assert key == "key", "Key representation should start with 'key:'"
                 namespace, kind, key = repr.split(",")
             except:
-                raise BadKeyError("Expected String of format 'key: namespace, kind, key',\
-                Got: %s" % namespace)
+                raise BadKeyError("Expected String of format 'key: namespace, kind, key', Got: %s" % namespace)
         validate = Validator.ValidateString
         self.namespace, self.kind, self.key = validate(namespace), validate(kind), validate(key)
           
@@ -110,18 +112,21 @@ class Key(object):
         """
         Returns a tag: URI for this entity for use in XML output
         
-        Foreign keys for entities may be represented in XML output as tag URIs.
-        RFC 4151 describes the tag URI scheme. From http://taguri.org/.
-        Key tags take this format: "tag:<namespace>, date:<kind>[<key>]" e.g.
+        Foreign keys for entities may be represented in XML 
+        output as tag URIs. RFC 4151 describes the tag URI 
+        scheme. From http://taguri.org/. Key tags take this 
+        format: "tag:<namespace>, date:<kind>[<key>]" e.g.
         
             tag:June,2006-08-29:Profile[Jack]
             
         Raises a BadKeyError if this key is incomplete.
         """ 
+        if not self.complete():
+            raise BadKeyError("Cannot use an incomplete key for tag URI's")
+            
         date = datetime.date.today().isoformat()
         return u"tag:{self.namespace},{date}:{self.kind}[self.key]".format(self = self, date = date)
         
-       
     def __unicode__(self):
         """Unicode representation of a key"""
         format = u"key: {self.namespace}, {self.kind}, {self.key}"
@@ -133,8 +138,8 @@ class Key(object):
             
 """
 Record(unit of persistence):
-Any class you want to store should extend this class. Record keeps track of 
-changes which you make to it.
+Any class you want to store should extend this class. 
+Record keeps track of changes which you make to it.
 
 @key("name")
 class Profile(Record):
@@ -146,16 +151,13 @@ class Record(object):
     
     @property
     def key(self):
-        """Returns a Key (If it is complete) for this Record else return None"""
+        """Returns the Key for this Record or None"""
         name, namespace = KindMap.getKey(self)
         kind = self.__class__.__name__
-        if getattr(self, name, None) is not None:
-            return Key(namespace, kind, getattr(self, name))
+        value = getattr(self, name, None)
+        if value is not None:
+            return Key(namespace, kind, value)
         return None
+
    
-   
-        
-
-
-
-
+ 
