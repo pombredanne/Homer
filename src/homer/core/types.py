@@ -6,7 +6,7 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-Provides implementation for Descriptors and Type.
+Provides implementation for Propertys and Type.
 """
 
 READWRITE, READONLY = 1, 2
@@ -21,11 +21,11 @@ class BadValueError(Exception):
 Property:
 Base class for all data descriptors; 
 """
-class Descriptor(object):
-    """A Generic Data Descriptor which can be READONLY or READWRITE"""
+class Property(object):
+    """A Generic Data Property which can be READONLY or READWRITE"""
     
     def __init__(self, default = None, mode = READWRITE, **keywords):
-        """Initializes the Descriptor"""
+        """Initializes the Property"""
         if mode not in [READWRITE, READONLY]:
             raise ValueError("mode must be one of READONLY,\
             READWRITE")
@@ -52,7 +52,7 @@ class Descriptor(object):
         if self.mode == READONLY:
             raise AttributeError("This is a READONLY attribute")
         value = self.validate(value)
-        if self.name is None : self.name = Descriptor.search(instance,self)
+        if self.name is None : self.name = Property.search(instance,self)
         if self.name is not None:
             instance.__dict__[self.name] = value
             self.value = value
@@ -63,11 +63,17 @@ class Descriptor(object):
 
     def __get__(self, instance, owner):
         """Read the value of this property"""
-        if self.name is None : self.name = Descriptor.search(instance,self)
+        if self.name is None : self.name = Property.search(instance,self)
         if self.name is not None:
             try:
-                found = instance.__dict__[self.name] 
-                return found  
+                if instance is not None:
+                    found = instance.__dict__[self.name] 
+                    return found  
+                elif owner is not None:
+                    found = owner.__dict__[self.name]
+                    return found
+                else:
+                    raise AttributeError     
             except (AttributeError,KeyError) as error:
                 if not self.deleted:
                     return self.default
@@ -83,7 +89,7 @@ class Descriptor(object):
         if self.deleted: return 
         if self.mode != READWRITE:
             raise AttributeError("This is NOT a READWRITE Property, Error")
-        if self.name is None : self.name = Descriptor.search(instance,self)
+        if self.name is None : self.name = Property.search(instance,self)
         if self.name is not None:
             try:
                 del instance.__dict__[self.name]
@@ -93,7 +99,11 @@ class Descriptor(object):
         else:
             raise AttributeError("Cannot find Property: %s in: %s" 
                 % (self,instance))
-                
+    
+    def __configure__(self, name):
+        """Allow this property to know its name"""
+        self.name = name
+                   
     @staticmethod
     def search(instance, descriptor):
         """Returns the name of this descriptor by searching its class hierachy"""
@@ -121,40 +131,42 @@ class Descriptor(object):
    
 """
 Type:
-A Descriptor that does type coercion, checking and validation. This is base
-class for all the common descriptors. If you intend to write a new descriptor
-start from here unless you know what you're doing...
+A Property that does type coercion, checking and validation. This is base
+class for all the common descriptors. e.g.
 #..
-
 class Story(Record):
     source = Type(Blog)
     
 #..
-The snippet above will make sure that you can only set Blog objects on the on
+The snippet above will make sure that you can only set Blog objects on
 source. If you try to set a different type of object; Type will attempt to
 convert this object to a blog by coercion i.e calling Blog(object). if this
-fails this raises an exception.
+fails it raises a BadValueError.
 
 Keywords:
 type = The type that will be used during type checking and coercion
-omit = Tells the SDK that you do not want to the property to be persisted or marshalled.
+omit = Tells the SDK that you do not want to the property to be persisted
+       or marshalled.
 """
-class Type(Descriptor):
-    """A Descriptor that does coercion and validation"""
-    type = None
+class Type(Property):
+    type, iSimple, isComplex, isSequence = None, False, False, False
+    
     def __init__(self, default = None, mode = READWRITE, type = None, **keywords):
-        """Generally like Descriptor.__init__ 'cept it accepts type and omit"""
-        Descriptor.__init__(self, default, mode, **keywords)
-        if self.type is None:
-            self.type = type
-        self.omit = keywords.get("omit", False)
-        
+        """Sets a type, checks if type is simple, complex or sequence"""
+        self.omit = keywords.pop("omit", False)
+        self.type = type if self.type is None else self.type
+        Property.__init__(self, default, mode, **keywords)
+         
     def validate(self, value):
-        """overrides Descriptor.validate() to add type checking and coercion"""
-        assert value.__class__ is not self.__class__,"You cannot do Type(Type)"
+        """Overrides Property.validate() to add type checking and coercion"""
         value = super(Type,self).validate(value)
         if self.type is None:
             return value
         if value is not None and not isinstance(value,self.type):
-            value = self.type(value)
+            try:
+                value = self.type(value)
+            except: 
+                raise BadValueError("Cannot coerce: %s to %s"% (value, self.type))
         return value
+        
+  

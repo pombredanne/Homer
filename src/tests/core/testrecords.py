@@ -21,12 +21,12 @@ class TestKeyAndRecord(TestCase):
             name = "JohnBull"
         assert isinstance(Person, type)
         person = Person()
-        assert person.key is not None, "Key Must not be None when its attribute is non null"
+        assert person.key() is not None, "Key Must not be None when its attribute is non null"
         self.assertTrue(person.name == "JohnBull")
         print "'" + str(person.key) + "'"
-        print person.key.toTagURI()
+        print person.key().toTagURI()
         person.name = None
-        assert person.key is None, "Key Should be None when its attribute is not set"
+        assert person.key() is None, "Key Should be None when its attribute is not set"
         
     def testkeyAcceptsOnlyRecords(self):
         """Asserts that @key only works on subclasses of Record"""

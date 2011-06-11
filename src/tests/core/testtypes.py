@@ -9,7 +9,7 @@ Description:
 Unittests for the records module...
 """
 from unittest import TestCase,expectedFailure
-from homer.core.types import Descriptor, Type, READWRITE, READONLY, BadValueError
+from homer.core.types import Property, Type, READWRITE, READONLY, BadValueError
 from datetime import datetime, date
 
 """#.. Tests for homer.core.record.Type"""
@@ -35,18 +35,18 @@ class TestType(TestCase):
         self.assertEqual(self.bug.name, "23")
             
 
-"""#.. Tests for homer.core.record.Descriptor"""
-class TestDescriptor(TestCase):
+"""#.. Tests for homer.core.record.Property"""
+class TestProperty(TestCase):
     def setUp(self):
         """Creates a new Bug class everytime"""
         class Bug(object):
             """No bugs..."""
-            name = Descriptor()
-            email = Descriptor("iroiso@live.com", mode = READONLY)
-            girlfriend = Descriptor("gwen", choices = ["amy","stacy","gwen"],required = True)   
+            name = Property()
+            email = Property("iroiso@live.com", mode = READONLY)
+            girlfriend = Property("gwen", choices = ["amy","stacy","gwen"],required = True)   
         self.bug = Bug()
          
-    def testReadWriteDescriptor(self):
+    def testReadWriteProperty(self):
         """Makes sure that ReadWrites can be read,written and deleted"""
         setattr(self.bug,"name","Emeka")
         self.assertEqual(self.bug.name , "Emeka")
@@ -78,19 +78,19 @@ class TestDescriptor(TestCase):
             self.bug.girlfriend = "steph"
             
     def testRequired(self):
-        """Asserts that a required Descriptor cannot be set to an empty value"""
+        """Asserts that a required Property cannot be set to an empty value"""
         with self.assertRaises(BadValueError):
             self.bug.girlfriend = None
        
-    def testReadOnlyDescriptor(self):
+    def testReadOnlyProperty(self):
         """Makes sure that ReadOnlies are immutable """
         with self.assertRaises(ValueError):
-            self.readOnly = Descriptor(mode = READONLY)
+            self.readOnly = Property(mode = READONLY)
         with self.assertRaises(AttributeError):
-            print("You cannot write to a read only Descriptor")
+            print("You cannot write to a read only Property")
             setattr(self.bug,"email",100)
         with self.assertRaises(AttributeError):
-            print("You cannot delete a read only Descriptor")
+            print("You cannot delete a read only Property")
             delattr(self.bug,"email")
     
        
