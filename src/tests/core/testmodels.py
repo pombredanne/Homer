@@ -72,7 +72,7 @@ class TestKeyAndModel(TestCase):
             person.girlfriend = "Natasha"
                
 
-"""#.. Tests for homer.core.Model.Type"""
+"""#.. Tests for homer.core.models.Type"""
 class TestType(TestCase):
     """Sanity Checks for Type"""
     def setUp(self):
@@ -80,8 +80,9 @@ class TestType(TestCase):
         class Bug(object):
             name = Type(type = str )
             filed = Type(type = date ) 
-        self.bug = Bug()
             
+        self.bug = Bug()
+           
     def testTypeSanity(self):
         """Makes sure that Type doe type checking"""
         self.assertRaises(Exception, lambda: 
@@ -93,7 +94,37 @@ class TestType(TestCase):
         """Does Type do coercion? """
         self.bug.name = 23
         self.assertEqual(self.bug.name, "23")
+    
+    def testTypeAcceptsPositionalArgs(self):
+        """Does type accept positional args"""
+        class Blog(object):
+            def __init__(self, name, post):
+                self.name = name
+                self.post = post
+                
+        class News(object):
+            blog = Type(type = Blog)
             
+        news = News()
+        news.blog = ["iroiso", "a little something"]
+        self.assertEqual(news.blog.name, "iroiso")
+        self.assertEqual(news.blog.post, "a little something")
+        
+    def testTypeKeywordArgs(self):
+        """Does Type accept keyword arguments"""
+        class Blog(object):
+            def __init__(self, name, post):
+                self.name = name
+                self.post = post
+                
+        class News(object):
+            blog = Type(type = Blog)
+            
+        another = News()
+        another.blog = {"name": "iroiso", "post": "a little something"}
+        self.assertEqual(another.blog.name, "iroiso")
+        self.assertEqual(another.blog.post, "a little something")  
+        
 
 """#.. Tests for homer.core.Model.Property"""
 class TestProperty(TestCase):
