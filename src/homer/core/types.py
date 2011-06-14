@@ -11,12 +11,12 @@ Provides implementation for Propertys and Type.
 
 READWRITE, READONLY = 1, 2
 
+
 """Exceptions"""
 class BadValueError(Exception):
     """An exception that signifies that a validation error has occurred"""
     pass
-    
-    
+     
 """
 Property:
 Base class for all data descriptors; 
@@ -73,7 +73,7 @@ class Property(object):
                     found = owner.__dict__[self.name]
                     return found
                 else:
-                    raise AttributeError     
+                    return self    
             except (AttributeError,KeyError) as error:
                 if not self.deleted:
                     return self.default
@@ -99,10 +99,6 @@ class Property(object):
         else:
             raise AttributeError("Cannot find Property: %s in: %s" 
                 % (self,instance))
-    
-    def __configure__(self, name):
-        """Allow this property to know its name"""
-        self.name = name
                    
     @staticmethod
     def search(instance, descriptor):
@@ -128,6 +124,13 @@ class Property(object):
         if self.validator is not None:
             value = self.validator(value)
         return value
+        
+    def __configure__(self, name):
+        """Allow this property to know its name"""
+        self.name = name
+    
+    def __str__(self):
+        return "Property: {self.name}".format(self = self)
    
 """
 Type:
@@ -149,13 +152,13 @@ omit = Tells the SDK that you do not want to the property to be persisted
        or marshalled.
 """
 class Type(Property):
-    type, iSimple, isComplex, isSequence = None, False, False, False
-    
+    type = None
     def __init__(self, default = None, mode = READWRITE, type = None, **keywords):
         """Sets a type, checks if type is simple, complex or sequence"""
         self.omit = keywords.pop("omit", False)
         self.type = type if self.type is None else self.type
         Property.__init__(self, default, mode, **keywords)
+        
          
     def validate(self, value):
         """Overrides Property.validate() to add type checking and coercion"""
@@ -168,5 +171,5 @@ class Type(Property):
             except: 
                 raise BadValueError("Cannot coerce: %s to %s"% (value, self.type))
         return value
-        
+     
   

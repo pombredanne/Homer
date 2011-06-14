@@ -60,8 +60,8 @@ from things.core import READONLY
 class Story(object):
     '''Models a Story Object'''
     headline = String("Barcelona FC meats Real Madrid in UEFA Champs Final")
-    anchor = String("Zeinab Badawi", READONLY)
-    channel = String("BBC World News", READONLY)
+    anchor = String("Zeinab Badawi")
+    channel = String("BBC World News")
     reporter = String(length = 30)
     
 """

@@ -5,7 +5,7 @@ TODO for Homer SDK
    occurs; look at DebugConnection for a Reference...This will allow me to look into
    complex types if they are set with Type(ComplexType)
    
-2. Add a Hashable common type that only accepts dict or hashables and decorates
+2. Add a HashMap common type that only accepts dict or hashables and decorates
    __setitem__ and __delitem__ to add modification notification.
    
 3. Add the Md5Digest,SHADigest Descriptor to commons.
