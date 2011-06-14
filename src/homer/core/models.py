@@ -14,10 +14,8 @@ from threading import Lock
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
-from homer.util import Validator
+from homer.util import Validation
 from homer.core.options import options
-
-
 
 __all__ = ["Model", "key", ]
 
@@ -28,9 +26,9 @@ READWRITE, READONLY = 1, 2
 
 """Exceptions """
 class BadKeyError(Exception):
+    """An Exception that shows that something is wrong with your key"""
     pass
 
-"""Exceptions"""
 class BadValueError(Exception):
     """An exception that signifies that a validation error has occurred"""
     pass
@@ -72,13 +70,115 @@ class Profile(Model):
 """
 def cache(timeout = -1):
     """Mark this Model as one that you cache"""
-    pass
+    def inner(cls):
+        pass
+    return inner
 
+"""
+StoragePolicy:
+This is class that affects how storage is actually done for a Model
+i.e.
+if cache and db is true instances will be put in Redis and Cassandra.
+if cache is true and db is False instances will be put in only Redis, 
+if db is True and cache is false instances will be put in only Cass-
+andra; the timeout attribute directly affects the expiry times of
+the object in Redis and Cassandra. Every model has a storage policy.
+"""
+class StoragePolicy(object):
+    """An object that dictates how an object should be stored"""
+    cache, db, timeout = True, True, -1
 
-class CachePolicy(object):
-    """An object that dictates how an object should be cached"""
-    pass
+"""
+KindMap(implementation detail):
+A class that maps classes to their key attributes in a thread safe manner; 
+This is an impl detail that may go away in subsequent releases.
+"""
+class KindMap(object):
+    """Maps classes to attributes which will store their keys"""
+    lock, keyMap, typeMap = Lock(), {}, {}
+   
+    @classmethod
+    def putKey(cls, kind, key, namespace = None):
+        """Thread safe class that maps kind to key and namespace"""
+        with cls.lock: 
+            assert isinstance(kind, type), "Kind has to be a\
+                class; Got: %s instead" % kind
+            name = kind.__name__
+            cls.keyMap[name] = key, namespace
+            cls.typeMap[name] = kind
     
+    @classmethod
+    def getKey(cls, kind):
+        """Returns a tuple (key, namespace) for this kind or None"""
+        with cls.lock:
+            name = kind.__class__.__name__
+            return cls.keyMap.get(name, None)
+    
+    @classmethod
+    def classForKind(cls, name):
+        """Returns the class object for this name"""
+        with cls.lock:
+            return cls.typeMap.get(name, None)
+
+"""
+Key:
+A GUID for Model objects. A Key contains all the information 
+required to retreive a Model from Cassandra or Redis
+Key is serialized to this String format:
+"key: {namespace}, {kind}, {key}"
+"""
+class Key(object):
+    """A GUID for Models"""
+    namespace, kind, key = None, None, None
+    
+    def __init__(self, namespace, kind = None, key = None):
+        """Creates a key from keywords or from a str representation"""
+        if kind is None and key is None:
+            try:
+                key, repr = namespace.split(":")
+                assert key == "key", "Key representation should start with 'key:'"
+                namespace, kind, key = repr.split(",")
+            except:
+                raise BadKeyError("Expected String of format 'key:\
+                    namespace, kind, key', Got: %s" % namespace)
+        validate = Validation.validateString
+        self.namespace, self.kind, self.key = \
+            validate(namespace), validate(kind), validate(key)
+          
+    def complete(self):
+        """Checks if this key has all its parts"""
+        if self.namespace and self.kind and self.key:
+            return True
+        return False
+    
+    def toTagURI(self):
+        """
+        Returns a tag: URI for this entity for use in XML output
+        
+        Foreign keys for entities may be represented in XML 
+        output as tag URIs. RFC 4151 describes the tag URI 
+        scheme. From http://taguri.org/. Key tags take this 
+        format: "tag:<namespace>, date:<kind>[<key>]" e.g.
+        
+            tag:June,2006-08-29:Profile[Jack]
+            
+        Raises a BadKeyError if this key is incomplete.
+        """ 
+        if not self.complete():
+            raise BadKeyError("Cannot use an incomplete key for tag URI's")
+        date = datetime.date.today().isoformat()
+        format = u"tag:{0},{1}:{2}[{3}]"
+        return format.format(self.namespace, date, self.kind, self.key)
+        
+    def __unicode__(self):
+        """Unicode representation of a key"""
+        format = u"key: {self.namespace}, {self.kind}, {self.key}"
+        return format.format(self = self)
+    
+    def __str__(self):
+        """String representation of a key"""
+        return unicode(self)
+   
 """
 Property:
 Base class for all data descriptors; 
@@ -89,14 +189,15 @@ class Property(object):
     def __init__(self, default = None, mode = READWRITE, **keywords):
         """Initializes the Property"""
         if mode not in [READWRITE, READONLY]:
-            raise ValueError("mode must be one of READONLY,\
+            raise ValueError("@mode must be one of READONLY,\
             READWRITE")
         if mode == READONLY and default is None:
-            raise ValueError("You must provide a default value\
+            raise ValueError("You must provide a @default value\
             in READONLY mode")
         self.mode = mode
-        self.required = keywords.get("required", False)
-        self.choices = keywords.get("choices", [])
+        self.required = keywords.pop("required", False)
+        self.choices = keywords.pop("choices", [])
+        self.omit = keywords.pop("omit", False)
         self.name = None
         self.deleted = False
         self.default = default
@@ -186,18 +287,6 @@ class Property(object):
         if self.validator is not None:
             value = self.validator(value)
         return value
-    
-    def isSimple(self):
-        """Is this property a simple property ?; simple as in XML Schemas"""
-        return False
-    
-    def isComplex(self):
-        """Is this property a complex property ?; complex as in XML Schemas"""
-        return False
-        
-    def isSequence(self):
-        """Will this property qualify as a Sequence type in an XML Schema definition?"""
-        return False
            
     def __configure__(self, name, owner):
         """Allow this property to know its name"""
@@ -209,28 +298,24 @@ class Property(object):
 """
 Type:
 A Property that does type coercion, checking and validation. This is base
-class for all the common descriptors. look at the example below for 
-clarification.
+class for all the common descriptors.
 #..
 class Story(Record):
     source = Type(Blog)
     
 #..
-The snippet above will make sure that you can only set Blog objects on
-source. If you try to set a different type of object; Type will attempt to
-convert this object to a blog by coercion i.e calling Blog(object). if this
-fails it raises a BadValueError.
+In the snippet above you can only set instances of blog or types that can
+be coerced to blog on the source attribute; any other type will throw a
+BadValueError
 
-Keywords:
-type = The type that will be used during type checking and coercion
-omit = Tells the SDK that you do not want to the property to be persisted
-       or marshalled.
+kwds:
+'type' = The class that will be used during type checking and coercion
 """
 class Type(Property):
+    """Does type checking and coercion"""
     type = None
     def __init__(self, default = None, mode = READWRITE, type = None, **keywords):
-        """Sets a type, checks if type is simple, complex or sequence"""
-        self.omit = keywords.pop("omit", False)
+        """Sets self.type and move along"""
         self.type = type if self.type is None else self.type
         Property.__init__(self, default, mode, **keywords)
         
@@ -242,102 +327,12 @@ class Type(Property):
             return value
         if value is not None and not isinstance(value,self.type):
             try:
-                value = self.type(value)
+                if isinstance(value, list): value = self.type(*value)
+                elif isinstance(value, dict): value = self.type(**value)
+                else: value = self.type(value)
             except: 
                 raise BadValueError("Cannot coerce: %s to %s"% (value, self.type))
         return value
-       
-"""
-KindMap(implementation detail):
-A class that maps classes to their key attributes in a thread safe manner; 
-This is an impl detail that may go away in subsequent releases.
-"""
-class KindMap(object):
-    """Maps classes to attributes which will store their keys"""
-    lock, keyMap, typeMap = Lock(), {}, {}
-   
-    @classmethod
-    def putKey(cls, kind, key, namespace = None):
-        """Thread safe class that maps kind to key and namespace"""
-        with cls.lock: 
-            assert isinstance(kind, type), "Kind has to be a\
-                class; Got: %s instead" % kind
-            name = kind.__name__
-            cls.keyMap[name] = key, namespace
-            cls.typeMap[name] = kind
-    
-    @classmethod
-    def getKey(cls, kind):
-        """Returns a tuple (key, namespace) for this kind or None"""
-        with cls.lock:
-            name = kind.__class__.__name__
-            return cls.keyMap.get(name, None)
-    
-    @classmethod
-    def classForKind(cls, name):
-        """Returns the class object for this name"""
-        with cls.lock:
-            return cls.typeMap.get(name, None)
-
-"""
-Key:
-A GUID for Model objects. A Key contains all the information 
-required to retreive a Model from Cassandra or Redis
-Key is serialized to this String format:
-"key: {namespace}, {kind}, {key}"
-"""
-class Key(object):
-    """A GUID for Models"""
-    namespace, kind, key = None, None, None
-    
-    def __init__(self, namespace, kind = None, key = None):
-        """Creates a key from keywords or from a str representation"""
-        if kind is None and key is None:
-            try:
-                key, repr = namespace.split(":")
-                assert key == "key", "Key representation should start with 'key:'"
-                namespace, kind, key = repr.split(",")
-            except:
-                raise BadKeyError("Expected String of format 'key:\
-                    namespace, kind, key', Got: %s" % namespace)
-        validate = Validator.ValidateString
-        self.namespace, self.kind, self.key = \
-            validate(namespace), validate(kind), validate(key)
-          
-    def complete(self):
-        """Checks if this key has all its parts"""
-        if self.namespace and self.kind and self.key:
-            return True
-        return False
-    
-    def toTagURI(self):
-        """
-        Returns a tag: URI for this entity for use in XML output
-        
-        Foreign keys for entities may be represented in XML 
-        output as tag URIs. RFC 4151 describes the tag URI 
-        scheme. From http://taguri.org/. Key tags take this 
-        format: "tag:<namespace>, date:<kind>[<key>]" e.g.
-        
-            tag:June,2006-08-29:Profile[Jack]
-            
-        Raises a BadKeyError if this key is incomplete.
-        """ 
-        if not self.complete():
-            raise BadKeyError("Cannot use an incomplete key for tag URI's")
-        date = datetime.date.today().isoformat()
-        format = u"tag:{0},{1}:{2}[{3}]"
-        return format.format(self.namespace, date, self.kind, self.key)
-        
-    def __unicode__(self):
-        """Unicode representation of a key"""
-        format = u"key: {self.namespace}, {self.kind}, {self.key}"
-        return format.format(self = self)
-    
-    def __str__(self):
-        """String representation of a key"""
-        return unicode(self)
-
 
 """
 ActiveModels:
@@ -366,7 +361,7 @@ class ActiveModels(object):
 __configure__:
 Called to create a new Model; It configures all the Properties 
 in the Model and caches them so that subsequent discovery will 
-be efficient.
+be efficient. 
 """
 class __configure__(type):
     def __new__(cls, name, bases, dict):
@@ -458,12 +453,13 @@ The differences between NormalView and ModelView are:
 class ModelView(View):
     """A ThreadSafe way to track changes to Model objects"""
     
-    def __init__(self, Model):
+    def __init__(self, model):
         """inits lock object and modification sets"""
         if isinstance(Model, Model):
             raise TypeError("Expected: a instance of Model, Got: %s" % Model)
+            
         self.lock = Lock()
-        self.Model = Model
+        self.model = model
         self.changedSet, self.delSet = set(), set()
         self.track()
     
@@ -491,8 +487,8 @@ class ModelView(View):
     def track(self):
         '''Track changes on self.Model and its attributes'''
         log.info("Tracking Model: %s for changes" % object)
-        SET = getattr(self.Model, "__setattr__")
-        DEL = getattr(self.Model, "__delattr__")
+        SET = getattr(self.model, "__setattr__")
+        DEL = getattr(self.model, "__delattr__")
         
         def __set__(instance, name, value):
             """Tracks changes on attribute during assignment."""
@@ -528,9 +524,9 @@ class ModelView(View):
                 DEL(instance, name)
                    
         update(__set__, SET), update(__delete__, DEL)
-        log.info("Wrapping __setattr__, and __delattr__")
-        setattr(object,"__setattr__", __set__)
-        setattr(object,"__delattr__", __delete__)
+        log.info("Started monitoring Model: %s" % self.model)
+        setattr(self.model,"__setattr__", __set__)
+        setattr(self.model,"__delattr__", __delete__)
 
 
 class ListView(View):
