@@ -15,6 +15,7 @@ from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
 from homer.util import Validator
+from homer.core.options import options
 
 
 
@@ -60,16 +61,24 @@ def key(name, namespace = "June"):
     return inner
 
 """
+@cache:
+This decorator is used to Signal that the decorated Model should only be
+put in Redis only. i.e. This Model should not be put in Cassandra at all
+
 @cache
 @key("link")
 class Profile(Model):
     link = URL("http://twitter.com")
 """
 def cache(timeout = -1):
-    """Put this Model in Redis"""
+    """Mark this Model as one that you cache"""
     pass
 
 
+class CachePolicy(object):
+    """An object that dictates how an object should be cached"""
+    pass
+    
 """
 Property:
 Base class for all data descriptors; 
@@ -126,7 +135,7 @@ class Property(object):
                     found = owner.__dict__[self.name]
                     return found
                 else:
-                    raise ValueError("Instance and type can't both be null")   
+                    raise ValueError("@instance and @owner can't both be null")   
             except (AttributeError,KeyError) as error:
                 if not self.deleted:
                     return self.default
@@ -177,8 +186,20 @@ class Property(object):
         if self.validator is not None:
             value = self.validator(value)
         return value
+    
+    def isSimple(self):
+        """Is this property a simple property ?; simple as in XML Schemas"""
+        return False
+    
+    def isComplex(self):
+        """Is this property a complex property ?; complex as in XML Schemas"""
+        return False
         
-    def __configure__(self, name):
+    def isSequence(self):
+        """Will this property qualify as a Sequence type in an XML Schema definition?"""
+        return False
+           
+    def __configure__(self, name, owner):
         """Allow this property to know its name"""
         self.name = name
     
@@ -188,7 +209,8 @@ class Property(object):
 """
 Type:
 A Property that does type coercion, checking and validation. This is base
-class for all the common descriptors. e.g.
+class for all the common descriptors. look at the example below for 
+clarification.
 #..
 class Story(Record):
     source = Type(Blog)
@@ -385,7 +407,12 @@ class Model(object):
         pass
     
     @classmethod
-    def get(key, cache = True):
+    def all(cls):
+        """Retreives all the instances of this Model from the Cassandra"""
+        pass
+        
+    @classmethod
+    def get(cls, key, cache = True):
         """Try to retrieve an instance of this Model from the datastore"""
         pass
     

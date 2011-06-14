@@ -12,7 +12,7 @@ import urlparse
 import datetime
 from contextlib import closing
 from homer.util import Size
-from homer.core.types import Type, BadValueError
+from homer.core.models import Type, BadValueError
 
 
 __all__ = [

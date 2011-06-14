@@ -6,13 +6,73 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-Unittests for the records module...
+Unittests for the Models module...
 """
-from unittest import TestCase,expectedFailure
-from homer.core.types import Property, Type, READWRITE, READONLY, BadValueError
+from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
+from homer.core.models import key, Model, Property, Type, READONLY, READWRITE, BadValueError
 
-"""#.. Tests for homer.core.record.Type"""
+@skip("Refactor occuring")
+class TestKeyAndModel(TestCase):
+    """Keys and Model where built to work together; they should be tested together"""
+    
+    def testkeySanity(self):
+        """Makes sure that basic usage for @key works"""
+        @key("name")
+        class Person(Model):
+            name = Property("JohnBull")
+            
+        assert isinstance(Person, type)
+        person = Person()
+        assert person.key() is not None, "Key Must not be None when its attribute is non null"
+        self.assertTrue(person.name == "JohnBull")
+        print "'" + str(person.key()) + "'"
+        print person.key().toTagURI()
+        person.name = None
+        assert person.key() is None, "Key Should be None when its attribute is not set"
+        
+    def testkeyAcceptsOnlyModels(self):
+        """Asserts that @key only works on subclasses of Model"""
+        with self.assertRaises(TypeError):
+            @key("name")
+            class House(object):
+                name = Property("House M.D")
+    
+    def testkeyChecksifKeyAttributeExists(self):
+        """Asserts that the attribute passed in to @key must exist in the class"""
+        with self.assertRaises(Exception):
+            @key("name")
+            class House(Model):
+                pass
+    
+    def testModelAcceptsKeywords(self):
+        """Tests If accepts keyword arguments and sets them"""
+        diction = { "name": "iroiso", "position" : "CEO", "nickname" : "I.I"}
+        class Person(Model):
+            name = Property()
+            position = Property()
+            nickname = Property()
+        
+        person = Person(**diction)
+        for name in diction:
+            self.assertEqual(getattr(person,name), diction[name])
+        print "..........................................."
+        for name, value in person.fields().items():
+            print name, str(value)
+
+    def testModelsDoesNotAllowExpansion(self):
+        """Shows that Model does not allow expansion"""
+        @key("name")
+        class Person(Model):
+            name = "Iroiso"
+            birthdate = "Aug 5th 1990"
+        
+        person = Person()
+        with self.assertRaises(AttributeError):
+            person.girlfriend = "Natasha"
+               
+
+"""#.. Tests for homer.core.Model.Type"""
 class TestType(TestCase):
     """Sanity Checks for Type"""
     def setUp(self):
@@ -35,7 +95,7 @@ class TestType(TestCase):
         self.assertEqual(self.bug.name, "23")
             
 
-"""#.. Tests for homer.core.record.Property"""
+"""#.. Tests for homer.core.Model.Property"""
 class TestProperty(TestCase):
     def setUp(self):
         """Creates a new Bug class everytime"""
@@ -92,6 +152,4 @@ class TestProperty(TestCase):
         with self.assertRaises(AttributeError):
             print("You cannot delete a read only Property")
             delattr(self.bug,"email")
-    
-       
     

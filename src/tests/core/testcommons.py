@@ -10,7 +10,7 @@ Unittests for the records module...
 """
 from unittest import TestCase,expectedFailure,skip
 from homer.core.commons import *
-from homer.core.types import READONLY
+from homer.core.models import READONLY
 from datetime import date,datetime
 
 class TestFloat(TestCase):
