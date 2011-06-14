@@ -83,6 +83,8 @@ if cache is true and db is False instances will be put in only Redis,
 if db is True and cache is false instances will be put in only Cass-
 andra; the timeout attribute directly affects the expiry times of
 the object in Redis and Cassandra. Every model has a storage policy.
+
+[Future additions to StoragePolicy may include ConsistencyLevel]
 """
 class StoragePolicy(object):
     """An object that dictates how an object should be stored"""
@@ -221,8 +223,7 @@ class Property(object):
             self.value = value
             self.deleted = False
         else:
-            raise AttributeError("Cannot find this property:%s in \
-                this the given object: %s " % (self,instance))
+            raise AttributeError("Cannot find %s in  %s " % (self,instance))
 
     def __get__(self, instance, owner):
         """Read the value of this property"""
@@ -230,21 +231,19 @@ class Property(object):
         if self.name is not None:
             try:
                 if instance is not None:
-                    found = instance.__dict__[self.name] 
-                    return found  
+                    return instance.__dict__[self.name]
                 elif owner is not None:
-                    found = owner.__dict__[self.name]
-                    return found
+                    return owner.__dict__[self.name]
                 else:
                     raise ValueError("@instance and @owner can't both be null")   
             except (AttributeError,KeyError) as error:
                 if not self.deleted:
                     return self.default
                 else:
-                    raise AttributeError("Cannot find Property: %s in: %s" 
+                    raise AttributeError("Cannot find %s in %s" 
                         % (self,instance))
         else:
-            raise AttributeError("Cannot find Property:%s in: %s" % 
+            raise AttributeError("Cannot find %s in: %s" % 
                 (self,instance))
            
     def __delete__(self, instance):
@@ -260,15 +259,22 @@ class Property(object):
                 self.deleted = True
             except (AttributeError,KeyError) as error: raise error
         else:
-            raise AttributeError("Cannot find Property: %s in: %s" 
+            raise AttributeError("Cannot find Property: %s in: %s or its ancestors" 
                 % (self,instance))
                    
     @staticmethod
     def search(instance, descriptor):
         """Returns the name of this descriptor by searching its class hierachy"""
+        '''Search class dictionary first'''
         for name, value in instance.__class__.__dict__.items():
             if value is descriptor:
                 return name
+        '''Then search all the ancestors dictionary'''        
+        for cls in type(instance).__bases__:
+            for name, value in cls.__dict__.items():
+                if value is descriptor:
+                    return name
+           
         return None
         
     def empty(self, value):
@@ -289,8 +295,9 @@ class Property(object):
         return value
            
     def __configure__(self, name, owner):
-        """Allow this property to know its name"""
+        """Allow this property to know its name, and owner"""
         self.name = name
+        self.owner = owner
     
     def __str__(self):
         return "Property: {self.name}".format(self = self)
@@ -318,8 +325,7 @@ class Type(Property):
         """Sets self.type and move along"""
         self.type = type if self.type is None else self.type
         Property.__init__(self, default, mode, **keywords)
-        
-         
+            
     def validate(self, value):
         """Overrides Property.validate() to add type checking and coercion"""
         value = super(Type,self).validate(value)
@@ -379,7 +385,7 @@ class __configure__(type):
 """
 Model: 
 The Universal Unit of Persistence.
-usecase:
+simple usecase:
 
 @key("name")
 class Profile(Model):
@@ -394,7 +400,7 @@ class Model(object):
         pass
     
     def rollback(self):
-        """Rollback changes you've made on your Model"""
+        """Rolls back any unsaved changes you've made to your Model"""
         pass
         
     def put(cache = True, timeout = -1):
@@ -410,10 +416,6 @@ class Model(object):
     def get(cls, key, cache = True):
         """Try to retrieve an instance of this Model from the datastore"""
         pass
-    
-    def cache(timeout = -1):
-        """Stores this model in Redis only"""
-        pass
             
     def fields(self):
         """Returns a dictionary of all known properties in this object"""
@@ -426,7 +428,7 @@ Base class of all objects that know how to track changes
 """
 class View(object):
     """Base class for all views"""
-    tracking = True
+    tracking = False
     
     def track(self, object):
         raise NotImplementedError("Use a concrete subclass of View")
@@ -461,6 +463,7 @@ class ModelView(View):
         self.lock = Lock()
         self.model = model
         self.changedSet, self.delSet = set(), set()
+        self.tracking = True
         self.track()
     
     def view(self):
@@ -486,6 +489,9 @@ class ModelView(View):
         
     def track(self):
         '''Track changes on self.Model and its attributes'''
+        if self.tracking:
+            return 
+            
         log.info("Tracking Model: %s for changes" % object)
         SET = getattr(self.model, "__setattr__")
         DEL = getattr(self.model, "__delattr__")
