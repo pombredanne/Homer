@@ -10,9 +10,10 @@ Unittests for the Models module...
 """
 from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
-from homer.core.models import key, Model, Property, Type, READONLY, READWRITE, BadValueError
+from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
+from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError
 
-@skip("Refactor occuring")
+
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
     
@@ -29,7 +30,7 @@ class TestKeyAndModel(TestCase):
         print "'" + str(person.key()) + "'"
         print person.key().toTagURI()
         person.name = None
-        assert person.key() is None, "Key Should be None when its attribute is not set"
+        self.assertRaises(BadKeyError, lambda : person.key())
         
     def testkeyAcceptsOnlyModels(self):
         """Asserts that @key only works on subclasses of Model"""
@@ -68,7 +69,7 @@ class TestKeyAndModel(TestCase):
             birthdate = "Aug 5th 1990"
         
         person = Person()
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(UnDeclaredPropertyError):
             person.girlfriend = "Natasha"
                
 

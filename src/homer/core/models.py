@@ -1,4 +1,19 @@
 #!/usr/bin/env python
+#
+# Copyright 2011 June Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """
 Author : Iroiso . I (iroiso@live.com)
 Project: Homer SDK
@@ -32,7 +47,15 @@ class BadKeyError(Exception):
 class BadValueError(Exception):
     """An exception that signifies that a validation error has occurred"""
     pass
+
+class BadModelError(Exception):
+    """Signifies that a Model was not decorated with @key"""
+    pass
     
+class UnDeclaredPropertyError(Exception):
+    """An exception that is thrown if you try to set an attribute that in declared in a Model"""
+    pass
+        
 """
 @key:
 This decorator automatically configures your Model and creates
@@ -50,7 +73,7 @@ def key(name, namespace = "June"):
     def inner(cls):
         if issubclass(cls, Model):
             if hasattr(cls, name):
-                KindMap.putKey(cls, name, namespace)
+                KindMap.put(namespace, cls, name)
                 return cls
             else:
                 raise BadKeyError("There is no attribute with this name in %s" % cls)
@@ -68,7 +91,7 @@ put in Redis only. i.e. This Model should not be put in Cassandra at all
 class Profile(Model):
     link = URL("http://twitter.com")
 """
-def cache(timeout = -1):
+def cache(timeToLive = -1):
     """Mark this Model as one that you cache"""
     def inner(cls):
         pass
@@ -81,14 +104,14 @@ i.e.
 if cache and db is true instances will be put in Redis and Cassandra.
 if cache is true and db is False instances will be put in only Redis, 
 if db is True and cache is false instances will be put in only Cass-
-andra; the timeout attribute directly affects the expiry times of
+andra; the timeToLive attribute directly affects the expiry times of
 the object in Redis and Cassandra. Every model has a storage policy.
 
 [Future additions to StoragePolicy may include ConsistencyLevel]
 """
 class StoragePolicy(object):
     """An object that dictates how an object should be stored"""
-    cache, db, timeout = True, True, -1
+    cache, db, timetoLive = True, True, -1
 
 """
 KindMap(implementation detail):
@@ -100,21 +123,25 @@ class KindMap(object):
     lock, keyMap, typeMap = Lock(), {}, {}
    
     @classmethod
-    def putKey(cls, kind, key, namespace = None):
+    def put(cls, namespace, kind, key ):
         """Thread safe class that maps kind to key and namespace"""
         with cls.lock: 
             assert isinstance(kind, type), "Kind has to be a\
                 class; Got: %s instead" % kind
             name = kind.__name__
-            cls.keyMap[name] = key, namespace
+            cls.keyMap[name] = namespace, key
             cls.typeMap[name] = kind
     
     @classmethod
-    def getKey(cls, kind):
-        """Returns a tuple (key, namespace) for this kind or None"""
+    def get(cls, kind):
+        """Returns a tuple (namespace, key) for this kind """
         with cls.lock:
             name = kind.__class__.__name__
-            return cls.keyMap.get(name, None)
+            if name in cls.keyMap:
+                return cls.keyMap.get(name)
+            else:
+                raise BadModelError("Class %s is was \
+                    not decorated with @key" % kind)
     
     @classmethod
     def classForKind(cls, name):
@@ -146,7 +173,7 @@ class Key(object):
         validate = Validation.validateString
         self.namespace, self.kind, self.key = \
             validate(namespace), validate(kind), validate(key)
-          
+    
     def complete(self):
         """Checks if this key has all its parts"""
         if self.namespace and self.kind and self.key:
@@ -187,7 +214,7 @@ Base class for all data descriptors;
 """
 class Property(object):
     """A Generic Data Property which can be READONLY or READWRITE"""
-    
+    counter = 0
     def __init__(self, default = None, mode = READWRITE, **keywords):
         """Initializes the Property"""
         if mode not in [READWRITE, READONLY]:
@@ -211,6 +238,7 @@ class Property(object):
             self.validator = None
         else:
             raise ValueError("keyword: validator must be a callable or None")
+        self.counter += 1
         
     def __set__(self, instance, value):
         """Put @value in @instance's class dictionary"""
@@ -274,7 +302,6 @@ class Property(object):
             for name, value in cls.__dict__.items():
                 if value is descriptor:
                     return name
-           
         return None
         
     def empty(self, value):
@@ -364,24 +391,26 @@ class ActiveModels(object):
         pass
         
 """
-__configure__:
+__Model__:
 Called to create a new Model; It configures all the Properties 
 in the Model and caches them so that subsequent discovery will 
-be efficient. 
+be quick. 
 """
-class __configure__(type):
-    def __new__(cls, name, bases, dict):
-        """ Where the magic occurs """
-        props = {}
-        for key, prop in dict.items():
-            if isinstance(prop, Property):
-                prop.__configure__(key)
-                props[key] = prop
-                print "Just configured: " + str(prop)
-                
-        dict["__fields__"] = props
-        return type.__new__(cls, name, bases, dict)
-                          
+class __Model__(type):
+    def __init__(cls, name, bases, dict):
+        """ Initialize all the Properties in this Models Ancestral Hierachy"""
+        print "Configuring %s" % cls.__name__
+        fields = {}
+        for root in reversed(cls.__mro__):
+            for name, prop in root.__dict__.items():
+                if isinstance(prop, Property):
+                    prop.__configure__(name, cls)
+                    fields[name] = prop
+        cls.__fields__ = fields
+        super(__Model__, cls).__init__(name, bases, dict)
+        print "Finished configuring Model: %s " % cls.__name__
+        print "Model: %s, fields: %s" % (cls.__name__, str(fields))
+        
 """
 Model: 
 The Universal Unit of Persistence.
@@ -390,33 +419,60 @@ simple usecase:
 @key("name")
 class Profile(Model):
     name = String("John Bull")
-    
+
+profile = Profile(key = "JohnBull", name = "JohnBull")
+profile.put()
+
 """
 class Model(object):
-    __metaclass__ = __configure__
-      
+    __metaclass__ = __Model__
+    
+    def __init__(self, **kwds ):
+        """Initializes properties in this Model from @kwds"""
+        for name, value in kwds.items():
+            setattr(self, name, value)
+                
     def key(self):
-        """Create and Return the Key for this Model or return None"""
-        pass
-    
-    def rollback(self):
-        """Rolls back any unsaved changes you've made to your Model"""
-        pass
+        """Unique Key for this Model"""
+        namespace, key = KindMap.get(self)
+        if hasattr(self, key):
+            value = getattr(self, key)
+            kind = self.__class__.__name__
+            if value is not None:
+                return Key(namespace, kind, value)
+            else: raise BadKeyError("The value for %s is None" % key)
+        else: 
+            raise BadKeyError("Incomplete Key for %s " % self)
+            
+    def __setattr__(self, name, value):
+        """Simply verifies that @name is declared property"""
+        if name not in self.fields():
+            raise UnDeclaredPropertyError("Attribute %s was not \
+                declared or inherited in this Model" % name)
+        super(Model, self).__setattr__(name, value)
         
-    def put(cache = True, timeout = -1):
-        """Put this model in Cassandra and Redis if cache is True"""
+    @classmethod     
+    def put(cls, cache = False, timeToLive = -1):
+        """'Put' this Model into the data store,
+           
+           @cache: if True a copy will be put in the Cache
+           for faster retreival.
+           
+           @timeToLive: Sets how long you want the data to
+           last in data store or cache.
+        """
         pass
-    
+       
     @classmethod
-    def all(cls):
-        """Retreives all the instances of this Model from the Cassandra"""
-        pass
-        
-    @classmethod
-    def get(cls, key, cache = True):
+    def get(cls, keys, cache = True):
         """Try to retrieve an instance of this Model from the datastore"""
         pass
-            
+    
+    @classmethod
+    def delete(cls, keys, cache = True):
+        """Deletes all the entities whose key is in @keys """
+        pass
+        
     def fields(self):
         """Returns a dictionary of all known properties in this object"""
         return self.__fields__
