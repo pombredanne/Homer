@@ -31,6 +31,7 @@ from contextlib import contextmanager as context
 
 from homer.util import Validation
 from homer.core.options import options
+from homer.core.differ import Differ, DiffError
 
 __all__ = ["Model", "key", ]
 
@@ -368,29 +369,6 @@ class Type(Property):
         return value
 
 """
-ActiveModels:
-Tracks all Models that exists; active(instances) or dormant
-(just defined classes).
-"""
-class ActiveModels(object):
-    """Keeps track of all model classes and instances"""
-    
-    @classmethod
-    def active(cls):
-        """Return all existing Model instances"""
-        pass
-    
-    @classmethod
-    def get(cls, key):
-        """ Return an instance that has this key; else return None """
-        pass
-        
-    @classmethod   
-    def all(cls):
-        """Returns all defined Model classes"""
-        pass
-        
-"""
 __Model__:
 Called to create a new Model; It configures all the Properties 
 in the Model and caches them so that subsequent discovery will 
@@ -420,8 +398,6 @@ simple usecase:
 class Profile(Model):
     name = String("John Bull")
 
-profile = Profile(key = "JohnBull", name = "JohnBull")
-profile.put()
 
 """
 class Model(object):
@@ -429,28 +405,40 @@ class Model(object):
     
     def __init__(self, **kwds ):
         """Initializes properties in this Model from @kwds"""
-        for name, value in kwds.items():
-            setattr(self, name, value)
+        self.differ = Differ(self)
+        for name in self.fields():
+            if name in kwds:
+                setattr(self, name, kwds[name])
                 
     def key(self):
         """Unique Key for this Model"""
         namespace, key = KindMap.get(self)
-        if hasattr(self, key):
+        if hasattr(self, key) and namespace and key:
             value = getattr(self, key)
             kind = self.__class__.__name__
             if value is not None:
                 return Key(namespace, kind, value)
-            else: raise BadKeyError("The value for %s is None" % key)
-        else: 
-            raise BadKeyError("Incomplete Key for %s " % self)
+            raise BadKeyError("The value for %s is None" % key)
+        raise BadKeyError("Incomplete Key for %s " % self)
             
     def __setattr__(self, name, value):
-        """Simply verifies that @name is declared property"""
-        if name not in self.fields():
-            raise UnDeclaredPropertyError("Attribute %s was not \
-                declared or inherited in this Model" % name)
+        """Models track the modification of its values"""
+        previous = getattr(self, name, None)
         super(Model, self).__setattr__(name, value)
-        
+        found = getattr(self, name, None)
+        if previous and previous is not found: # Track objects that were just added and delete previous ones
+            try:
+                self.differ.put(found)
+                self.differ.delete(previous)
+            except (DiffError, KeyError) as e: 
+                log.warning("Error: %s occurred when adding: %s" % (e, value))
+    
+    def __delattr__(self, name):
+        """Simply removes the deleted object from @differ"""
+        previous = getattr(self, name, None)
+        super(Model, self).__delattr__(name)
+        self.differ.delete(previous)
+          
     @classmethod     
     def put(cls, cache = False, timeToLive = -1):
         """'Put' this Model into the data store,
@@ -478,152 +466,4 @@ class Model(object):
         return self.__fields__
 
 
-"""
-View:
-Base class of all objects that know how to track changes
-"""
-class View(object):
-    """Base class for all views"""
-    tracking = False
-    
-    def track(self, object):
-        raise NotImplementedError("Use a concrete subclass of View")
-        
-    @context
-    def block(self):
-        """Block tracking while you execute this context"""
-        tracking = False
-        yield
-        tracking = True
-
-"""
-ModelView:
-A ThreadSafe way to track changes to Models; 
-The differences between NormalView and ModelView are:
-
-1. ModelView tracks only instances of Model.
-2. ModelView loops through Properties in a Model and tracks them too. unless if
-   the Property stores a Model of course.
-3. ModelView yields all the Views for the properties in the Model it tracks 
-   through the ModelView.view() method.
-   
-"""   
-class ModelView(View):
-    """A ThreadSafe way to track changes to Model objects"""
-    
-    def __init__(self, model):
-        """inits lock object and modification sets"""
-        if isinstance(Model, Model):
-            raise TypeError("Expected: a instance of Model, Got: %s" % Model)
-            
-        self.lock = Lock()
-        self.model = model
-        self.changedSet, self.delSet = set(), set()
-        self.tracking = True
-        self.track()
-    
-    def view(self):
-        """Returns a dict containing attributes of this self.Model and their views"""
-        pass
-        
-    def deleted(self):
-        '''Returns a set of all the attributes that have been deleted'''
-        return copy.deepcopy(self.delSet)
-        
-    def modified(self):
-        '''Returns a set of the attributes that have changed'''
-        return copy.deepcopy(self.changedSet)
-    
-    def flush(self):
-        """Empty all tracking information and start afresh;
-        
-           This will useful if a Model is reloaded from the 
-           datastore or when it is saved. basically it resets
-           self.originals
-        """
-        pass
-        
-    def track(self):
-        '''Track changes on self.Model and its attributes'''
-        if self.tracking:
-            return 
-            
-        log.info("Tracking Model: %s for changes" % object)
-        SET = getattr(self.model, "__setattr__")
-        DEL = getattr(self.model, "__delattr__")
-        
-        def __set__(instance, name, value):
-            """Tracks changes on attribute during assignment."""
-            if self.tracking:
-                log.info("Tracking changes on: %s" % self.Model )
-                previous = getattr(instance, name, None)
-                try:
-                    SET(instance, name, value)
-                    if previous is not getattr(instance, name):
-                        with self.lock:
-                            self.changedSet.add(name)
-                            self.delSet.remove(name)  
-                except error: 
-                    raise errror      
-            else:
-                log.info("Stopped tracking changes on: %s" % self.Model)
-                SET(instance, name, value)
-                
-        def __delete__(instance, name):
-            """Tracks changes when deletion occurs"""
-            if self.tracking:
-                try:
-                    log.info("Tracking ON...")
-                    DEL(instance, name)
-                    if not hasattr(instance, name):
-                        with self.lock:
-                            self.changedSet.remove(name)
-                            self.delSet.add(name)         
-                except error:
-                    raise error
-            else:
-                log.info("Tracking OFF...")
-                DEL(instance, name)
-                   
-        update(__set__, SET), update(__delete__, DEL)
-        log.info("Started monitoring Model: %s" % self.model)
-        setattr(self.model,"__setattr__", __set__)
-        setattr(self.model,"__delattr__", __delete__)
-
-
-class ListView(View):
-    """A view that tracks lists"""
-    pass
-
-class SetView(View):
-    """A view that tracks sets"""
-    pass
-    
-class HashView(View):
-    """A view that tracks mappings"""
-    pass
-
-class NormalView(View):
-    """Tracks normal objects"""
-    pass
-    
-"""
-Views:
-A factory for creating view
-
-"""
-class Views(object):
-
-    @classmethod
-    def forModel(Model):
-        """Install a view for this Model"""
-        pass
-        
-    @classmethod
-    def getView(Model):
-        """Returns the view for this Model"""
-        pass
-                       
-        
-        
 

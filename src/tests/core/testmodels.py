@@ -61,18 +61,6 @@ class TestKeyAndModel(TestCase):
         for name, value in person.fields().items():
             print name, str(value)
 
-    def testModelsDoesNotAllowExpansion(self):
-        """Shows that Model does not allow expansion"""
-        @key("name")
-        class Person(Model):
-            name = "Iroiso"
-            birthdate = "Aug 5th 1990"
-        
-        person = Person()
-        with self.assertRaises(UnDeclaredPropertyError):
-            person.girlfriend = "Natasha"
-               
-
 """#.. Tests for homer.core.models.Type"""
 class TestType(TestCase):
     """Sanity Checks for Type"""

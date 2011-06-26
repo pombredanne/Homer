@@ -1,37 +1,73 @@
+#
+# Author : Iroiso . I 
+# Copyright 2011
+# License: Apache License 2.0
+# Module: Utility functions and classes.
+# File Description: Utility functions for the SDK.
+
+# Copyright 2011 June Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+from numbers import Number
+from datetime import datetime, date, time
+from collections import Sequence, Set, Mapping
+
 """
-Author : Iroiso . I (iroiso@live.com)
-Copyright 2011
-License: Apache License 2.0
-Module: Utility functions and classes.
-File Description: Utility functions for the SDK.
+Schema:
+The Homer SDK classifies objects into three classes which are 
+similar to the W3C XMLSchema (http://www.w3.org/2001/XMLSchema)
+with a few minor differences. 
+
+Simple = DateTime, Date, Time, String, and Numbers
 
 """
 class Schema(object):
-    """Provides static methods that can be used to test if objects conform to Schema types"""
+    """Provides static methods for XMLSchema type checking"""
+    simples = (Number, basestring, datetime, date, time, bool)
+    sets, sequences, mappings = (Set , ), (Sequence, ), (Mapping, )
     
-    @staticmethod
-    def isSimple(object):
+    @classmethod
+    def isSimple(cls, object):
         """Is @object a simple type"""
-        pass
+        return isinstance(object, cls.simples)
         
-    @staticmethod
-    def isComplex(object):
+    @classmethod
+    def isComplex(cls, object):
         """Is @object a complex type ?"""
-        pass
+        if cls.isSimple(object) or cls.isSequence(object):
+            return False
+        elif cls.isMapping(object) or cls.isSet(object):
+            return False
+        else:
+            return True
     
-    @staticmethod
-    def isSequence(object):
+    @classmethod
+    def isSequence(cls, object):
         """Is @object a sequence type ?"""
-        pass
+        if cls.isSimple(object):
+            return False
+        return isinstance(object, cls.sequences)
     
-    @staticmethod
-    def isMapping(object):
+    @classmethod
+    def isMapping(cls, object):
         """Is @object a mapping ? e.g. dict """
-        pass
+        return isinstance(object, cls.mappings)
     
-    def isSet(object):
+    @classmethod
+    def isSet(cls, object):
         """Is @object a set of any kind ? """
-        pass
+        return isinstance(object, cls.sets)
     
 """
 Size:
