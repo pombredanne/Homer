@@ -36,28 +36,32 @@ class DiffError(Exception):
 class Differ(object):
     """A class that knows how to calculate changes in an object"""
     
-    def __init__(self, model):
+    def __init__(self, model, exclude):
         '''Inserts all the objects in @args to this differ'''
+        self.excluded = exclude
         self.replica = copy.deepcopy(model)
         self.model = model
               
     def added(self):
         '''Yields the names of the attributes that were recently added to this model'''
+        # I used getattr(), because properties will return their default values or None by default
         dict = self.model.__dict__
         for name in dict:
-            if not hasattr(self.replica, name):
-                yield name
+            if not getattr(self.replica, name, None):
+                if name not in self.excluded:
+                    yield name
             
     def commit(self):
         '''Make the current state the default state for this Differ'''
         self.replica = copy.deepcopy(self.model)
-        
+   
     def deleted(self):
         '''Yields the names of the attributes that were deleted from this model'''
         dict = self.replica.__dict__
         for name in dict:
             if not hasattr(self.model, name):
-                yield name
+                if name not in self.excluded:
+                    yield name
     
     def modified(self):
         '''Return all the attributes that were modified in any way in this model'''
@@ -65,7 +69,8 @@ class Differ(object):
         for name in dict:
             if hasattr(self.model, name):
                 if dict[name] != getattr(self.model, name):
-                    yield name
+                    if name not in self.excluded:
+                        yield name
         
 
    

@@ -122,34 +122,30 @@ This is an impl detail that may go away in subsequent releases.
 """
 class KindMap(object):
     """Maps classes to attributes which will store their keys"""
-    lock, keyMap, typeMap = Lock(), {}, {}
+    keyMap, typeMap = {}, {}
    
     @classmethod
     def put(cls, namespace, kind, key ):
-        """Thread safe class that maps kind to key and namespace"""
-        with cls.lock: 
-            assert isinstance(kind, type), "Kind has to be a\
-                class; Got: %s instead" % kind
-            name = kind.__name__
-            cls.keyMap[name] = namespace, key
-            cls.typeMap[name] = kind
+        """Thread safe class that maps kind to key and namespace""" 
+        assert isinstance(kind, type), "Kind has to be a class; Got: %s instead" % kind
+        name = kind.__name__
+        cls.keyMap[name] = namespace, key
+        cls.typeMap[name] = kind
     
     @classmethod
     def get(cls, kind):
         """Returns a tuple (namespace, key) for this kind """
-        with cls.lock:
-            name = kind.__class__.__name__
-            if name in cls.keyMap:
-                return cls.keyMap.get(name)
-            else:
-                raise BadModelError("Class %s is was \
-                    not decorated with @key" % kind)
-    
+        name = kind.__class__.__name__
+        if name in cls.keyMap:
+            return cls.keyMap.get(name)
+        else:
+            raise BadModelError("Class %s is was not decorated with @key" % kind)
+            
+        
     @classmethod
     def classForKind(cls, name):
         """Returns the class object for this name"""
-        with cls.lock:
-            return cls.typeMap.get(name, None)
+        return cls.typeMap.get(name, None)
 
 """
 Key:
@@ -414,7 +410,7 @@ class Model(object):
     
     def __init__(self, **kwds ):
         """Initializes properties in this Model from @kwds"""
-        self.differ = Differ(self)
+        self.differ = Differ(self, exclude = ['differ',])
         for name in self.fields():
             if name in kwds:
                 setattr(self, name, kwds[name])
@@ -423,7 +419,7 @@ class Model(object):
     def key(self):
         """Unique Key for this Model"""
         namespace, key = KindMap.get(self)
-        if hasattr(self, key) and namespace and key:
+        if hasattr(self, key):
             value = getattr(self, key)
             kind = self.__class__.__name__
             if value is not None:
@@ -435,7 +431,12 @@ class Model(object):
     def put(cls, cache = False, timeToLive = -1):
         """Store this model into the datastore"""
         pass
-       
+    
+    
+    def kind(self):
+        '''self.kind() is a shortcut for finding the name of a models class'''
+        return self.__class__.__name__
+          
     @classmethod
     def get(cls, *keys):
         """Try to retrieve an instance of this Model from the datastore"""
@@ -456,7 +457,7 @@ class Model(object):
         return self.__fields__  
     
     def __str__(self):
-        format = "{self.kind()}: {self.key()}".format(self = self)
+        format = "Model: %s" % (self.kind(),)
         return format
         
     def __unicode__(self):

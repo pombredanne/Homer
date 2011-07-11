@@ -10,22 +10,30 @@ Unittests for the Differ Module...
 """
 from unittest import TestCase
 from homer.core.differ import Differ
+from homer.core.models import Model, key
+from homer.core.commons import Integer, Float, String
+
 
 class TestDiffer(TestCase):
-    
-    def testDictDiff(self):
-        """Verifies that diff() works for Mappings"""
-        pass
-    
-    def testSequenceDiff(self):
-        """Verifies that diff() works for sequences"""
-        pass
-        
-    def testSetDiff(self):
-        """Verifies that diff() works for sets"""
-        pass
-    
-    def testObjectDiff(self):
-        """Verifies that diff works for objects"""
-        pass
+    '''Basic tests for the current differ implementation'''
+    def testSanity(self):
+        '''Sanity tests for differ'''
+        class Simple(Model):
+            pi = Float()
+            name = String()
+            instances = Integer()
+            
+        simple = Simple(pi = 3.142, name = "Hello", instances = 500)
+        del simple.name
+        self.assertEquals(list(simple.differ.deleted()), ["name",])
+        simple.instances = 20
+        self.assertEquals(list(simple.differ.modified()), ["instances",])
+        simple.stuff = ["Some stuff here".split()]
+        self.assertEquals(list(simple.differ.added()), ["stuff",])
+        simple.differ.commit()
+        simple.name = "Another-name"
+        simple.stuff.append("Some-more")
+        self.assertEquals(list(simple.differ.added()), ["name",])
+        self.assertEquals(list(simple.differ.modified()), ["stuff",])
+            
     
