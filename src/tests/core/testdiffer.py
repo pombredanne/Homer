@@ -35,5 +35,18 @@ class TestDiffer(TestCase):
         simple.stuff.append("Some-more")
         self.assertEquals(list(simple.differ.added()), ["name",])
         self.assertEquals(list(simple.differ.modified()), ["stuff",])
+    
+    def testRevert(self):
+        '''Tests differ.revert()'''
+        class Simple(Model):
+            pi = Float()
+            name = String()
+            instances = Integer()
+        simple = Simple(pi = 3.142, name = "Hello", instances = 500)
+        del simple.pi; del simple.name; del simple.instances
+        simple.differ.revert()
+        self.assertEquals(simple.pi, 3.142); self.assertEquals(simple.name, "Hello"); self.assertEquals(simple.instances, 500)
+        
+        
             
     

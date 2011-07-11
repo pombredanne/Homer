@@ -55,6 +55,20 @@ class Differ(object):
         '''Make the current state the default state for this Differ'''
         self.replica = copy.deepcopy(self.model)
    
+    def revert(self):
+        '''Reverts @self.model to the previous commit state'''
+        #This method will be used to implement a rollback feature for Models
+        clean = self.replica.__dict__
+        dirty = self.model.__dict__
+        dispose = [v for v in dirty if v not in clean]
+        for name in clean:
+            setattr(self.model, name, clean[name]) #Revert all known objects.
+                
+        for name in dispose: # Delete all new attributes
+            delattr(self.model, name)
+            
+                
+        
     def deleted(self):
         '''Yields the names of the attributes that were deleted from this model'''
         dict = self.replica.__dict__

@@ -421,17 +421,21 @@ class Model(object):
         namespace, key = KindMap.get(self)
         if hasattr(self, key):
             value = getattr(self, key)
-            kind = self.__class__.__name__
             if value is not None:
-                return Key(namespace, kind, value)
+                return Key(namespace, self.kind(), value)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
     
+    def rollback(self):
+        '''Reverts this Model to the previous commit state, if this model has not
+           been saved it will revert the model to it state after construction
+        '''
+        self.differ.revert()
+        
     @classmethod     
     def put(cls, cache = False, timeToLive = -1):
         """Store this model into the datastore"""
         pass
-    
     
     def kind(self):
         '''self.kind() is a shortcut for finding the name of a models class'''
