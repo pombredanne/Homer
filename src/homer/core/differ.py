@@ -15,7 +15,16 @@
 # limitations under the License.
 #
 import copy
-from homer.util import Schema
+from threading import Lock
+"""
+---------------------------------------------------------------------
+Differ:
+The differ module contains utilities that helps homer to diff objects
+and retrieve properties that have changed. This is helpful because it
+reduces the payload of thrift/redis protocol requests.
+----------------------------------------------------------------------
+"""
+
 """
 DiffError:
 Represents any exception that gets thrown during diffing
@@ -23,69 +32,44 @@ Represents any exception that gets thrown during diffing
 class DiffError(Exception):
     pass
     
-"""
-Differ:
-Differ contains methods that allow you to find differences
-between two container objects.
-usecase:
 
-differ = Differ()
-names = ['a', 'b', 'c', 'd']
-differ.insert(names)
-del names[0:2]
-result = differ.diff(names)
-print result 
-=> {'added': None, 'deleted' : ['a', 'b'], 'modified' : None}
-
-"""
 class Differ(object):
-    """Base class for all views"""
+    """A class that knows how to calculate changes in an object"""
     
-    def __init__(self, *arguments):
+    def __init__(self, model):
         '''Inserts all the objects in @args to this differ'''
-        self.copies = {}
-        map(self.put, arguments)
+        self.replica = copy.deepcopy(model)
+        self.model = model
+              
+    def added(self):
+        '''Yields the names of the attributes that were recently added to this model'''
+        dict = self.model.__dict__
+        for name in dict:
+            if not hasattr(self.replica, name):
+                yield name
             
-    def put(self, object):
-        """introduce an object to the differ"""
-        if Schema.isSimple(object): 
-            raise DiffError("Differ does not diff simple types")
-        replica = copy.deepcopy(object)
-        self.copies[id(object)] = replica
+    def commit(self):
+        '''Make the current state the default state for this Differ'''
+        self.replica = copy.deepcopy(self.model)
+        
+    def deleted(self):
+        '''Yields the names of the attributes that were deleted from this model'''
+        dict = self.replica.__dict__
+        for name in dict:
+            if not hasattr(self.model, name):
+                yield name
     
-    def delete(self, object):
-        """Removes an object from this Differ"""
-        del self.copies[id(object)]
-         
-    def diff(self, object):
-        """Calculate diff for this object."""
-        if id(object) not in self.copies:
-            raise DiffError("This object was not found in this Differ")
-        # I select a diff function based on the Schema of the object.
-        old = self.copies[id(object)] # Fetch the old copy first
-        if Schema.isMapping(object):
-            return diffDict(old, object) 
-        elif Schema.isSequence(object):
-            return diffList(old, object)   
-        elif Schema.isSet(object):
-            return diffSet(old, object)
-        else:
-            raise DiffError("Cannot diff object: %s " % object)
+    def modified(self):
+        '''Return all the attributes that were modified in any way in this model'''
+        dict = self.replica.__dict__
+        for name in dict:
+            if hasattr(self.model, name):
+                if dict[name] != getattr(self.model, name):
+                    yield name
+        
+
+   
     
-    def clear(self):
-        """Remove all object from this Differ, clearing its state"""
-        self.copies.clear()
-          
-
-
-def diffDict(old, new):
-    """Diffs two dict like objects"""
-    pass
-
-def diffSet(old, new):
-    """Diff two sets"""
-    pass
-
-def diffList(old, new):
-    """Diff two List like objects"""
-    pass
+    
+    
+    

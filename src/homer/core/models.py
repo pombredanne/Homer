@@ -33,6 +33,7 @@ from homer.util import Validation
 from homer.core.options import options
 from homer.core.differ import Differ, DiffError
 
+
 __all__ = ["Model", "key", ]
 
 """Module Variables """
@@ -391,13 +392,21 @@ class __Model__(type):
         
 """
 Model: 
-The Universal Unit of Persistence.
+The Universal Unit of Persistence, a model is always 
+aware of the changes you make to it; ergo models only
+persist changes you make to it; thereby saving bandw-
+idth.
 simple usecase:
 
 @key("name")
 class Profile(Model):
-    name = String("John Bull")
+    name = String(default = "John Bull")
 
+profile = Profile(name = "Jane Doe")
+profile.put() #save to datastore
+
+found = Profile.get("Jane Doe") #Retrieval
+assert profile == found
 
 """
 class Model(object):
@@ -409,6 +418,7 @@ class Model(object):
         for name in self.fields():
             if name in kwds:
                 setattr(self, name, kwds[name])
+        self.differ.commit() #commit the state of this differ.
                 
     def key(self):
         """Unique Key for this Model"""
@@ -420,50 +430,37 @@ class Model(object):
                 return Key(namespace, kind, value)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
-            
-    def __setattr__(self, name, value):
-        """Models track the modification of its values"""
-        previous = getattr(self, name, None)
-        super(Model, self).__setattr__(name, value)
-        found = getattr(self, name, None)
-        if previous and previous is not found: # Track objects that were just added and delete previous ones
-            try:
-                self.differ.put(found)
-                self.differ.delete(previous)
-            except (DiffError, KeyError) as e: 
-                log.warning("Error: %s occurred when adding: %s" % (e, value))
     
-    def __delattr__(self, name):
-        """Simply removes the deleted object from @differ"""
-        previous = getattr(self, name, None)
-        super(Model, self).__delattr__(name)
-        self.differ.delete(previous)
-          
     @classmethod     
     def put(cls, cache = False, timeToLive = -1):
-        """'Put' this Model into the data store,
-           
-           @cache: if True a copy will be put in the Cache
-           for faster retreival.
-           
-           @timeToLive: Sets how long you want the data to
-           last in data store or cache.
-        """
+        """Store this model into the datastore"""
         pass
        
     @classmethod
-    def get(cls, keys, cache = True):
+    def get(cls, *keys):
         """Try to retrieve an instance of this Model from the datastore"""
         pass
     
     @classmethod
-    def delete(cls, keys, cache = True):
+    def all(cls):
+        """Yields all the instances of this model in the datastore"""
+        pass
+        
+    @classmethod
+    def delete(cls, *keys ):
         """Deletes all the entities whose key is in @keys """
         pass
         
     def fields(self):
         """Returns a dictionary of all known properties in this object"""
-        return self.__fields__
-
-
+        return self.__fields__  
+    
+    def __str__(self):
+        format = "{self.kind()}: {self.key()}".format(self = self)
+        return format
+        
+    def __unicode__(self):
+        """Unicode representation of this model"""
+        return u'%s' % self.__str__()
+              
 
