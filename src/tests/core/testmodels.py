@@ -39,6 +39,17 @@ class TestKeyAndModel(TestCase):
             class House(object):
                 name = Property("House M.D")
     
+    def testkeyAcceptsCallables(self):
+        """Asserts that @key can accept a callable function"""
+        @key("name")
+        class House(Model):
+            '''A key whose name is function'''
+            number = Property()
+            def name(self):
+                return "House: %s" % self.number
+        house = House(number = 50)
+        self.assertEquals(house.key().key, "House: 50")
+        
     def testkeyChecksifKeyAttributeExists(self):
         """Asserts that the attribute passed in to @key must exist in the class"""
         with self.assertRaises(Exception):

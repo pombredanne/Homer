@@ -32,6 +32,7 @@ from contextlib import contextmanager as context
 from homer.util import Validation
 from homer.core.options import options
 from homer.core.differ import Differ, DiffError
+from db import Simpson, CqlQuery #Simpson is current implementation of NORM
 
 
 __all__ = ["Model", "key", ]
@@ -39,6 +40,8 @@ __all__ = ["Model", "key", ]
 """Module Variables """
 log = options.logger("homer.core.models")
 READWRITE, READONLY = 1, 2
+Limit = 500
+CachePeriod = 24 * 3600 * 30 #Normally objects will last in the cache for 30 days
 
 
 """Exceptions """
@@ -55,7 +58,7 @@ class BadModelError(Exception):
     pass
     
 class UnDeclaredPropertyError(Exception):
-    """An exception that is thrown if you try to set an attribute that in declared in a Model"""
+    """An exception that is thrown if you try to set an attribute that is not declared in a Model"""
     pass
         
 """
@@ -82,43 +85,12 @@ def key(name, namespace = "June"):
         else:
             raise TypeError("You must pass in a subclass of  Model not: %s" % cls)
     return inner
+    
 
 """
-@cache:
-This decorator is used to Signal that the decorated Model should only be
-put in Redis only. i.e. This Model should not be put in Cassandra at all
-
-@cache
-@key("link")
-class Profile(Model):
-    link = URL("http://twitter.com")
-"""
-def cache(timeToLive = -1):
-    """Mark this Model as one that you cache"""
-    def inner(cls):
-        pass
-    return inner
-
-"""
-StoragePolicy:
-This is class that affects how storage is actually done for a Model
-i.e.
-if cache and db is true instances will be put in Redis and Cassandra.
-if cache is true and db is False instances will be put in only Redis, 
-if db is True and cache is false instances will be put in only Cass-
-andra; the timeToLive attribute directly affects the expiry times of
-the object in Redis and Cassandra. Every model has a storage policy.
-
-[Future additions to StoragePolicy may include ConsistencyLevel]
-"""
-class StoragePolicy(object):
-    """An object that dictates how an object should be stored"""
-    cache, db, timetoLive = True, True, -1
-
-"""
-KindMap(implementation detail):
-A class that maps classes to their key attributes in a thread safe manner; 
-This is an impl detail that may go away in subsequent releases.
+KindMap:
+A class that maps classes to their key names and maps classes
+to their kinds; 
 """
 class KindMap(object):
     """Maps classes to attributes which will store their keys"""
@@ -417,12 +389,13 @@ class Model(object):
         self.differ.commit() #commit the state of this differ.
                 
     def key(self):
-        """Unique Key for this Model"""
+        """Unique Key for this Model, this will throw a BadKeyError"""
         namespace, key = KindMap.get(self)
         if hasattr(self, key):
             value = getattr(self, key)
             if value is not None:
-                return Key(namespace, self.kind(), value)
+                key = value() if callable(value) else value
+                return Key(namespace, self.kind(), key)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
     
@@ -431,30 +404,53 @@ class Model(object):
            been saved it will revert the model to it state after construction
         '''
         self.differ.revert()
-        
-    @classmethod     
-    def put(cls, cache = False, timeToLive = -1):
-        """Store this model into the datastore"""
-        pass
     
+    def hasKey(self):
+        '''Used for premptively checking if a Model has a complete key'''
+        try:
+            if self.key().complete():
+                return True
+            else:
+                return False
+        except BadKeyError:
+            return False
+        
+    @classmethod
     def kind(self):
         '''self.kind() is a shortcut for finding the name of a models class'''
         return self.__class__.__name__
-          
+       
+    def put(self, cache = True, cacheExpiry = CachePeriod):
+        """Store this model into the datastore, throws a BadKeyError if this
+           model doesn't have a valid key
+        """
+        try:
+            if self.hasKey():
+                Simpson.Put(self, **kwds)
+                self.differ.commit()
+                return True    
+        except:
+            return False
+            
     @classmethod
-    def get(cls, *keys):
+    def get(cls, cache = True, *keys ):
         """Try to retrieve an instance of this Model from the datastore"""
-        pass
+        return Simpson.Get(cache, *keys)
     
     @classmethod
-    def all(cls):
-        """Yields all the instances of this model in the datastore"""
-        pass
+    def delete(cls, cache = True, *keys):
+        """Deletes this Model from the datastore"""
+        return Simpson.Delete(cache, *keys)
+       
+    @classmethod
+    def cql(cls, query, *args, **kwds):
+        """Interface to Cql from your model, which yields models"""
+        return CqlQuery('SELECT * FROM %s %s' % (cls.kind(), query), *args, **kwds)
         
     @classmethod
-    def delete(cls, *keys ):
-        """Deletes all the entities whose key is in @keys """
-        pass
+    def all(cls, limit = Limit):
+        """Yields all the instances of this model in the datastore"""
+        return CqlQuery('SELECT * FROM %s LIMIT=%s' % (cls.kind(), limit))
         
     def fields(self):
         """Returns a dictionary of all known properties in this object"""
