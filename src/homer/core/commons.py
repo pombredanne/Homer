@@ -203,27 +203,87 @@ class Set(Property):
             return coerced        
         else: # Do normal type coercion, third party devs should make sure their Descriptors are callable
             for i in value: 
-                    try:
-                        if isinstance(i, list): i = self.cls(*i)
-                        elif isinstance(i, dict): i = self.cls(**i)
-                        else: i = self.cls(i)
-                        coerced.add(i)
-                    except: 
-                        raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls))  
+                if isinstance(i, self.cls):
+                    coerced.append(i)
+                    continue
+                try:
+                    if isinstance(i, list): i = self.cls(*i)
+                    elif isinstance(i, dict): i = self.cls(**i)
+                    else: i = self.cls(i)
+                    coerced.append(i)       
+                except: 
+                    raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls)) 
             return coerced
         raise BadValueError("Validation could not complete successfully, Please contact the mailing\
                              list or file a bug report, Thanks.")    
-                 
+
+"""
+List:
+A descriptor that stores homogeneous lists, it works like the Set descriptor except
+that Lists can accept duplicates. by default it is an empty list.
+sample.
+
+class Person(object):
+    name = String()
+    harem = List(Women)
+
+person = Person()
+person.harem.extend(["Aisha","Halima","Safia",])
+
+"""
+class List(Property):
+    """Stores a List of objects,You can specify the type of the objects this list contains"""
+    def __init__(self,cls = object, default = [], **arguments ):    
+        if not isinstance(cls, type):
+            raise ValueError("@cls must be a type")
+        self.cls = cls
+        super(List, self).__init__(default, **arguments)
+    
+    def validate(self,value):
+        """Validates a list and all its contents"""
+        value = super(List,self).validate(value)
+        if not isinstance(value, list):
+            try: value = list(value)
+            except:
+                raise BadValueError("This property has to be set, got a : %s" % type(value))
+        coerced = []
+        # Coercion is all or nothing. if any fails the entire operation fails
+        name = self.cls.__name__
+        if name in __defaults__: # Check if cls is a common descriptor.
+            validate = __defaults__[name] # Retrieve a singleton to deal with this.
+            for i in value:  # Normally Common descriptors take care of 'Nones'
+                coerced.append(validate(i))
+            return coerced        
+        else: # Do normal type coercion, third party devs should make sure their Descriptors are callable
+            for i in value: 
+                if isinstance(i, self.cls):
+                    coerced.append(i)
+                    continue
+                try:
+                    if isinstance(i, list): i = self.cls(*i)
+                    elif isinstance(i, dict): i = self.cls(**i)
+                    else: i = self.cls(i)
+                    coerced.append(i)   
+                except: 
+                    raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls))        
+            return coerced
+        raise BadValueError("Validation could not complete successfully, Please contact the mailing\
+                             list or file a bug report, Thanks.")
+                          
 """
 Map:
 A descriptor for dict-like objects;
 
 class Person(object):
-    favURLs = HashMap(type = (String, URL))
+    bookmarks = HashMap(String, URL)
 """
-class Map(Type):
-    type = dict
-    
+class Map(Property):
+    def __init__(self, key=object, value=object, default = {}, **arguments):
+        if not isinstance(key, type) and isinstance(value, type):
+            raise ValueError("@key and @value must be classes")
+        pass
+
+
 """
 Boolean:
 A descriptor that coerces any value set to it to a boolean. it behaves like 
@@ -243,38 +303,7 @@ class Boolean(Type):
     """Stores Boolean values, It coerces values like normal python bools"""
     type = bool
 
-"""
-List:
-A descriptor that stores homogeneous lists, it works like the Set descriptor except
-that Lists can accept duplicates. by default it is an empty list.
-sample.
 
-class Person(object):
-    name = String()
-    harem = List(Women)
-
-person = Person()
-person.harem.extend(["Aisha","Halima","Safia",])
-
-"""
-class List(Type):
-    """Stores a List of objects,You can specify the type of the objects this list contains"""
-    def __init__(self,itemCls = object, default = [], **arguments ):    
-        self.itemCls = itemCls
-        super(List,self).__init__(type = list,default = default,**arguments)
-    
-    def validate(self,value):
-        """Validates a list and all its contents"""
-        # I do not use super class validation here. because it would coerce
-        if not isinstance(value,list):
-            raise BadValueError("This property has to be a set, got a : %s" % 
-                type(value))
-        
-        for i in value:
-            if not isinstance(i,self.itemCls):
-                raise BadValueError("All the items in %s must be %s instances"
-                    %(self.name,self.itemCls.__name__))
-        return value
         
 """
 URL:
