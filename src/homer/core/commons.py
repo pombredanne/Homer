@@ -189,6 +189,9 @@ class Set(Property):
     def validate(self,value):
         """Validates the type you are setting and its contents"""
         value = super(Set,self).validate(value)
+        if value is None:
+            return None
+            
         if not isinstance(value, set):
             try: value = set(value)
             except:
@@ -242,6 +245,8 @@ class List(Property):
     def validate(self,value):
         """Validates a list and all its contents"""
         value = super(List,self).validate(value)
+        if value is None:
+            return None
         if not isinstance(value, list):
             try: value = list(value)
             except:
@@ -275,13 +280,23 @@ Map:
 A descriptor for dict-like objects;
 
 class Person(object):
-    bookmarks = HashMap(String, URL)
+    bookmarks = Map(String, URL)
 """
 class Map(Property):
+    ''' A descriptor for dict-like objects '''
     def __init__(self, key=object, value=object, default = {}, **arguments):
         if not isinstance(key, type) and isinstance(value, type):
             raise ValueError("@key and @value must be classes")
+        self.key, self.value = key, value
+        super(Map, self).__init__(default, **arguments)
+    
+    def validate(self, value):
+        '''Simply does type checking'''
+        value = super(Map, self).validate(value)
         pass
+    
+    
+    
 
 
 """

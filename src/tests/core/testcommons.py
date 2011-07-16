@@ -176,6 +176,9 @@ class TestList(TestCase):
         self.test.birthdays = sample
         self.assertEqual(self.test.birthdays, sample)
     
+    def testListHandlesNones(self):
+        '''List should throw an error for Nones'''
+        self.test.birthdays = None
     @expectedFailure
     def testListTypeChecking(self):
         """This test should fail. It verifies that List type checking works"""
