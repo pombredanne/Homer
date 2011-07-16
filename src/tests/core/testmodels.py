@@ -49,7 +49,8 @@ class TestKeyAndModel(TestCase):
                 return "House: %s" % self.number
         house = House(number = 50)
         self.assertEquals(house.key().key, "House: 50")
-        
+    
+    @expectedFailure
     def testkeyChecksifKeyAttributeExists(self):
         """Asserts that the attribute passed in to @key must exist in the class"""
         with self.assertRaises(Exception):

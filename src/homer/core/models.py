@@ -32,7 +32,6 @@ from contextlib import contextmanager as context
 from homer.util import Validation
 from homer.core.options import options
 from homer.core.differ import Differ, DiffError
-from db import Simpson, CqlQuery #Simpson is current implementation of NORM
 
 
 __all__ = ["Model", "key", ]
@@ -65,7 +64,7 @@ class UnDeclaredPropertyError(Exception):
 @key:
 This decorator automatically configures your Model and creates
 a key entry for it within the SDK. If you pass in an object
-that is not a Model a BadKeyError is raised.
+that is not a Model a TypeError is raised.
 
 @key("link", namespace = "June")
 class Profile(Model):
@@ -77,11 +76,8 @@ def key(name, namespace = "June"):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
-            if hasattr(cls, name):
-                KindMap.put(namespace, cls, name)
-                return cls
-            else:
-                raise BadKeyError("There is no attribute with this name in %s" % cls)
+             KindMap.put(namespace, cls, name)
+             return cls
         else:
             raise TypeError("You must pass in a subclass of  Model not: %s" % cls)
     return inner
@@ -218,11 +214,17 @@ class Property(object):
         if self.name is None : self.name = Property.search(instance,self)
         if self.name is not None:
             instance.__dict__[self.name] = value
-            self.value = value
             self.deleted = False
         else:
             raise AttributeError("Cannot find %s in  %s " % (self,instance))
-
+    
+    #   For nested objects like lists and dicts, it is quite difficult to verify
+    # on each insert, so calling getForStorage should perform this before storage.      
+    def finalize(self, instance):
+        '''This method is called to do final verification before a property is stored'''
+        value = self.validate(getattr(instance, self.name)) # Validate values.
+        return value
+        
     def __get__(self, instance, owner):
         """Read the value of this property"""
         if self.name is None : self.name = Property.search(instance,self)
@@ -253,7 +255,6 @@ class Property(object):
         if self.name is not None:
             try:
                 del instance.__dict__[self.name]
-                del self.value
                 self.deleted = True
             except (AttributeError,KeyError) as error: raise error
         else:
@@ -298,7 +299,7 @@ class Property(object):
     
     def __str__(self):
         return "Property: {self.name}".format(self = self)
-   
+
 """
 Type:
 A Property that does type coercion, checking and validation. This is base
@@ -322,7 +323,11 @@ class Type(Property):
         """Sets self.type and move along"""
         self.type = type if self.type is None else self.type
         Property.__init__(self, default, mode, **keywords)
-            
+    
+    def __call__(self, value):
+        """A shortcut to self.validate(value)"""
+        return self.validate(value)
+              
     def validate(self, value):
         """Overrides Property.validate() to add type checking and coercion"""
         value = super(Type,self).validate(value)
@@ -337,27 +342,6 @@ class Type(Property):
                 raise BadValueError("Cannot coerce: %s to %s"% (value, self.type))
         return value
 
-"""
-__Model__:
-Called to create a new Model; It configures all the Properties 
-in the Model and caches them so that subsequent discovery will 
-be quick. 
-"""
-class __Model__(type):
-    def __init__(cls, name, bases, dict):
-        """ Initialize all the Properties in this Models Ancestral Hierachy"""
-        print "Configuring %s" % cls.__name__
-        fields = {}
-        for root in reversed(cls.__mro__):
-            for name, prop in root.__dict__.items():
-                if isinstance(prop, Property):
-                    prop.__configure__(name, cls)
-                    fields[name] = prop
-        cls.__fields__ = fields
-        super(__Model__, cls).__init__(name, bases, dict)
-        print "Finished configuring Model: %s " % cls.__name__
-        print "Model: %s, fields: %s" % (cls.__name__, str(fields))
-        
 """
 Model: 
 The Universal Unit of Persistence, a model is always 
@@ -378,7 +362,6 @@ assert profile == found
 
 """
 class Model(object):
-    __metaclass__ = __Model__
     
     def __init__(self, **kwds ):
         """Initializes properties in this Model from @kwds"""
@@ -419,28 +402,23 @@ class Model(object):
     def kind(self):
         '''self.kind() is a shortcut for finding the name of a models class'''
         return self.__class__.__name__
-       
+    
+    # TODO: Add self.differ.commit() after every successful put.  
     def put(self, cache = True, cacheExpiry = CachePeriod):
         """Store this model into the datastore, throws a BadKeyError if this
            model doesn't have a valid key
         """
-        try:
-            if self.hasKey():
-                Simpson.Put(self, **kwds)
-                self.differ.commit()
-                return True    
-        except:
-            return False
+        pass
             
     @classmethod
     def get(cls, cache = True, *keys ):
         """Try to retrieve an instance of this Model from the datastore"""
-        return Simpson.Get(cache, *keys)
+        pass
     
     @classmethod
     def delete(cls, cache = True, *keys):
         """Deletes this Model from the datastore"""
-        return Simpson.Delete(cache, *keys)
+        pass
        
     @classmethod
     def cql(cls, query, *args, **kwds):
@@ -453,9 +431,16 @@ class Model(object):
         return CqlQuery('SELECT * FROM %s LIMIT=%s' % (cls.kind(), limit))
         
     def fields(self):
-        """Returns a dictionary of all known properties in this object"""
-        return self.__fields__  
-    
+        """Searches class hierachy and returns all known properties for this object"""
+        # This call is quite expensive to make but it is the right way to do things.
+        cls = self.__class__
+        fields = {}
+        for root in reversed(cls.__mro__):
+            for name, prop in root.__dict__.items():
+                if isinstance(prop, Property):
+                    fields[name] = prop
+        return fields
+        
     def __str__(self):
         format = "Model: %s" % (self.kind(),)
         return format

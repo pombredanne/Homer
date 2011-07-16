@@ -12,13 +12,17 @@ import urlparse
 import datetime
 from contextlib import closing
 from homer.util import Size
-from homer.core.models import Type, BadValueError
+from homer.core.models import Type, BadValueError, Property
 
-
+# TODO: Add common types; Md5Hash, ShaHash, Email, Tuple
 __all__ = [
             "Integer","String","Blob","Set","Boolean","List","URL", "Time", "DateTime",
-            "Date","Float"
+            "Date","Float", "Map"
 ]
+
+       
+               
+               
 """
 Float:
 A data descriptor for modeling Floats in your 'things'. It coerces like the normal
@@ -173,28 +177,53 @@ class Person(object):
     spouses = Set(User)
 
 """
-class Set(Type):
+class Set(Property):
     """A data descriptor for storing sets"""
-    def __init__(self,itemCls = object,default = set(),**arguments):
+    def __init__(self, cls = object,default = set(),**arguments):
         """The type keyword here has a different meaning"""
-        if not isinstance(itemCls,type):
-            raise TypeError("You have to pass a valid type")
-            
-        self.itemCls = itemCls
-        super(Set,self).__init__(type = set,default = default,**arguments)
+        if not isinstance(cls, type):
+            raise ValueError("@cls must be a type")
+        self.cls = cls
+        super(Set, self).__init__(default, **arguments)
     
     def validate(self,value):
         """Validates the type you are setting and its contents"""
         value = super(Set,self).validate(value)
-        if not isinstance(value,set):
-            raise BadValueError("This property has to be set, got a : %s" % 
-                type(value))
-     
-        for i in value:
-            if not isinstance(i,self.itemCls):
-                raise BadValueError("All the items in %s must be %s instances"
-                    %(self.name,self.itemCls.__name__))
-        return value
+        if not isinstance(value, set):
+            try: value = set(value)
+            except:
+                raise BadValueError("This property has to be set, got a : %s" % type(value))
+        coerced = set()
+        # Coercion is all or nothing. if any fails the entire operation fails
+        name = self.cls.__name__
+        if name in __defaults__: # Check if cls is a common descriptor.
+            validate = __defaults__[name] # Retrieve a singleton to deal with this.
+            for i in value:  # Normally Common descriptors take care of 'Nones'
+                coerced.add(validate(i))
+            return coerced        
+        else: # Do normal type coercion, third party devs should make sure their Descriptors are callable
+            for i in value: 
+                    try:
+                        if isinstance(i, list): i = self.cls(*i)
+                        elif isinstance(i, dict): i = self.cls(**i)
+                        else: i = self.cls(i)
+                        coerced.add(i)
+                    except: 
+                        raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls))  
+            return coerced
+        raise BadValueError("Validation could not complete successfully, Please contact the mailing\
+                             list or file a bug report, Thanks.")    
+                 
+"""
+Map:
+A descriptor for dict-like objects;
+
+class Person(object):
+    favURLs = HashMap(type = (String, URL))
+"""
+class Map(Type):
+    type = dict
+    
 """
 Boolean:
 A descriptor that coerces any value set to it to a boolean. it behaves like 
@@ -333,4 +362,14 @@ class Date(DateTime):
         
     def now(self):
         return datetime.datetime.now().date()
+        
+# __names__ are useful for getting supported common types
+__names__ = {
+               "Integer": Integer, "String": String, "Blob": Blob,
+               "Set": Set, "Boolean": Boolean, "List": List, "URL": URL,
+               "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, "Map": Map
+}             
+
+# __defaults__ contains singletons for common types
+__defaults__ = { name : value() for name, value in __names__.items() }  
 

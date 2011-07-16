@@ -209,8 +209,8 @@ class TestSet(TestCase):
     """Tests for Set() descriptor"""
     def setUp(self):
         class Person(object):
-            spouses = Set(str, default = set(["amy","tiffy"]))
-            pets = Set(int)
+            spouses = Set(String, default = set(["amy","tiffy"]))
+            pets = Set(Float)
         self.test = Person()
     
     def testSetSanity(self):
@@ -219,12 +219,13 @@ class TestSet(TestCase):
         print self.test.pets
         self.assertEquals(self.test.spouses,set(["amy","tiffy"]))
         self.test.pets = set([1,2,3,])
-        self.assertEquals(self.test.pets, set([1,2,3,]))
+        print self.test.pets
+        self.assertEquals(self.test.pets, set([1.0, 2.0, 3.0,]))
         
     def testSetsAreHomogenous(self):
         """asserts that Sets contents are homogeneous and validated"""
         with self.assertRaises(Exception):
-            self.test.spouses = set([1,2,3,4,5])
+            self.test.pets = set(["Hello", "I should fail",])
                        
 class TestBlob(TestCase):
     """Tests for Blob() data descriptors"""
