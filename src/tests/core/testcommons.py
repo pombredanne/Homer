@@ -168,12 +168,15 @@ class TestList(TestCase):
     def setUp(self):
         class Family(object):
             birthdays = List(date)
+            nested = List(List)
         self.test = Family()
     
     def testListSanity(self):
         """Sanity checks for List()"""
         sample = [ date(1990,8,5) for i in range(10)]
         self.test.birthdays = sample
+        self.test.nested.extend([["Hello", "World", ], ["Another", "Yes",]])
+        print self.test.nested
         self.assertEqual(self.test.birthdays, sample)
     
     def testListHandlesNones(self):

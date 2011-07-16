@@ -181,8 +181,6 @@ class Set(Property):
     """A data descriptor for storing sets"""
     def __init__(self, cls = object,default = set(),**arguments):
         """The type keyword here has a different meaning"""
-        if not isinstance(cls, type):
-            raise ValueError("@cls must be a type")
         self.cls = cls
         super(Set, self).__init__(default, **arguments)
     
@@ -237,8 +235,6 @@ person.harem.extend(["Aisha","Halima","Safia",])
 class List(Property):
     """Stores a List of objects,You can specify the type of the objects this list contains"""
     def __init__(self,cls = object, default = [], **arguments ):    
-        if not isinstance(cls, type):
-            raise ValueError("@cls must be a type")
         self.cls = cls
         super(List, self).__init__(default, **arguments)
     
@@ -293,8 +289,14 @@ class Map(Property):
     def validate(self, value):
         '''Simply does type checking'''
         value = super(Map, self).validate(value)
-        pass
-    
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            try: value = dict(value)
+            except:
+                raise BadValueError("This property has to be set, got a : %s" % type(value))
+            
+        
     
     
 
