@@ -28,35 +28,7 @@ class DisposedError(Exception):
     """A Error that is thrown if you try to use a Connection that has been disposed"""
     pass
 
-"""   
-Simpson: 
-Simpson maps Model objects  to Memcache and Cassandra; 
-It automatically implements the store and cache pattern
-to make fetches lightning fast.
 
-At startup simpson retreives all server information from
-the options singleton and creates an instance of 
-
-"""
-class Simpson(object):
-    '''The current incarnation of the Homer NORM'''
-    def __init__(self):
-        '''Retreives Connection info from the options module
-           and creates a pool from it
-        '''
-        pass
-        
-    def put(cls, *args, **kwds):
-        '''Stores this object in Cassandra and Memcached if cache is True'''
-        pass
-    
-    def get(cls, *args, **kwds ):
-        '''Tries to get these Keys from the datastore; if cache check Memcached first'''
-        pass
-    
-    def delete(cls, *args, **kwds ):
-        '''Tries to remove these keys or instances from the Datastore and the Cache'''
-        pass
 
 class Memcache(object):
     '''A Memcache interface that knows Homer Models'''
@@ -135,8 +107,8 @@ class RoundRobinPool(Pool):
 
 """
 Connection:
-A convenient wrapper around an Ordinary Cassandra.Client
-that can be pooled. 
+A convenient wrapper around an Ordinary Cassandra.Client which
+that can be pooled, I also speak in homer Models.
 """
 class Connection(object):
     """A convenient wrapper around the thrift client interface"""

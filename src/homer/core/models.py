@@ -399,13 +399,16 @@ class Model(object):
         pass
             
     @classmethod
-    def get(cls, cache = True, *keys ):
-        """Try to retrieve an instance of this Model from the datastore"""
+    def get(cls, keys, cache = True ):
+        """Try to retrieve an instance of this Model from the datastore
+           @keys: a String, a Key, an iterable of Strings or an iterable of Keys
+           @cache: if True this object will be searched for in the cache first.
+        """
         pass
     
     @classmethod
-    def delete(cls, cache = True, *keys):
-        """Deletes this Model from the datastore"""
+    def delete(cls, keys, cache = True):
+        """Deletes this Model from the datastore and cache"""
         pass
        
     @classmethod
