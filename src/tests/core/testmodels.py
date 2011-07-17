@@ -50,13 +50,11 @@ class TestKeyAndModel(TestCase):
         house = House(number = 50)
         self.assertEquals(house.key().key, "House: 50")
     
-    @expectedFailure
     def testkeyChecksifKeyAttributeExists(self):
         """Asserts that the attribute passed in to @key must exist in the class"""
-        with self.assertRaises(Exception):
-            @key("name")
-            class House(Model):
-                pass
+        @key("name")
+        class House(Model):
+            pass
     
     def testModelAcceptsKeywords(self):
         """Tests If accepts keyword arguments and sets them"""

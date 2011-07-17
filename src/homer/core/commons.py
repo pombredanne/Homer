@@ -11,6 +11,7 @@ Common descriptors for day to day usage
 import urlparse
 import datetime
 from contextlib import closing
+from collections import Hashable
 from homer.util import Size
 from homer.core.models import Type, BadValueError, Property
 
@@ -75,7 +76,7 @@ class String(Type):
         """ Construct property """
         if length <= 0:
             raise ValueError("Length must be greater than zero")
-        super(String,self).__init__(default = default, type = basestring,**arguments)
+        super(String,self).__init__(default = default, type = str,**arguments)
         self.length = length
     
     def validate(self,value):
@@ -281,8 +282,6 @@ class Person(object):
 class Map(Property):
     ''' A descriptor for dict-like objects '''
     def __init__(self, key=object, value=object, default = {}, **arguments):
-        if not isinstance(key, type) and isinstance(value, type):
-            raise ValueError("@key and @value must be classes")
         self.key, self.value = key, value
         super(Map, self).__init__(default, **arguments)
     
@@ -295,8 +294,21 @@ class Map(Property):
             try: value = dict(value)
             except:
                 raise BadValueError("This property has to be set, got a : %s" % type(value))
+        coerced = {}
+        keyVal, valueVal = None, None
+       
+        if isinstance(self.key, type):
+            name = self.key.__name__
+            keyVal = __defaults__[name] if name in __defaults__ else self.key
+        if isinstance(self.value, type):
+            val = self.value.__name__
+            valueVal = __defaults__[val] if val in __defaults__ else self.value
             
-        
+        for k,v in value.items(): 
+            key = keyVal(k) if keyVal else self.key(k)
+            value = valueVal(v) if valueVal else self.value(v)
+            coerced[key] = value
+        return coerced
     
     
 

@@ -30,14 +30,12 @@ from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
 from homer.util import Validation
-from homer.core.options import options
 from homer.core.differ import Differ, DiffError
 
 
 __all__ = ["Model", "key", ]
 
-"""Module Variables """
-log = options.logger("homer.core.models")
+
 READWRITE, READONLY = 1, 2
 Limit = 500
 CachePeriod = 24 * 3600 * 30 #Normally objects will last in the cache for 30 days
@@ -219,7 +217,7 @@ class Property(object):
             raise AttributeError("Cannot find %s in  %s " % (self,instance))
     
     #   For nested objects like lists and dicts, it is quite difficult to verify
-    # on each insert, so calling getForStorage should perform this before storage.      
+    # on each insert, so calling finalize() before storage should perform type checking.      
     def finalize(self, instance):
         '''This method is called to do final verification before a property is stored'''
         value = self.validate(getattr(instance, self.name)) # Validate values.
@@ -388,16 +386,6 @@ class Model(object):
         '''
         self.differ.revert()
     
-    def hasKey(self):
-        '''Used for premptively checking if a Model has a complete key'''
-        try:
-            if self.key().complete():
-                return True
-            else:
-                return False
-        except BadKeyError:
-            return False
-        
     @classmethod
     def kind(self):
         '''self.kind() is a shortcut for finding the name of a models class'''

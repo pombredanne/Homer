@@ -168,7 +168,7 @@ class TestList(TestCase):
     def setUp(self):
         class Family(object):
             birthdays = List(date)
-            nested = List(List)
+            nested = List(List(String))
         self.test = Family()
     
     def testListSanity(self):
@@ -182,11 +182,13 @@ class TestList(TestCase):
     def testListHandlesNones(self):
         '''List should throw an error for Nones'''
         self.test.birthdays = None
+    
     @expectedFailure
     def testListTypeChecking(self):
         """This test should fail. It verifies that List type checking works"""
         sample = [i for i in range(10)]
         self.test.birthdays = sample
+        print self.test.birthdays
               
 class TestBoolean(TestCase):
     """Tests for the Boolean() descriptor"""
@@ -210,7 +212,21 @@ class TestBoolean(TestCase):
         self.assertEqual(self.test.isJapanese,False)
         self.test.isJapanese = True
         self.assertEqual(self.test.isJapanese,True)
+
+class TestMap(TestCase):
+    """Tests for the Map() descriptor"""
+    def setUp(self):
+        '''Creates a test object'''
+        class Person(object):
+            bookmarks = Map(String, URL)
+        self.test = Person()
         
+    def testMapSanity(self):
+        '''Makes sure that Maps are sane'''
+        map = {"Google": "http://google.com", 234: "http://234next.com", 1.345: "http://base.com"}
+        self.test.bookmarks = map
+        self.assertEquals(self.test.bookmarks, {"Google": "http://google.com", "234": "http://234next.com", "1.345": "http://base.com"})
+                   
 class TestSet(TestCase):
     """Tests for Set() descriptor"""
     def setUp(self):
@@ -286,9 +302,9 @@ class TestString(TestCase):
         with self.assertRaises(AttributeError):
             self.test.mail = "Another mail address"
         
-    @expectedFailure
     def testFailureConditions(self):
         """Type checking does it work"""
         self.test.name = 50
         self.test.name = ["iroiso",]
+        print self.test.name
             
