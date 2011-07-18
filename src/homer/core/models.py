@@ -24,6 +24,7 @@ Description:
 Contains Model, Key and @key
 """
 import copy
+from weakref import WeakValueDictionary
 import datetime
 from threading import Lock
 from functools import update_wrapper as update
@@ -33,8 +34,7 @@ from homer.util import Validation
 from homer.core.differ import Differ, DiffError
 
 
-__all__ = ["Model", "key", ]
-
+__all__ = ["Model", "key",]
 
 READWRITE, READONLY = 1, 2
 Limit = 500
@@ -64,54 +64,71 @@ This decorator automatically configures your Model and creates
 a key entry for it within the SDK. If you pass in an object
 that is not a Model a TypeError is raised.
 
-@key("link", namespace = "June")
+@key("link")
 class Profile(Model):
     link = URL("http://twitter.com")
     
-  
 """
-def key(name, namespace = "June"):
+def key(name, expires = -1, namespace = "June"):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
-             KindMap.put(namespace, cls, name)
-             return cls
+            StorageSchema.Put(namespace, cls, name, expires)
+            return cls
         else:
             raise TypeError("You must pass in a subclass of  Model not: %s" % cls)
     return inner
     
+"""
+StorageSchema:
+Holds Global Storage Configuration for all classes. It stores things like
+the key attribute of a Model, Its cache expiration settings, finally it
+maps names to classes which is useful during deserialization. It allows
+you to request for information in a thread safe way.
 
 """
-KindMap:
-A class that maps classes to their key names and maps classes
-to their kinds; 
-"""
-class KindMap(object):
+class StorageSchema(object):
     """Maps classes to attributes which will store their keys"""
-    keyMap, typeMap = {}, {}
-   
-    @classmethod
-    def put(cls, namespace, kind, key ):
-        """Thread safe class that maps kind to key and namespace""" 
-        assert isinstance(kind, type), "Kind has to be a class; Got: %s instead" % kind
-        name = kind.__name__
-        cls.keyMap[name] = namespace, key
-        cls.typeMap[name] = kind
+    schema, keys = {}, {}
+    
     
     @classmethod
-    def get(cls, kind):
-        """Returns a tuple (namespace, key) for this kind """
-        name = kind.__class__.__name__
-        if name in cls.keyMap:
-            return cls.keyMap.get(name)
+    def Put(cls, namespace, model, key, expiration):
+        """Thread safe class that maps kind to key and namespace""" 
+        kind = model.__name__
+        if not namespace in cls.schema:
+            cls.schema[namespace] = WeakValueDictionary()
+        if kind not in cls.schema[namespace]:
+            cls.schema[namespace][kind] = model
+            cls.keys[id(model)] = [namespace, kind, key, expiration,]
         else:
-            raise BadModelError("Class %s is was not decorated with @key" % kind)
-            
+            raise BadModelError("Model: %s already exists in the Namespace: %s" % (model, namespace))
+        
+        
         
     @classmethod
-    def classForKind(cls, name):
-        """Returns the class object for this name"""
-        return cls.typeMap.get(name, None)
+    def Get(cls, model):
+        """Returns a tuple [namespace, kind, key, expiration] for this Model"""
+        try:
+            model = model if isinstance(model, type) else model.__class__
+            return cls.keys[id(model)]
+        except KeyError:
+            raise BadModelError("Class: %s is not a valid Model, are you sure it has an @key; ",(model))
+    
+    @classmethod
+    def ExpiresIn(cls, model):
+        """Returns the expiration setting for this model in seconds
+           @model : An instance of Model.
+        """
+        return cls.Get(model)[2] # Returns the expiration flag for the kind.
+               
+    @classmethod
+    def ClassForModel(cls, namespace, name):
+        """Returns the class object for the Model with @name"""
+        try:
+            return cls.schema[namespace][name]
+        except KeyError:
+            raise BadModelError("There is no Model with name: %s" % name)
 
 """
 Key:
@@ -122,9 +139,9 @@ Key is serialized to this String format:
 """
 class Key(object):
     """A GUID for Models"""
-    namespace, kind, key = None, None, None
+    namespace, kind, key, expiry = None, None, None, None
     
-    def __init__(self, namespace, kind = None, key = None):
+    def __init__(self, namespace, kind = None, key = None, expiry = -1):
         """Creates a key from keywords or from a str representation"""
         if kind is None and key is None:
             try:
@@ -135,11 +152,11 @@ class Key(object):
                 raise BadKeyError("Expected String of format 'key:\
                     namespace, kind, key', Got: %s" % namespace)
         validate = Validation.validateString
-        self.namespace, self.kind, self.key = \
-            validate(namespace), validate(kind), validate(key)
+        self.namespace, self.kind, self.key, self.expiry = \
+            validate(namespace), validate(kind), validate(key), int(expiry)
     
     def complete(self):
-        """Checks if this key has all its parts"""
+        """Checks if this key has a namespace, kind and key"""
         if self.namespace and self.kind and self.key:
             return True
         return False
@@ -258,7 +275,11 @@ class Property(object):
         else:
             raise AttributeError("Cannot find Property: %s in: %s or its ancestors" 
                 % (self,instance))
-                   
+    
+    def __call__(self, value):
+        """A shortcut to self.validate(value)"""
+        return self.validate(value)
+                             
     @staticmethod
     def search(instance, descriptor):
         """Returns the name of this descriptor by searching its class hierachy"""
@@ -348,19 +369,18 @@ persist changes you make to it; thereby saving bandw-
 idth.
 simple usecase:
 
-@key("name")
+@key("name", expires = 2000)
 class Profile(Model):
     name = String(default = "John Bull")
 
-profile = Profile(name = "Jane Doe")
-profile.put() #save to datastore
-
-found = Profile.get("Jane Doe") #Retrieval
-assert profile == found
+a = Profile(name = "Jane Doe")
+a.put() 
+b = Profile.get("Jane Doe") 
+assert a == b
 
 """
 class Model(object):
-    
+    '''The Unit of persistence'''
     def __init__(self, **kwds ):
         """Initializes properties in this Model from @kwds"""
         self.differ = Differ(self, exclude = ['differ',])
@@ -370,13 +390,13 @@ class Model(object):
         self.differ.commit() #commit the state of this differ.
                 
     def key(self):
-        """Unique Key for this Model, this will throw a BadKeyError"""
-        namespace, key = KindMap.get(self)
+        """Unique key for identifying this instance"""
+        namespace, kind, key, expiry = StorageSchema.Get(self)
         if hasattr(self, key):
             value = getattr(self, key)
             if value is not None:
                 key = value() if callable(value) else value
-                return Key(namespace, self.kind(), key)
+                return Key(namespace, kind, key, expiry)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
     
@@ -385,11 +405,6 @@ class Model(object):
            been saved it will revert the model to it state after construction
         '''
         self.differ.revert()
-    
-    @classmethod
-    def kind(self):
-        '''self.kind() is a shortcut for finding the name of a models class'''
-        return self.__class__.__name__
     
     # TODO: Add self.differ.commit() after every successful put.  
     def put(self, cache = True, cacheExpiry = CachePeriod):
@@ -401,8 +416,10 @@ class Model(object):
     @classmethod
     def get(cls, keys, cache = True ):
         """Try to retrieve an instance of this Model from the datastore
-           @keys: a String, a Key, an iterable of Strings or an iterable of Keys
-           @cache: if True this object will be searched for in the cache first.
+           @keys: a String, a Key, an iterable of Strings or an iterable
+                  of Keys
+           @cache: if True this object will be searched for in the cache
+                  first.
         """
         pass
     

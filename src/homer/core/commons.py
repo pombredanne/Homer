@@ -18,12 +18,10 @@ from homer.core.models import Type, BadValueError, Property
 # TODO: Add common types; Md5Hash, ShaHash, Email, Tuple
 __all__ = [
             "Integer","String","Blob","Set","Boolean","List","URL", "Time", "DateTime",
-            "Date","Float", "Map"
+            "Date","Float", "Map",
 ]
 
-       
-               
-               
+            
 """
 Float:
 A data descriptor for modeling Floats in your 'things'. It coerces like the normal

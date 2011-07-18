@@ -19,7 +19,7 @@ from thrift.protocol import TBinaryProtocol
 from homer.rpc import Cassandra
 from homer.core.options import options
 
-__all__ = ["CqlQuery", "Simpson"]
+__all__ = ["CqlQuery", "Simpson", "Memcache"]
 
 Pooled, CheckedOut, Disposed = 0, 1, 2
 
@@ -29,7 +29,24 @@ class DisposedError(Exception):
     pass
 
 
-
+"""
+Simpson:
+Provides a very simple way to use Cassandra from python; It does load balancing,
+auto failover, connection pooling and its clever enough to batch calls so it
+has very low latency. And one more thing... It automatically implements the
+the store and cache pattern, So Gets are lightning fast...
+"""
+class Simpson(object):
+    @classmethod
+    def put(cls, keys, cache = True):
+        pass
+    
+"""
+Memcache:
+An object oriented interface to Memcache that speaks
+homer Models, Memcache's interface is very similar
+to GAE's memcache.
+"""
 class Memcache(object):
     '''A Memcache interface that knows Homer Models'''
     pass
@@ -58,7 +75,6 @@ class CqlQuery(object):
         '''Yields objects from the query results'''
         pass
     
-
 """
 Pool:
 An abstract class that all pools must implement
@@ -104,7 +120,25 @@ class RoundRobinPool(Pool):
         '''Detaches this conn from the Pool'''
         pass
 
-
+"""
+Consistency:
+A Generic Context Manager for dealing with Cassandra consistency;
+It changes the way the Singleton to Cassandra behaves
+"""
+class Consistency(object):
+    '''Generic Context Manager for Simpson'''
+    def __init__(self, level):
+        self.level = level
+        self.previous = None
+        
+    def __enter__(self):
+        '''Changes the current consistency to self.level'''
+        pass 
+        
+    def __exit__(self):
+        '''Revert the global consistency to the previous setting.'''
+        pass 
+    
 """
 Connection:
 A convenient wrapper around an Ordinary Cassandra.Client which
@@ -193,8 +227,7 @@ class __TraceFactory__(type):
                 return __trace__
             print "Wrapping Function: %s " % name
             setattr(cls, name, trace(attr))
-               
-            
+                         
 """
 DebugTraceClient:
 This Extends the Cassandra Client to add tracing and timing to every 

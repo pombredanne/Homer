@@ -1,4 +1,4 @@
-#!/usr/bin/env pythons
+#!/usr/bin/env python
 """
 Author : Iroiso . I (iroiso@live.com)
 Project: Homer SDK
@@ -24,8 +24,10 @@ class Options(object):
     """ Specifies configuration for logging, """
     debug = Boolean(True)
     auth = Map(String, String )
-    cacheHosts = Set(String) # each host uses the format address:port
-    dbHosts = Set(String, default = ["localhost:9160",])
+    namespace = String(default = "June")
+    dbs = Set(String, default = ["localhost:9160",])
+    caches = Set(String, default = ["localhost:11211",]) # each host uses the format address:port
+    
     
     def logger(self, name = "Default::Logger"):
         """Creates a new logger everytime from the attributes that are set in this logger"""
