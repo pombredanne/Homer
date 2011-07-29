@@ -22,7 +22,7 @@ from glob import glob
 from unittest import TextTestRunner,TestLoader,TestSuite
 
 """Configure Path"""
-sys.path.extend(["./src",])
+sys.path.extend(["./src", "./lib"])
 """##############"""
 
 def find(*argument):

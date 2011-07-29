@@ -26,7 +26,6 @@ Contains Model, Key and @key
 import copy
 from weakref import WeakValueDictionary
 import datetime
-from threading import Lock
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
@@ -91,7 +90,6 @@ class StorageSchema(object):
     """Maps classes to attributes which will store their keys"""
     schema, keys = {}, {}
     
-    
     @classmethod
     def Put(cls, namespace, model, key, expiration):
         """Thread safe class that maps kind to key and namespace""" 
@@ -103,8 +101,6 @@ class StorageSchema(object):
             cls.keys[id(model)] = [namespace, kind, key, expiration,]
         else:
             raise BadModelError("Model: %s already exists in the Namespace: %s" % (model, namespace))
-        
-        
         
     @classmethod
     def Get(cls, model):
@@ -423,6 +419,10 @@ class Model(object):
         """
         pass
     
+    @classmethod
+    def kind(cls):
+        return self.__class__.__name__
+        
     @classmethod
     def delete(cls, keys, cache = True):
         """Deletes this Model from the datastore and cache"""

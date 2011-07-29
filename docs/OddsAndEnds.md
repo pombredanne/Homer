@@ -29,14 +29,14 @@ Some things to note if you are using homer.
 6. Why didn't you implement automatic key Generation ?
 
 Odds:
-What about classes from different modules clashing; The @key decorator can prevent
+What about classes from different modules clashing; The @key decorator can prevent this
 by throwing an exception when the same kind is defined twice in the same namespace.
 
 Ten things I love about Homer-Simpson:
 1.  Autofailover
 2.  Loadbalancing
 3.  Typesafe object mapping with data validation
-4.  Low latency, through nifty optimizations under the hood
+4.  Low latency, through nifty optimizations under the hood; Everything occurs in batches.
 5.  Very high level, Cluelessness? SWEET.
 6.  Builtin Model SerDe (Serialization, Deserialization) ; JSON, XML
 7.  Lightning Speed, Yup - Using the store and cache pattern automatically
@@ -47,5 +47,9 @@ Ten things I love about Homer-Simpson:
 12. CqlQuery support with automatic object mapping...!. Cutting edge.
 13. It runs on Apache Cassandra and Memcache...
 14. Out of the box multiple keyspace/namespaces support.
-15. .... Oops I've gone past 10; Its time to stop I guess...
+15. Indexing support out of the box.
+16. Automatic and smart coercion and constructors; very pythonic I guess.
+17. Dynamically expandable models.... No need for db.Expando I guess.
+17. .... Oops I've gone past 10; Its time to stop I guess...
+
 
