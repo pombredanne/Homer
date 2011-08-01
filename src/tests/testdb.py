@@ -19,6 +19,9 @@ class TestRoundRobinPool(TestCase):
     def setUp(self):
         print "Creating a Pool with the default connections"
         self.pool = RoundRobinPool(PoolOption())
+    
+    def tearDown(self):
+        self.pool.disposeAll()
         
     def testGet(self):
         '''Yields a valid connection to this Keyspace'''
@@ -68,7 +71,10 @@ class TestConnection(TestCase):
     
     def setUp(self):
         self.pool = RoundRobinPool(PoolOption())
-   
+    
+    def tearDown(self):
+        self.pool.disposeAll()
+        
     def testClient(self):
         '''Returns the Cassandra.Client Connection that I have'''
         connection = self.pool.get()
@@ -81,6 +87,7 @@ class TestConnection(TestCase):
         connection = self.pool.get()
         cursor = connection.cursor()
         self.assertTrue(cursor is not None)
+        connection.dispose()
         
     def testToPool(self):
         '''Return this Connection to the Pool where it came from'''

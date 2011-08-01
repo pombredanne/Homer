@@ -13,7 +13,6 @@ import time
 import itertools
 from threading import Thread
 from Queue import Queue, Empty, Full
-from functools import update_wrapper
 
 from thrift import Thrift
 from thrift.transport import TTransport, TSocket
@@ -41,6 +40,7 @@ class AllServersUnAvailableError(Exception):
     '''Thrown when all the servers in a particular pool are unavailable'''
     pass
 
+
 """
 Simpson:
 Provides a very simple way to use Cassandra from python; It does load balancing,
@@ -49,8 +49,20 @@ has very low latency. And one more thing... It automatically implements the
 the store and cache pattern, So Gets are lightning fast...
 """
 class Simpson(object):
+    '''An 'Model' Oriented Interface to Cassandra;'''
     @classmethod
-    def put(cls, keys, cache = True):
+    def Put(cls, *objects ):
+        '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
+        pass
+    
+    @classmethod
+    def Get(cls, keys ):
+        '''Retreives @keys from the Backend, check Memcached if cache is True'''
+        pass
+    
+    @classmethod
+    def Delete(cls, *objects):
+        '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
         pass
     
 """
@@ -59,15 +71,20 @@ An object oriented interface to Memcache that speaks
 homer Models, Memcache's interface is very similar
 to GAE's memcache.
 """
-class Memcache(object):
-    '''A Memcache interface that knows Homer Models'''
-    pass
+class Memcached(object):
+    '''An 'Model' Oriented Interface to Memcached;'''
+    @classmethod
+    def Set(cls, *objects):
+        '''Put these models in Memcache'''
+        pass
+    
+    
     
 """
 CqlQuery:
 A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
 provides a very distinguishing feature, it automatically
-returns query results as Model instances or python datastructures.
+returns query results as Model instances or python types
 """
 class CqlQuery(object):
     """ A very nice wrapper around the CQL Query Interface """
@@ -89,7 +106,7 @@ class CqlQuery(object):
 
 """
 Consistency:
-A Generic Context Manager for dealing with Cassandra consistency;
+A Generic Context Manager for dealing with Cassandra's consistency;
 It changes the way the Singleton to Cassandra behaves
 """
 class Consistency(object):
@@ -243,7 +260,6 @@ class Connection(object):
         if username and password:
             request = AuthenticationRequest(credentials = {"username": username, "password": password})
             self.pipe.login(request)
-        
     
     @property      
     def client(self):

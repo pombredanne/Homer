@@ -16,7 +16,10 @@ import time
 from homer.core.models import READONLY, Type
 from homer.core.commons import *
 
-
+'''
+PoolOption:
+Pool specific configuration options
+'''
 class PoolOption(object):
     '''Configuration options for a Pool'''
     Size = Integer(25)
@@ -35,7 +38,7 @@ Uses "commons" to specify the system wide configuration options for Homer;
 class Options(object):
     """ Specifies configuration for logging, """
     debug = Boolean(True)
-    pool = Integer(default = 10)
+    maxRetry = Integer(5)
     optionsFor = Map(String, PoolOption)
     caches = Set(String, default = ["localhost:11211",]) # each host uses the format address:port
     defaultOptions = Type(type = PoolOption, default = PoolOption(), mode = READONLY)
@@ -50,8 +53,6 @@ class Options(object):
         else:
             log.setLevel(logging.INFO)
         return log
-       
-
-        
+            
 """Create a Singleton for Project Wide Configuration"""   
 options = Options()
