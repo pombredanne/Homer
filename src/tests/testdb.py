@@ -13,6 +13,7 @@ from homer.options import PoolOption, options
 from homer.db import RoundRobinPool, Connection, ConnectionDisposedError
 from unittest import TestCase, skip
 
+
 class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
     
@@ -53,7 +54,6 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    @skip("Takes too long to run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -65,6 +65,7 @@ class TestRoundRobinPool(TestCase):
         time.sleep(45)
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
+
         
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''

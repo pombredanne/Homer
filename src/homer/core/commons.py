@@ -15,7 +15,7 @@ from collections import Hashable
 from homer.util import Size
 from homer.core.models import Type, BadValueError, Property
 
-# TODO: Add common types; Md5Hash, ShaHash, Email, Tuple
+# TODO: Add common types; MD5, SHA512, SHA256, Email, Tuple
 __all__ = [
             "Integer","String","Blob","Set","Boolean","List","URL", "Time", "DateTime",
             "Date","Float", "Map",
@@ -303,8 +303,8 @@ class Map(Property):
             valueVal = __defaults__[val] if val in __defaults__ else self.value
             
         for k,v in value.items(): 
-            key = keyVal(k) if keyVal else self.key(k)
-            value = valueVal(v) if valueVal else self.value(v)
+            key = keyVal(k) 
+            value = valueVal(v)
             coerced[key] = value
         return coerced
     

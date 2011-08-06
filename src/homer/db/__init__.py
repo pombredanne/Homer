@@ -1,3 +1,19 @@
+#!/usr/bin/env python
+#
+# Copyright 2011 June Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """
 Author : Iroiso .I (iroiso@live.com)
 Project: Homer SDK
@@ -11,7 +27,8 @@ the June infrastructure.
 """
 import time
 import itertools
-from threading import Thread
+from contextlib import contextmanager as Context
+from threading import Thread, local
 from Queue import Queue, Empty, Full
 
 from thrift import Thrift
@@ -20,10 +37,10 @@ from thrift.protocol import TBinaryProtocol
 
 from cql.cursor import Cursor
 from cql.cassandra import Cassandra
-from cql.cassandra.ttypes import AuthenticationRequest
+from cql.cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
 from homer.options import options
 
-__all__ = ["CqlQuery", "Simpson", "Memcache"]
+__all__ = ["CqlQuery", "Simpson", ]
 
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 
@@ -40,31 +57,6 @@ class AllServersUnAvailableError(Exception):
     '''Thrown when all the servers in a particular pool are unavailable'''
     pass
 
-
-"""
-Simpson:
-Provides a very simple way to use Cassandra from python; It does load balancing,
-auto failover, connection pooling and its clever enough to batch calls so it
-has very low latency. And one more thing... It automatically implements the
-the store and cache pattern, So Gets are lightning fast...
-"""
-class Simpson(object):
-    '''An 'Model' Oriented Interface to Cassandra;'''
-    @classmethod
-    def Put(cls, *objects ):
-        '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
-        pass
-    
-    @classmethod
-    def Get(cls, keys ):
-        '''Retreives @keys from the Backend, check Memcached if cache is True'''
-        pass
-    
-    @classmethod
-    def Delete(cls, *objects):
-        '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
-        pass
-    
 """
 Memcache:
 An object oriented interface to Memcache that speaks
@@ -77,9 +69,7 @@ class Memcached(object):
     def Set(cls, *objects):
         '''Put these models in Memcache'''
         pass
-    
-    
-    
+
 """
 CqlQuery:
 A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
@@ -103,7 +93,50 @@ class CqlQuery(object):
     def __iter__(self):
         '''Yields objects from the query results'''
         pass
+    
+"""
+Simpson:
+Provides a very simple way to use Cassandra from python; It does load balancing,
+auto failover, connection pooling and its clever enough to batch calls so it
+has very low latency. And one more thing... It automatically implements the
+the store and cache pattern, So Gets are lightning fast...
+"""
+class Simpson(object):
+    '''An 'Model' Oriented Interface to Cassandra;'''
+    consistency = ConsistencyLevel.ONE
+    
+    @classmethod
+    def Put(cls, *Models):
+        '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
+        pass
+    
+    @classmethod
+    def Get(cls, *Keys):
+        '''Retreives @keys from the Backend; This call yields Model Objects.'''
+        pass
+    
+    @classmethod
+    def Delete(cls, *Models):
+        '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
+        pass
 
+'''
+Using:
+Retrieves a Connection from the Pool and Returns after it is Done.
+i.e.
+
+with Using(Pool) as Connection:
+    #Use the Connection Here.
+     
+'''
+@Context
+def Using(Pool):
+    '''Removes an Connection from @Pool and Returns After It's Done'''
+    connection = Pool.get()
+    yield connection
+    Pool.put(connection)   
+   
+     
 """
 Consistency:
 A Generic Context Manager for dealing with Cassandra's consistency;
@@ -112,24 +145,49 @@ It changes the way the Singleton to Cassandra behaves
 class Consistency(object):
     '''Generic Context Manager for Simpson'''
     def __init__(self, level):
+        '''Basic initialization...'''
         self.level = level
         self.previous = None
         
     def __enter__(self):
         '''Changes the current consistency to self.level'''
-        pass 
+        self.previous = Simpson.consistency # Save the Previous consistency level
+        Simpson.consistency = self.level
         
-    def __exit__(self):
+    def __exit__(self, *arguments, **kwds):
         '''Revert the global consistency to the previous setting.'''
-        pass 
+        Simpson.consistency = self.previous
 
+'''
+Level:
+Allows you to Manage Consistency Levels from the top level.
+i.e.
+
+with Level.Quorum:
+    # Do some stuff here.
+    
+with Level.All:
+    # Do some highly consistent thing here.
+    
+'''
+class Level(object):
+    '''Manages Different Consistency Levels'''
+    Any = Consistency(ConsistencyLevel.ANY)
+    All = Consistency(ConsistencyLevel.ALL)
+    Quorum = Consistency(ConsistencyLevel.QUORUM)
+    One = Consistency(ConsistencyLevel.ONE)
+    Two = Consistency(ConsistencyLevel.TWO)
+    Three = Consistency(ConsistencyLevel.THREE)
+    LocalQuorum = Consistency(ConsistencyLevel.LOCAL_QUORUM)
+    EachQuorum = Consistency(ConsistencyLevel.EACH_QUORUM)
+  
 #####
 # Connection and Pooling 
 #####    
 """
 Pool:
 A pool provides autofailover and loadbalancing automatically
-for keyspaces.
+for connections to the db or the cache.
 """
 class Pool(object):
     '''Implements Load balancing for a Cluster'''
@@ -235,20 +293,20 @@ class EvictionThread(Thread):
                 
 """
 Connection:
-A Wrapper around Cassandra.Client which supports connection pooling, debug
-tracing and context managers.
+A ThreadSafe wrapper around Cassandra.Client which supports connection pooling.
 """
 class Connection(object):
     """A convenient wrapper around the thrift client interface"""
     def __init__(self, pool, address, keyspace = None, username = None, password = None, timeout = 3*1000):
         '''Creates a Cassandra Client internally and initializes it'''
+        self.local = local()
         host, port = address.split(":")
         socket = TSocket.TSocket(host, int(port))
         socket.setTimeout(timeout)
         # Local Variables
         self.transport = TTransport.TFramedTransport(socket)
         protocol = TBinaryProtocol.TBinaryProtocolAccelerated(self.transport)
-        self.pipe = Cassandra.Client(protocol)
+        self.local.pipe = Cassandra.Client(protocol)
         self.address = address
         self.state = CHECKEDOUT
         self.pool = pool
@@ -256,16 +314,16 @@ class Connection(object):
         self.transport.open()
         self.open = True
         self.keyspace = keyspace
-        self.pipe.set_keyspace(keyspace)
+        self.client.set_keyspace(keyspace)
         if username and password:
             request = AuthenticationRequest(credentials = {"username": username, "password": password})
-            self.pipe.login(request)
+            self.client.login(request)
     
     @property      
     def client(self):
         '''Returns the Cassandra.Client Connection that I have'''
         if self.state == CHECKEDOUT and self.open:
-            return self.pipe
+            return self.local.pipe
         raise ConnectionDisposedError("This Connection has already been Disposed")
     
     def cursor(self):
@@ -283,6 +341,7 @@ class Connection(object):
         '''Close this connection and mark it as DISPOSED'''
         if self.open:
             self.transport.close()
+            self.pool.count -= 1
             self.state = DISPOSED
             self.open = False
     

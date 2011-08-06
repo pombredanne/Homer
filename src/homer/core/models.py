@@ -421,6 +421,7 @@ class Model(object):
     
     @classmethod
     def kind(cls):
+        '''The Type Name of @self in the Datastore'''
         return self.__class__.__name__
         
     @classmethod
@@ -450,6 +451,7 @@ class Model(object):
         return fields
         
     def __str__(self):
+        '''A String representation of this Model'''
         format = "Model: %s" % (self.kind(),)
         return format
         
