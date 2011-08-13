@@ -6,7 +6,6 @@ These usecases express common concepts for Homer.
 class Anime(Model):
     '''A model for Animes, who keep track of all its episode'''
     title = String()
-    creator = Pointer(User)
     episodes = Set(Episode)
     
     def hits(self):
@@ -27,7 +26,7 @@ class Anime(Model):
 class Episode(Model):
     """An Episode of an Anime"""
     name = String()
-    hits = Integer()
-    rating = Rating()
+    hits = Integer(indexed = True)
+    rating = Rating(indexed = True)
     video = Blob(size = "100MB", mime = "video/mp4")
     

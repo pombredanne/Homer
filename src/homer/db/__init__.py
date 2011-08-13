@@ -58,19 +58,6 @@ class AllServersUnAvailableError(Exception):
     pass
 
 """
-Memcache:
-An object oriented interface to Memcache that speaks
-homer Models, Memcache's interface is very similar
-to GAE's memcache.
-"""
-class Memcached(object):
-    '''An 'Model' Oriented Interface to Memcached;'''
-    @classmethod
-    def Set(cls, *objects):
-        '''Put these models in Memcache'''
-        pass
-
-"""
 CqlQuery:
 A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
 provides a very distinguishing feature, it automatically
@@ -126,8 +113,7 @@ Retrieves a Connection from the Pool and Returns after it is Done.
 i.e.
 
 with Using(Pool) as Connection:
-    #Use the Connection Here.
-     
+    #Use the Connection Here.   
 '''
 @Context
 def Using(Pool):
@@ -232,7 +218,7 @@ class RoundRobinPool(Pool):
         try:
             return self.queue.get(False)
         except Empty:
-            if self.count < self.maxConnections:  # If we are under quota just create a new connection
+            if self.count < self.maxConnections:  #If we are under quota just create a new connection
                 addr = self.address().next()
                 print "Creating a new connection to address: %s" % addr
                 connection = Connection(self, addr, self.keyspace, self.username, self.password)
@@ -241,7 +227,7 @@ class RoundRobinPool(Pool):
             else:  # If we are over quota force the request to wait for @self.timeout
                 try:
                     return self.queue.get(True, self.timeout)
-                except Empty: raise TimedOutException("Sorry, your request has TimedOut")
+                except Empty: raise TimedOutException("Sorry, your request has Timed Out")
       
     def address(self):
         '''Returns an address from this servers pool in a round robin fashion'''
@@ -293,7 +279,8 @@ class EvictionThread(Thread):
                 
 """
 Connection:
-A ThreadSafe wrapper around Cassandra.Client which supports connection pooling.
+A ThreadSafe wrapper around Cassandra.Client which 
+supports connection pooling.
 """
 class Connection(object):
     """A convenient wrapper around the thrift client interface"""
@@ -344,4 +331,59 @@ class Connection(object):
             self.pool.count -= 1
             self.state = DISPOSED
             self.open = False
+            
+###
+# Cassandra Mapping Section;
+###
+class MetaModel(object):
+    '''Changes a Model to Cassandra's DataModel..'''
+    
+    def __init__(self, Model):
+        '''Creates a Transform for this Model'''
+        pass
+    
+    def mutations(self):
+        '''Returns a Map suitable for Use with BatchMutate Calls'''
+        pass
+    
+    def key(self):
+        '''Returns a Cassandra from the key for this Model'''
+        pass
+    
+    def columnParent(self):
+        pass
+    
+    def columnPath(self, name):
+        '''Creates a ColumnPath from this Model'''
+        pass
+    
+    def toColumn(self, name):
+        '''Returns a Column or SuperColumn from the @name Property'''
+        pass
+        
+    def asKeyspace(self):
+        '''Creates a Keyspace object for this Model'''
+        pass
+        
+    def asColumnFamily(self):
+        '''Returns a ColumnFamily Definition for this Model'''
+        pass
+    
+           
+######
+# CACHING IMPLEMENTATION
+#######
+"""
+Memcache:
+An object oriented interface to Memcache that speaks
+homer Models, Memcache's interface is very similar
+to GAE's memcache.
+"""
+class Memcached(object):
+    '''An 'Model' Oriented Interface to Memcached;'''
+    @classmethod
+    def Set(cls, *objects):
+        '''Put these models in Memcache'''
+        pass
+
     

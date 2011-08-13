@@ -367,12 +367,7 @@ simple usecase:
 
 @key("name", expires = 2000)
 class Profile(Model):
-    name = String(default = "John Bull")
-
-a = Profile(name = "Jane Doe")
-a.put() 
-b = Profile.get("Jane Doe") 
-assert a == b
+    name = String("John Bull")
 
 """
 class Model(object):
