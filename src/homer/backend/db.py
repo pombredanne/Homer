@@ -21,8 +21,7 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-Provides a very nice abstraction around the storage layer of
-the June infrastructure.
+Provides a very nice abstraction around Cassandra
 
 """
 import time
@@ -40,11 +39,13 @@ from cql.cassandra import Cassandra
 from cql.cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
 from homer.options import options
 
-__all__ = ["CqlQuery", "Simpson", ]
+__all__ = ["CqlQuery", "Simpson", "Level", ]
 
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 
+####
 # Module Exceptions
+####
 class ConnectionDisposedError(Exception):
     """A Error that is thrown if you try to use a Connection that has been disposed"""
     pass
@@ -57,6 +58,9 @@ class AllServersUnAvailableError(Exception):
     '''Thrown when all the servers in a particular pool are unavailable'''
     pass
 
+####
+# CQL Query Support
+####
 """
 CqlQuery:
 A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
@@ -80,7 +84,10 @@ class CqlQuery(object):
     def __iter__(self):
         '''Yields objects from the query results'''
         pass
-    
+
+####
+# Simpson Implementation
+####  
 """
 Simpson:
 Provides a very simple way to use Cassandra from python; It does load balancing,
@@ -121,8 +128,11 @@ def Using(Pool):
     connection = Pool.get()
     yield connection
     Pool.put(connection)   
-   
-     
+
+
+####
+# Controlling Consistency
+####     
 """
 Consistency:
 A Generic Context Manager for dealing with Cassandra's consistency;
@@ -146,7 +156,7 @@ class Consistency(object):
 
 '''
 Level:
-Allows you to Manage Consistency Levels from the top level.
+Allows you to Manage the Global Consistency Level of the Module.
 i.e.
 
 with Level.Quorum:
@@ -166,7 +176,7 @@ class Level(object):
     Three = Consistency(ConsistencyLevel.THREE)
     LocalQuorum = Consistency(ConsistencyLevel.LOCAL_QUORUM)
     EachQuorum = Consistency(ConsistencyLevel.EACH_QUORUM)
-  
+
 #####
 # Connection and Pooling 
 #####    
@@ -189,6 +199,7 @@ class Pool(object):
     def disposeAll(self):
         '''Clears all the connections in this Pool'''
         raise NotImplementedError
+
 
 """
 RoundRobinPool:
@@ -331,32 +342,76 @@ class Connection(object):
             self.pool.count -= 1
             self.state = DISPOSED
             self.open = False
-            
+
+import time
+from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column     
 ###
 # Cassandra Mapping Section;
 ###
+"""
+MetaModel:
+Does basic transformations from Model to the Cassandra's Data Model.
+"""
 class MetaModel(object):
     '''Changes a Model to Cassandra's DataModel..'''
     
     def __init__(self, Model):
         '''Creates a Transform for this Model'''
+        self.model = Model
+        
+    def create(self):
+        '''Creates this model'''
         pass
-    
+        
     def mutations(self):
-        '''Returns a Map suitable for Use with BatchMutate Calls'''
-        pass
-    
+        '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
+        ## Expected Results and Constants ##
+        mutations = {}
+        key = self.key()
+        name = self.name()
+        when = time.time()
+        differ = self.model.differ
+        mutations[key] = { name : [] }
+        mutationList =  mutations[key][name]
+        
+        ## Marshal Deletions from the Differ ##
+        print "Marshalling Deletions from the Model"
+        affectedColumns = list(differ.deleted)
+        pred = SlicePredicate(column_names = affectedColumns)
+        deletes = Mutation(deletion = Deletion(timestamp = when, predicate = pred))
+        mutationList.append(deletes)
+        
+        ## Marshal Modifications from the Differ ##
+        print "Marshalling Modifications from the Model"
+        for name in differ.modified:
+            column = self.toColumn(name)
+            cosc = ColumnOrSuperColumn(column= column)
+            mutation = Mutation(column_or_supercolumn = cosc)
+            mutationList.append(mutation)
+            
+        print "Marshalling Additions from the Model"
+        for name in differ.added:
+            column = self.toColumn(name)
+            cosc = ColumnOrSuperColumn(column= column)
+            mutation = Mutation(column_or_supercolumn = cosc)
+            mutationList.append(mutation)
+        return mutations
+        
     def key(self):
         '''Returns a Cassandra from the key for this Model'''
         pass
     
-    def columnParent(self):
+    def name(self):
+        '''Returns the name of self.model, either a supercolumn name or column name'''
+        pass
+        
+    def toColumnPath(self, name):
         pass
     
-    def columnPath(self, name):
-        '''Creates a ColumnPath from this Model'''
+    def toColumnParent(self):
+        '''Returns this Model as a ColumnParent'''
         pass
-    
+          
     def toColumn(self, name):
         '''Returns a Column or SuperColumn from the @name Property'''
         pass
@@ -364,26 +419,9 @@ class MetaModel(object):
     def asKeyspace(self):
         '''Creates a Keyspace object for this Model'''
         pass
-        
+       
     def asColumnFamily(self):
         '''Returns a ColumnFamily Definition for this Model'''
         pass
     
            
-######
-# CACHING IMPLEMENTATION
-#######
-"""
-Memcache:
-An object oriented interface to Memcache that speaks
-homer Models, Memcache's interface is very similar
-to GAE's memcache.
-"""
-class Memcached(object):
-    '''An 'Model' Oriented Interface to Memcached;'''
-    @classmethod
-    def Set(cls, *objects):
-        '''Put these models in Memcache'''
-        pass
-
-    
