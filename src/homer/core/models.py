@@ -372,6 +372,7 @@ class Profile(Model):
 """
 class Model(object):
     '''The Unit of persistence'''
+    
     def __init__(self, **kwds ):
         """Initializes properties in this Model from @kwds"""
         self.differ = Differ(self, exclude = ['differ',])
@@ -379,7 +380,7 @@ class Model(object):
             if name in kwds:
                 setattr(self, name, kwds[name])
         self.differ.commit() #commit the state of this differ.
-                
+    
     def key(self):
         """Unique key for identifying this instance"""
         namespace, kind, key, expiry = StorageSchema.Get(self)
@@ -390,23 +391,26 @@ class Model(object):
                 return Key(namespace, kind, key, expiry)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
-    
+        
     def rollback(self):
-        '''Reverts this Model to the previous commit state, if this model has not
+        '''
+           Reverts this Model to the previous commit state, if this model has not
            been saved it will revert the model to it state after construction
         '''
-        self.differ.revert()
+        pass
     
-    # TODO: Add self.differ.commit() after every successful put.  
     def put(self, cache = True, cacheExpiry = CachePeriod):
-        """Store this model into the datastore, throws a BadKeyError if this
-           model doesn't have a valid key
+        """
+           Store this model into the datastore, throws a BadKeyError if this
+           model doesn't have a valid key, A successful put clears the differ
+           of this Model.
         """
         pass
-            
+          
     @classmethod
     def get(cls, keys, cache = True ):
-        """Try to retrieve an instance of this Model from the datastore
+        """
+           Try to retrieve an instance of this Model from the datastore
            @keys: a String, a Key, an iterable of Strings or an iterable
                   of Keys
            @cache: if True this object will be searched for in the cache
@@ -437,7 +441,7 @@ class Model(object):
     def fields(self):
         """Searches class hierachy and returns all known properties for this object"""
         # This call is quite expensive to make but it is the right way to do things.
-        cls = self.__class__
+        cls = self.__class__;
         fields = {}
         for root in reversed(cls.__mro__):
             for name, prop in root.__dict__.items():

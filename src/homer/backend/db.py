@@ -288,11 +288,12 @@ class EvictionThread(Thread):
                 connection.dispose()
                 time.sleep(self.delay/1000)
                 
-"""
-Connection:
-A ThreadSafe wrapper around Cassandra.Client which 
-supports connection pooling.
-"""
+
+###
+# Connection:
+# A ThreadSafe wrapper around Cassandra.Client which 
+# supports connection pooling.
+###
 class Connection(object):
     """A convenient wrapper around the thrift client interface"""
     def __init__(self, pool, address, keyspace = None, username = None, password = None, timeout = 3*1000):
@@ -343,33 +344,33 @@ class Connection(object):
             self.state = DISPOSED
             self.open = False
 
-import time
-from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column     
 ###
 # Cassandra Mapping Section;
 ###
-"""
-MetaModel:
-Does basic transformations from Model to the Cassandra's Data Model.
-"""
+import time
+from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column     
+
+##
+# MetaModel:
+# Transforms Models to the Cassandra's Data Model.
+##
 class MetaModel(object):
     '''Changes a Model to Cassandra's DataModel..'''
     
     def __init__(self, Model):
         '''Creates a Transform for this Model'''
         self.model = Model
-        
-    def create(self):
-        '''Creates this model'''
+    
+    @classmethod   
+    def create(cls, Model, Key):
+        '''Creates a ColumnFamily and Keyspace if necessary from this class'''
         pass
         
     def mutations(self):
         '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
         ## Expected Results and Constants ##
         mutations = {}
-        key = self.key()
-        name = self.name()
-        when = time.time()
+        key = self.key(); name = self.name(); when = time.time()
         differ = self.model.differ
         mutations[key] = { name : [] }
         mutationList =  mutations[key][name]
@@ -398,7 +399,7 @@ class MetaModel(object):
         return mutations
         
     def key(self):
-        '''Returns a Cassandra from the key for this Model'''
+        '''Returns the key for this Model; actually it returns Model.key().value'''
         pass
     
     def name(self):
