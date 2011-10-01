@@ -129,8 +129,7 @@ class StorageSchema(object):
 """
 Key:
 A GUID for Model objects. A Key contains all the information 
-required to retreive a Model from Cassandra or Redis
-Key is serialized to this String format:
+required to retreive a Model from Cassandra or any other Cache
 "key: {namespace}, {kind}, {key}"
 """
 class Key(object):
@@ -151,30 +150,11 @@ class Key(object):
         self.namespace, self.kind, self.key, self.expiry = \
             validate(namespace), validate(kind), validate(key), int(expiry)
     
-    def complete(self):
+    def isComplete(self):
         """Checks if this key has a namespace, kind and key"""
         if self.namespace and self.kind and self.key:
             return True
         return False
-    
-    def toTagURI(self):
-        """
-        Returns a tag: URI for this entity for use in XML output
-        
-        Foreign keys for entities may be represented in XML 
-        output as tag URIs. RFC 4151 describes the tag URI 
-        scheme. From http://taguri.org/. Key tags take this 
-        format: "tag:<namespace>, date:<kind>[<key>]" e.g.
-        
-            tag:June,2006-08-29:Profile[Jack]
-            
-        Raises a BadKeyError if this key is incomplete.
-        """ 
-        if not self.complete():
-            raise BadKeyError("Cannot use an incomplete key for tag URI's")
-        date = datetime.date.today().isoformat()
-        format = u"tag:{0},{1}:{2}[{3}]"
-        return format.format(self.namespace, date, self.kind, self.key)
         
     def __unicode__(self):
         """Unicode representation of a key"""
@@ -372,7 +352,6 @@ class Profile(Model):
 """
 class Model(object):
     '''The Unit of persistence'''
-    
     def __init__(self, **kwds ):
         """Initializes properties in this Model from @kwds"""
         self.differ = Differ(self, exclude = ['differ',])
@@ -432,7 +411,7 @@ class Model(object):
     def cql(cls, query, *args, **kwds):
         """Interface to Cql from your model, which yields models"""
         return CqlQuery('SELECT * FROM %s %s' % (cls.kind(), query), *args, **kwds)
-        
+    
     @classmethod
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
@@ -440,7 +419,7 @@ class Model(object):
         
     def fields(self):
         """Searches class hierachy and returns all known properties for this object"""
-        # This call is quite expensive to make but it is the right way to do things.
+        #This call is quite expensive to make but it is the right way to do things.
         cls = self.__class__;
         fields = {}
         for root in reversed(cls.__mro__):

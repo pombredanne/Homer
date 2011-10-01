@@ -17,19 +17,15 @@
 import copy
 from threading import Lock
 """
----------------------------------------------------------------------
 Differ:
 The differ module contains utilities that helps homer to diff objects
 and retrieve properties that have changed. This is helpful because it
 reduces the payload of thrift/redis protocol requests.
-----------------------------------------------------------------------
 """
 
-"""
-DiffError:
-Represents any exception that gets thrown during diffing
-"""
+
 class DiffError(Exception):
+    """Represents any exception that gets thrown during diffing"""
     pass
     
 
@@ -61,10 +57,11 @@ class Differ(object):
         clean = self.replica.__dict__
         dirty = self.model.__dict__
         dispose = [v for v in dirty if v not in clean]
+        #Revert all known attributes
         for name in clean:
-            setattr(self.model, name, clean[name]) #Revert all known objects.
-               
-        for name in dispose: # Delete all new attributes
+            setattr(self.model, name, clean[name]) 
+        # Delete all new attributes
+        for name in dispose: 
             delattr(self.model, name)
             
     def deleted(self):

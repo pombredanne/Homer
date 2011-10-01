@@ -100,13 +100,23 @@ class Simpson(object):
     consistency = ConsistencyLevel.ONE
     
     @classmethod
+    def Create(cls, Model):
+        '''Creates Cassandra Equivalent for this Model'''
+        pass
+    
+    @classmethod
+    def Read(cls, *Keys):
+        '''Reads @keys from the Database'''
+        pass
+        
+    @classmethod
     def Put(cls, *Models):
         '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
         pass
     
     @classmethod
-    def Get(cls, *Keys):
-        '''Retreives @keys from the Backend; This call yields Model Objects.'''
+    def Update(cls, *Models):
+        '''Updates @Models with values from the DataStore'''
         pass
     
     @classmethod

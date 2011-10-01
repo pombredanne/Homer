@@ -6,54 +6,16 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-builtin functions from the core
+Useful builtin functions for everyday use of Homer.
 """
 from homer.core.options import options
 
-__all__ = ["key", "tag", "deleted", "modified", "added", "view",]
+__all__ = ["tag",]
 log = options.logger()
 
-"""
-added:
-
-"""
-def added(object):
-    """Yields all the new attributes added to this Record """
-    if not isinstance(object, Record):
-        raise ValueError("%s : must be a subclass of Record" % object)
-        
-"""
-modified:
-
-"""
-def modified(object):
-    """Yields all the attributes that have been modified on this Record """
-    if not isinstance(object, Record):
-        raise ValueError("%s : must be a subclass of Record" % object)
-        
-"""
-deleted:
-
-"""
-def deleted(object):
-    """Yields all the attributes that have been deleted on this Record """
-    if not isinstance(object, Record):
-        raise ValueError("%s : must be a subclass of Record" % object)
-
-"""
-tag:
-
-"""
 def tag(object):
-    """Returns a human readable unique id for this object (format :http://taguri.org)"""
+    """Returns a human readable globally unique id for this object (format :http://taguri.org)"""
     if not isinstance(object, Record):
         raise ValueError("%s : must be a subclass of Record" % object)
     
-"""
-view:
-
-"""
-def view(object):
-    """Yields all the attributes that exists on this object; """
-    pass
 

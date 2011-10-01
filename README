@@ -5,8 +5,8 @@ Copyright 2011, June inc.
 
 
 Description:
-A modeling framework that maps new-style python classes to key-value datastores
-(with built in support for Apache Cassandra, and Redis). Homer will allow to describe
+An object modeling framework that maps new-style python classes to key-value datastores
+(with built in support for Apache Cassandra, and Memcached). Homer will allow to describe
 your model in a new-style class and use it with many different key-value stores with 
 little or no configuration. 
 

@@ -28,7 +28,6 @@ class TestKeyAndModel(TestCase):
         assert person.key() is not None, "Key Must not be None when its attribute is non null"
         self.assertTrue(person.name == "JohnBull")
         print "'" + str(person.key()) + "'"
-        print person.key().toTagURI()
         person.name = None
         self.assertRaises(BadKeyError, lambda : person.key())
         
