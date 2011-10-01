@@ -63,6 +63,7 @@ class Differ(object):
         # Delete all new attributes
         for name in dispose: 
             delattr(self.model, name)
+        self.commit()
             
     def deleted(self):
         '''Yields the names of the attributes that were deleted from this model'''

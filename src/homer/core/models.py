@@ -351,14 +351,15 @@ class Profile(Model):
 
 """
 class Model(object):
-    '''The Unit of persistence'''
+    '''Unit of persistence'''
     def __init__(self, **kwds ):
-        """Initializes properties in this Model from @kwds"""
-        self.differ = Differ(self, exclude = ['differ',])
+        """Creates an instance of this Model"""
+        self.differ = Differ(self, exclude = ['differ','new'])
         for name in self.fields():
             if name in kwds:
                 setattr(self, name, kwds[name])
-        self.differ.commit() #commit the state of this differ.
+        self.new = True
+        self.differ.commit()
     
     def key(self):
         """Unique key for identifying this instance"""
@@ -372,34 +373,28 @@ class Model(object):
         raise BadKeyError("Incomplete Key for %s " % self)
         
     def rollback(self):
-        '''
-           Reverts this Model to the previous commit state, if this model has not
-           been saved it will revert the model to it state after construction
-        '''
-        pass
+        '''Undoes the current state of the object to the last commit'''
+        self.differ.revert();
     
-    def put(self, cache = True, cacheExpiry = CachePeriod):
-        """
-           Store this model into the datastore, throws a BadKeyError if this
-           model doesn't have a valid key, A successful put clears the differ
-           of this Model.
-        """
-        pass
-          
+    def put(self, cache = True, period = CachePeriod):
+        """Stores this object in the datastore and in the cache"""
+        if self.new:
+            print 'Creating %s at the Backend' % self
+            Simpson.create(self)
+            self.new = False
+        else:
+            print 'Putting %s at the Backend' % self
+            Simpson.put(cache, period, self)
+            self.differ.commit()
+               
     @classmethod
     def get(cls, keys, cache = True ):
-        """
-           Try to retrieve an instance of this Model from the datastore
-           @keys: a String, a Key, an iterable of Strings or an iterable
-                  of Keys
-           @cache: if True this object will be searched for in the cache
-                  first.
-        """
+        """Retreives objects from the datastore, if @cache check the cache"""
         pass
     
     @classmethod
     def kind(cls):
-        '''The Type Name of @self in the Datastore'''
+        """The Type Name of @self in the Datastore"""
         return self.__class__.__name__
         
     @classmethod
@@ -419,7 +414,6 @@ class Model(object):
         
     def fields(self):
         """Searches class hierachy and returns all known properties for this object"""
-        #This call is quite expensive to make but it is the right way to do things.
         cls = self.__class__;
         fields = {}
         for root in reversed(cls.__mro__):

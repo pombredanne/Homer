@@ -90,7 +90,7 @@ class CqlQuery(object):
 ####  
 """
 Simpson:
-Provides a very simple way to use Cassandra from python; It does load balancing,
+Provides a very simple way to use cassandra from python; It provides load balancing,
 auto failover, connection pooling and its clever enough to batch calls so it
 has very low latency. And one more thing... It automatically implements the
 the store and cache pattern, So Gets are lightning fast...
@@ -100,27 +100,27 @@ class Simpson(object):
     consistency = ConsistencyLevel.ONE
     
     @classmethod
-    def Create(cls, Model):
+    def create(cls, Model):
         '''Creates Cassandra Equivalent for this Model'''
         pass
     
     @classmethod
-    def Read(cls, *Keys):
+    def read(cls, *Keys):
         '''Reads @keys from the Database'''
         pass
         
     @classmethod
-    def Put(cls, *Models):
+    def put(cls, cache, period, *Models):
         '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
         pass
     
     @classmethod
-    def Update(cls, *Models):
+    def update(cls, *Models):
         '''Updates @Models with values from the DataStore'''
         pass
     
     @classmethod
-    def Delete(cls, *Models):
+    def delete(cls, *Models):
         '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
         pass
 
@@ -157,7 +157,7 @@ class Consistency(object):
         
     def __enter__(self):
         '''Changes the current consistency to self.level'''
-        self.previous = Simpson.consistency # Save the Previous consistency level
+        self.previous = Simpson.consistency
         Simpson.consistency = self.level
         
     def __exit__(self, *arguments, **kwds):
@@ -371,11 +371,6 @@ class MetaModel(object):
         '''Creates a Transform for this Model'''
         self.model = Model
     
-    @classmethod   
-    def create(cls, Model, Key):
-        '''Creates a ColumnFamily and Keyspace if necessary from this class'''
-        pass
-        
     def mutations(self):
         '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
         ## Expected Results and Constants ##
@@ -384,14 +379,12 @@ class MetaModel(object):
         differ = self.model.differ
         mutations[key] = { name : [] }
         mutationList =  mutations[key][name]
-        
         ## Marshal Deletions from the Differ ##
         print "Marshalling Deletions from the Model"
         affectedColumns = list(differ.deleted)
         pred = SlicePredicate(column_names = affectedColumns)
         deletes = Mutation(deletion = Deletion(timestamp = when, predicate = pred))
         mutationList.append(deletes)
-        
         ## Marshal Modifications from the Differ ##
         print "Marshalling Modifications from the Model"
         for name in differ.modified:
@@ -399,40 +392,11 @@ class MetaModel(object):
             cosc = ColumnOrSuperColumn(column= column)
             mutation = Mutation(column_or_supercolumn = cosc)
             mutationList.append(mutation)
-            
+        ## Marshall Additions
         print "Marshalling Additions from the Model"
         for name in differ.added:
             column = self.toColumn(name)
             cosc = ColumnOrSuperColumn(column= column)
             mutation = Mutation(column_or_supercolumn = cosc)
             mutationList.append(mutation)
-        return mutations
-        
-    def key(self):
-        '''Returns the key for this Model; actually it returns Model.key().value'''
-        pass
-    
-    def name(self):
-        '''Returns the name of self.model, either a supercolumn name or column name'''
-        pass
-        
-    def toColumnPath(self, name):
-        pass
-    
-    def toColumnParent(self):
-        '''Returns this Model as a ColumnParent'''
-        pass
-          
-    def toColumn(self, name):
-        '''Returns a Column or SuperColumn from the @name Property'''
-        pass
-        
-    def asKeyspace(self):
-        '''Creates a Keyspace object for this Model'''
-        pass
-       
-    def asColumnFamily(self):
-        '''Returns a ColumnFamily Definition for this Model'''
-        pass
-    
-           
+        return mutations 
