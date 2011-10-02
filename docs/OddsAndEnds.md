@@ -38,7 +38,7 @@ Ten things I love about Homer-Simpson:
 3.  Typesafe object mapping with data validation
 4.  Low latency, through nifty optimizations under the hood; Everything occurs in batches.
 5.  Very high level, Cluelessness? SWEET.
-6.  Builtin Model SerDe (Serialization, Deserialization) ; JSON, XML
+6.  Builtin Model SerDe (Serialization, Deserialization) ; JSON, XML, YAML
 7.  Lightning Speed, Yup - Using the store and cache pattern automatically
 8.  The @key decorator; Simplicity...
 9.  Rich data modeling (String, Map, List, ...)

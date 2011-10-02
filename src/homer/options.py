@@ -38,7 +38,7 @@ class Options(object):
     """ Specifies configuration for logging, """
     from homer.core.models import READONLY, Type
     debug = Boolean(True)
-    maxRetry = Integer(5)
+    maxRetries = Integer(5)
     optionsFor = Map(String, PoolOption)
     caches = Set(String, default = ["localhost:11211",]) # each host uses the format address:port
     defaultOptions = Type(type = PoolOption, default = PoolOption(), mode = READONLY)

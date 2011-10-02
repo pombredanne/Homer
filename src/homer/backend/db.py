@@ -21,7 +21,7 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-Provides a very nice abstraction around Cassandra
+Provides a very nice abstraction around Cassandra; 
 
 """
 import time
@@ -84,48 +84,9 @@ class CqlQuery(object):
         '''Yields objects from the query results'''
         pass
 
-####
-# Simpson Implementation
-####  
-"""
-Simpson:
-Provides a very simple way to use cassandra from python; It provides load balancing,
-auto failover, connection pooling and its clever enough to batch calls so it
-has very low latency. And one more thing... It automatically implements the
-the store and cache pattern, So Gets are lightning fast...
-"""
-class Simpson(object):
-    '''An 'Model' Oriented Interface to Cassandra;'''
-    consistency = ConsistencyLevel.ONE
-    
-    @classmethod
-    def create(cls, Model):
-        '''Creates Cassandra Equivalent for this Model'''
-        pass
-    
-    @classmethod
-    def read(cls, cache, *Keys):
-        '''Reads @keys from the Datastore; if @cache check Memcache first'''
-        pass
-        
-    @classmethod
-    def put(cls, cache, period, *Models):
-        '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
-        pass
-    
-    @classmethod
-    def update(cls, *Models):
-        '''Updates @Models with values from the DataStore'''
-        pass
-    
-    @classmethod
-    def delete(cls, cache, *Models):
-        '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
-        pass
-
 
 @Context
-def Using(Pool):
+def From(Pool):
     '''Fetches an Connection from @Pool and returns after use'''
     connection = Pool.get()
     yield connection
@@ -271,6 +232,7 @@ A Thread that periodically looks in a Connection Pool to Evict
 excess Idle connections.
 """
 class EvictionThread(Thread):
+    """Periodically evicts idle connections from the connection pool"""
     def __init__(self, pool, maxIdle, delay):
         from homer.options import options
         super(EvictionThread, self).__init__()
@@ -352,11 +314,72 @@ class Connection(object):
 # Cassandra Mapping Section;
 ###
 import time
-from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column     
+from homer.core.models import StorageSchema
+from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column   
+
+####
+# Simpson Implementation
+####  
+"""
+Simpson:
+Provides a very simple way to use cassandra from python; It provides load balancing,
+auto failover, connection pooling and its clever enough to batch calls so it
+has very low latency. And one more thing... It automatically implements the
+the store and cache pattern, So Gets are lightning fast...
+"""
+class Simpson(object):
+    '''An 'Model' Oriented Interface to Cassandra;'''
+    consistency = ConsistencyLevel.ONE
+    keyspaces, columnfamilies, pools = set(), set(), dict()
+    
+    @classmethod
+    def create(cls, model):
+        '''Creates the Cassandra Equivalent of this Model;'''
+        from homer.options import options
+        info = StorageSchema.Get(model)
+        namespace = info[0]
+        kind = info[1]
+        # Create a new keyspace if necessary
+        if namespace not in keyspaces:
+            print 'Creating Keyspace: %s' % namespace
+            config = options.optionsFor(namespace)
+            pool = RoundRobinPool(config)
+            print 'Connecting to Cassandra :)'
+            with Using(pool) as conn:
+                MetaModel(model).makeKeySpace(conn)
+            cls.pools[namespace] = pool
+            cls.keyspaces.add(namespace)
+        # Create a new column family if necessary    
+        if kind not in columfamilies:
+            print 'Creating ColumnFamily: %s' % kind
+            pool = cls.pools[namespace]
+            with Using(pool) as conn:
+                MetaModel(model).makeColumnFamily(conn)
+            cls.columnfamilies.add(kind)
+           
+    @classmethod
+    def read(cls, *Keys):
+        '''Reads @keys from the Datastore; if @cache check Memcache first'''
+        pass
+        
+    @classmethod
+    def put(cls, period, *Models):
+        '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
+        pass
+    
+    @classmethod
+    def update(cls, *Models):
+        '''Updates @Models with values from the DataStore'''
+        pass
+    
+    @classmethod
+    def delete(cls, *Models):
+        '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
+        pass  
 
 ##
 # MetaModel:
-# Transforms Models to the Cassandra's Data Model.
+# Transforms {@link Model} instances to Cassandra's Data Model.
 ##
 class MetaModel(object):
     '''Changes a Model to Cassandra's DataModel..'''
@@ -365,6 +388,15 @@ class MetaModel(object):
         '''Creates a Transform for this Model'''
         self.model = Model
     
+    def makeKeySpace(self, connection):
+        '''Creates a new keyspace from the namespace property of this Model'''
+        pass
+    
+    def makeColumnFamily(self, connection):
+        '''Creates a new column family from the 'kind' property of this Model'''
+        pass
+        
+    @property
     def mutations(self):
         '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
         ## Expected Results and Constants ##

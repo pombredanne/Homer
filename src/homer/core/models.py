@@ -59,7 +59,7 @@ class UnDeclaredPropertyError(Exception):
         
 """
 @key:
-This decorator automatically configures your Model and creates
+This decorator automatically configures your Model, and creates
 a key entry for it within the SDK. If you pass in an object
 that is not a Model a TypeError is raised.
 
@@ -80,11 +80,9 @@ def key(name, expires = -1, namespace = "June"):
     
 """
 StorageSchema:
-Holds Global Storage Configuration for all classes. It stores things like
+Holds Global Storage Configuration for all Models. It stores things like
 the key attribute of a Model, Its cache expiration settings, finally it
-maps names to classes which is useful during deserialization. It allows
-you to request for information in a thread safe way.
-
+maps names to classes which is useful during deserialization.
 """
 class StorageSchema(object):
     """Maps classes to attributes which will store their keys"""
@@ -92,13 +90,13 @@ class StorageSchema(object):
     
     @classmethod
     def Put(cls, namespace, model, key, expiration):
-        """Thread safe class that maps kind to key and namespace""" 
+        """Stores Meta Information for a particular class""" 
         kind = model.__name__
         if not namespace in cls.schema:
             cls.schema[namespace] = WeakValueDictionary()
         if kind not in cls.schema[namespace]:
             cls.schema[namespace][kind] = model
-            cls.keys[id(model)] = [namespace, kind, key, expiration,]
+            cls.keys[id(model)] = (namespace, kind, key, expiration,)
         else:
             raise BadModelError("Model: %s already exists in the Namespace: %s" % (model, namespace))
         
@@ -386,15 +384,14 @@ class Model(object):
             print 'Creating %s at the backend' % self
             Simpson.create(self)
             self.new = False
-        else:
-            print 'Putting %s at the backend' % self
-            Simpson.put(cache, period, self)
+        print 'Putting %s at the backend' % self
+        Simpson.put(period, self)
         self.differ.commit()
                
     @classmethod
     def get(cls, keys, cache = True ):
         """Retreives objects from the datastore, if @cache check the cache"""
-        return Simpson.read(cache, *keys)
+        return Simpson.read(*keys)
     
     @classmethod
     def kind(cls):
@@ -404,7 +401,7 @@ class Model(object):
     @classmethod
     def delete(cls, keys, cache = True):
         """Deletes this Model from the datastore and cache"""
-        Simpson.delete(cache, *keys)
+        Simpson.delete(*keys)
        
     @classmethod
     def cql(cls, query, *args, **kwds):
