@@ -13,7 +13,6 @@ import os
 import sys
 import logging
 import time
-from homer.core.models import READONLY, Type
 from homer.core.commons import *
 
 '''
@@ -37,6 +36,7 @@ Uses "commons" to specify the system wide configuration options for Homer;
 """
 class Options(object):
     """ Specifies configuration for logging, """
+    from homer.core.models import READONLY, Type
     debug = Boolean(True)
     maxRetry = Integer(5)
     optionsFor = Map(String, PoolOption)

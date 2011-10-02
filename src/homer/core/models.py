@@ -337,6 +337,10 @@ class Type(Property):
                 raise BadValueError("Cannot coerce: %s to %s"% (value, self.type))
         return value
 
+###
+# Model and Its Friends
+###
+from homer.backend import Simpson
 """
 Model: 
 The Universal Unit of Persistence, a model is always 
@@ -373,24 +377,24 @@ class Model(object):
         raise BadKeyError("Incomplete Key for %s " % self)
         
     def rollback(self):
-        '''Undoes the current state of the object to the last commit'''
+        '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
     
     def put(self, cache = True, period = CachePeriod):
         """Stores this object in the datastore and in the cache"""
         if self.new:
-            print 'Creating %s at the Backend' % self
+            print 'Creating %s at the backend' % self
             Simpson.create(self)
             self.new = False
         else:
-            print 'Putting %s at the Backend' % self
+            print 'Putting %s at the backend' % self
             Simpson.put(cache, period, self)
-            self.differ.commit()
+        self.differ.commit()
                
     @classmethod
     def get(cls, keys, cache = True ):
         """Retreives objects from the datastore, if @cache check the cache"""
-        pass
+        return Simpson.read(cache, *keys)
     
     @classmethod
     def kind(cls):
@@ -400,7 +404,7 @@ class Model(object):
     @classmethod
     def delete(cls, keys, cache = True):
         """Deletes this Model from the datastore and cache"""
-        pass
+        Simpson.delete(cache, *keys)
        
     @classmethod
     def cql(cls, query, *args, **kwds):

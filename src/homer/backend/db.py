@@ -37,7 +37,6 @@ from thrift.protocol import TBinaryProtocol
 from cql.cursor import Cursor
 from cql.cassandra import Cassandra
 from cql.cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
-from homer.options import options
 
 __all__ = ["CqlQuery", "Simpson", "Level", ]
 
@@ -105,8 +104,8 @@ class Simpson(object):
         pass
     
     @classmethod
-    def read(cls, *Keys):
-        '''Reads @keys from the Database'''
+    def read(cls, cache, *Keys):
+        '''Reads @keys from the Datastore; if @cache check Memcache first'''
         pass
         
     @classmethod
@@ -120,21 +119,14 @@ class Simpson(object):
         pass
     
     @classmethod
-    def delete(cls, *Models):
+    def delete(cls, cache, *Models):
         '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
         pass
 
-'''
-Using:
-Retrieves a Connection from the Pool and Returns after it is Done.
-i.e.
 
-with Using(Pool) as Connection:
-    #Use the Connection Here.   
-'''
 @Context
 def Using(Pool):
-    '''Removes an Connection from @Pool and Returns After It's Done'''
+    '''Fetches an Connection from @Pool and returns after use'''
     connection = Pool.get()
     yield connection
     Pool.put(connection)   
@@ -280,6 +272,7 @@ excess Idle connections.
 """
 class EvictionThread(Thread):
     def __init__(self, pool, maxIdle, delay):
+        from homer.options import options
         super(EvictionThread, self).__init__()
         self.pool = pool
         self.maxIdle = maxIdle
@@ -308,6 +301,7 @@ class Connection(object):
     """A convenient wrapper around the thrift client interface"""
     def __init__(self, pool, address, keyspace = None, username = None, password = None, timeout = 3*1000):
         '''Creates a Cassandra Client internally and initializes it'''
+        from homer.options import options
         self.local = local()
         host, port = address.split(":")
         socket = TSocket.TSocket(host, int(port))
