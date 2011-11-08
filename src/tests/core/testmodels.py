@@ -56,7 +56,7 @@ class TestKeyAndModel(TestCase):
             pass
         
         with self.assertRaises(Exception):
-            @key("name")
+            @key("name", namespace="April")
             class House(Model):
                 pass
     

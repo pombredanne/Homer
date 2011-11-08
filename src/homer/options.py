@@ -43,6 +43,10 @@ class Options(object):
     caches = Set(String, default = ["localhost:11211",]) # each host uses the format address:port
     defaultOptions = Type(type = PoolOption, default = PoolOption(), mode = READONLY)
     
+    def load(self, config, file = None):
+        """Reads configuration options from config or from file, but not from both"""
+        pass
+        
     def logger(self, name = "Default::Logger"):
         """Creates a new logger everytime from the attributes that are set in this logger"""
         log = logging.getLogger(name)

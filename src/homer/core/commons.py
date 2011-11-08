@@ -307,9 +307,6 @@ class Map(Property):
             value = valueVal(v)
             coerced[key] = value
         return coerced
-    
-    
-
 
 """
 Boolean:
@@ -426,6 +423,6 @@ __names__ = {
                "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, "Map": Map
 }             
 
-# __defaults__ contains singletons for common types
+## Common Singletons
 __defaults__ = { name : value() for name, value in __names__.items() }  
 

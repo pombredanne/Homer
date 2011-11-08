@@ -39,8 +39,8 @@ from cql.cassandra import Cassandra
 from cql.cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
 
 __all__ = ["CqlQuery", "Simpson", "Level", ]
-
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
+
 
 ####
 # Module Exceptions
@@ -86,7 +86,7 @@ class CqlQuery(object):
 
 
 @Context
-def From(Pool):
+def Using(Pool):
     '''Fetches an Connection from @Pool and returns after use'''
     connection = Pool.get()
     yield connection
@@ -315,7 +315,8 @@ class Connection(object):
 ###
 import time
 from homer.core.models import StorageSchema
-from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column   
+from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column,\
+     InvalidRequestException
 
 ####
 # Simpson Implementation
@@ -334,15 +335,20 @@ class Simpson(object):
     
     @classmethod
     def create(cls, model):
-        '''Creates the Cassandra Equivalent of this Model;'''
+        '''
+           Creates the Cassandra Equivalent of this Model;
+        
+           Changes an Instance of a model to a Keyspace 
+           (KeyType and all), ColumnFamilies, Indexes, 
+        '''
         from homer.options import options
-        info = StorageSchema.Get(model)
+        info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
         namespace = info[0]
         kind = info[1]
         # Create a new keyspace if necessary
         if namespace not in keyspaces:
             print 'Creating Keyspace: %s' % namespace
-            config = options.optionsFor(namespace)
+            # config = options.optionsFor[namespace]
             pool = RoundRobinPool(config)
             print 'Connecting to Cassandra :)'
             with Using(pool) as conn:
@@ -356,6 +362,7 @@ class Simpson(object):
             with Using(pool) as conn:
                 MetaModel(model).makeColumnFamily(conn)
             cls.columnfamilies.add(kind)
+        #Create a indexes if necessary..
            
     @classmethod
     def read(cls, *Keys):
@@ -379,23 +386,55 @@ class Simpson(object):
 
 ##
 # MetaModel:
-# Transforms {@link Model} instances to Cassandra's Data Model.
+# Transforms {@link Model} instances to Cassandra's native Data Model.
+# 'A mix of CQL and Thrift as I see fit...'
 ##
 class MetaModel(object):
     '''Changes a Model to Cassandra's DataModel..'''
-    
-    def __init__(self, Model):
+    def __init__(self, model):
         '''Creates a Transform for this Model'''
+        info = StorageSchema.Get(model)
         self.model = Model
+        self.namespace = info[0]
+        self.kind = info[1]
+        self.keyProperty = info[2]
+        self.validity = info[3]
+        self.comment = self.kind.__doc__
     
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
-        pass
-    
+        try:
+            connection.client.system_add_keyspace(self.asKeySpace())
+        except InvalidRequestException:
+            pass #Log invalid requests; They mean that there is a duplicate
+            
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
+        try:
+            connection.client.system_add_column_family(self.asColumnFamily())
+        except InvalidRequestException:
+            pass #Do nothing about invalid requests; They mean that there is a duplicate
+    
+    def makeIndices(self, connection):
+        '''Creates Indices for all the indexed properties in the model'''
+        # This call should work by flipping bits. If Property.indexed == True, index it else unindex it
         pass
         
+    def asKeySpace(self):
+        '''Returns the native keyspace definition for this object;'''
+        result = KsDef(name= self.namespace)
+        return result
+    
+    def asColumnFamily(self):
+        '''Returns the native column family definition for this @Model'''
+        result = CfDef(keyspace=self.namespace, name= self.model.kind())
+        result.comment = self.comment
+        return result
+    
+    def keyType(self):
+        '''Returns the Comparator type of the Key Descriptor of this Model'''
+        return "UTF8Type"
+         
     @property
     def mutations(self):
         '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
