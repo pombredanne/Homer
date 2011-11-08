@@ -15,6 +15,8 @@ $./test.py testrecor* testproper*
 
 The above example runs all the tests that match the unix filename patterns provided.
 
+Todo:
+1. Add ability to exclude certain tests modules, or test packages
 """
 import sys
 import os.path

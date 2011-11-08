@@ -348,7 +348,8 @@ class Simpson(object):
         # Create a new keyspace if necessary
         if namespace not in keyspaces:
             print 'Creating Keyspace: %s' % namespace
-            # config = options.optionsFor[namespace]
+            found = options.optionsFor[namespace]
+            configuration = found 
             pool = RoundRobinPool(config)
             print 'Connecting to Cassandra :)'
             with Using(pool) as conn:

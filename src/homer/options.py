@@ -39,9 +39,6 @@ class Options(object):
     from homer.core.models import READONLY, Type
     debug = Boolean(True)
     maxRetries = Integer(5)
-    optionsFor = Map(String, PoolOption)
-    caches = Set(String, default = ["localhost:11211",]) # each host uses the format address:port
-    defaultOptions = Type(type = PoolOption, default = PoolOption(), mode = READONLY)
     
     def load(self, config, file = None):
         """Reads configuration options from config or from file, but not from both"""
