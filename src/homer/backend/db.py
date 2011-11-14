@@ -84,15 +84,6 @@ class CqlQuery(object):
         '''Yields objects from the query results'''
         pass
 
-
-@Context
-def Using(Pool):
-    '''Fetches an Connection from @Pool and returns after use'''
-    connection = Pool.get()
-    yield connection
-    Pool.put(connection)   
-
-
 ####
 # Controlling Consistency
 ####     
@@ -163,28 +154,32 @@ class Pool(object):
         '''Clears all the connections in this Pool'''
         raise NotImplementedError
 
+@Context
+def using(Pool):
+    '''Fetches an Connection using @Pool and returns after use'''
+    connection = Pool.get()
+    yield connection
+    Pool.put(connection)   
 
 """
 RoundRobinPool:
 This provides threadsafe client side load balancing for a Cassandra cluster, 
-is created it reads configuration from the options and creates a pool of open 
-connections which it reuses;
-
+It reuses addresses that are preconfigured in a round robin fashion.
 """
 class RoundRobinPool(Pool):
     '''Implements Load balancing for a Cluster'''
     def __init__(self, options):
         '''Configures a RoundRobinPool with a PoolOption object'''
         self.count = 0
-        self.maxConnections = options.Size
-        self.queue = Queue(options.Size)
-        self.keyspace = options.Namespace
-        self.maxIdle = options.MaxIdle
-        self.timeout = options.Timeout
-        self.evictionDelay = options.EvictionDelay
-        self.servers = options.Servers
-        self.username = options.Username
-        self.password = options.Password
+        self.maxConnections = options.size
+        self.queue = Queue(options.size)
+        self.keyspace = options.keyspace
+        self.maxIdle = options.idle
+        self.timeout = options.timeout
+        self.evictionDelay = options.recycle
+        self.servers = options.servers
+        self.username = options.username
+        self.password = options.password
         self.evictionThread = EvictionThread(self, self.maxIdle, self.evictionDelay)
         
     def get(self):
@@ -226,48 +221,19 @@ class RoundRobinPool(Pool):
             except Empty:
                 break
     
-"""
-EvictionThread:
-A Thread that periodically looks in a Connection Pool to Evict
-excess Idle connections.
-"""
-class EvictionThread(Thread):
-    """Periodically evicts idle connections from the connection pool"""
-    def __init__(self, pool, maxIdle, delay):
-        from homer.options import options
-        super(EvictionThread, self).__init__()
-        self.pool = pool
-        self.maxIdle = maxIdle
-        self.delay = delay
-        self.name = "EVICTION-THREAD: %s" % pool.keyspace
-        self.log = options.logger(self.name)
-        self.daemon = True
-        self.start()
-        
-    def run(self):
-        """Evicts Idle Connections periodically from a Connection Pool"""
-        while True:
-            if not self.pool.queue.qsize() <= self.maxIdle:
-                self.log.info("Evicting Idle Connections")
-                connection = self.pool.queue.get(False)
-                connection.dispose()
-                time.sleep(self.delay/1000)
-                
-
 ###
 # Connection:
-# A ThreadSafe wrapper around Cassandra.Client which 
-# supports connection pooling.
+# A ThreadSafe wrapper around Cassandra.Client which supports connection pooling.
 ###
 class Connection(object):
     """A convenient wrapper around the thrift client interface"""
-    def __init__(self, pool, address, keyspace = None, username = None, password = None, timeout = 3*1000):
+    def __init__(self, pool, address, keyspace = None, username = None, password = None):
         '''Creates a Cassandra Client internally and initializes it'''
         from homer.options import options
         self.local = local()
         host, port = address.split(":")
         socket = TSocket.TSocket(host, int(port))
-        socket.setTimeout(timeout)
+        socket.setTimeout(pool.timeout)
         # Local Variables
         self.transport = TTransport.TFramedTransport(socket)
         protocol = TBinaryProtocol.TBinaryProtocolAccelerated(self.transport)
@@ -310,6 +276,34 @@ class Connection(object):
             self.state = DISPOSED
             self.open = False
 
+"""
+EvictionThread:
+A Thread that periodically looks in a Connection Pool to Evict
+excess Idle connections.
+"""
+class EvictionThread(Thread):
+    """Periodically evicts idle connections from the connection pool"""
+    def __init__(self, pool, maxIdle, delay):
+        from homer.options import options
+        super(EvictionThread, self).__init__()
+        self.pool = pool
+        self.maxIdle = maxIdle
+        self.delay = delay
+        self.name = "EVICTION-THREAD: %s" % pool.keyspace
+        self.log = options.logger(self.name)
+        self.daemon = True
+        self.start()
+        
+    def run(self):
+        """Evicts Idle Connections periodically from a Connection Pool"""
+        while True:
+            if not self.pool.queue.qsize() <= self.maxIdle:
+                self.log.info("Evicting Idle Connections")
+                connection = self.pool.queue.get(False)
+                connection.dispose()
+                time.sleep(self.delay/1000)
+                
+
 ###
 # Cassandra Mapping Section;
 ###
@@ -317,6 +311,7 @@ import time
 from homer.core.models import StorageSchema
 from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column,\
      InvalidRequestException
+
 
 ####
 # Simpson Implementation
@@ -335,24 +330,17 @@ class Simpson(object):
     
     @classmethod
     def create(cls, model):
-        '''
-           Creates the Cassandra Equivalent of this Model;
-        
-           Changes an Instance of a model to a Keyspace 
-           (KeyType and all), ColumnFamilies, Indexes, 
-        '''
-        from homer.options import options
+        from homer.options import Settings
         info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
         namespace = info[0]
         kind = info[1]
         # Create a new keyspace if necessary
         if namespace not in keyspaces:
             print 'Creating Keyspace: %s' % namespace
-            found = options.optionsFor[namespace]
-            configuration = found 
-            pool = RoundRobinPool(config)
+#           found = Settings.Homer.Pool[namespace]                                  
+            pool = RoundRobinPool(found)
             print 'Connecting to Cassandra :)'
-            with Using(pool) as conn:
+            with using(pool) as conn:
                 MetaModel(model).makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
@@ -360,8 +348,8 @@ class Simpson(object):
         if kind not in columfamilies:
             print 'Creating ColumnFamily: %s' % kind
             pool = cls.pools[namespace]
-            with Using(pool) as conn:
-                MetaModel(model).makeColumnFamily(conn)
+            with using(pool) as conn:
+                MetaModel(model).makeColumnFamily(conn) #MetaModels should be designed to be disposable.
             cls.columnfamilies.add(kind)
         #Create a indexes if necessary..
            

@@ -9,7 +9,7 @@ Tests for the db module
 
 """
 import time
-from homer.options import PoolOption, options
+from homer.options import options, DataStoreOptions
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError
 from unittest import TestCase, skip
 
@@ -19,7 +19,7 @@ class TestRoundRobinPool(TestCase):
     
     def setUp(self):
         print "Creating a Pool with the default connections"
-        self.pool = RoundRobinPool(PoolOption())
+        self.pool = RoundRobinPool(DataStoreOptions())
     
     def tearDown(self):
         self.pool.disposeAll()
@@ -54,7 +54,7 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    #@skip("Takes to Long to Run..")
+    @skip("Takes to Long to Run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -72,7 +72,7 @@ class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
     def setUp(self):
-        self.pool = RoundRobinPool(PoolOption())
+        self.pool = RoundRobinPool(DataStoreOptions())
     
     def tearDown(self):
         self.pool.disposeAll()

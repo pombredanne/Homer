@@ -5,19 +5,58 @@ Copyright 2011, June inc.
 
 
 Description:
-An object modeling framework that maps new-style python classes to key-value datastores
-(with built in support for Apache Cassandra, and Memcached). Homer will allow to describe
-your model in a new-style class and use it with many different key-value stores with 
-little or no configuration. 
+============
+This is the backend for June. I built it for these reasons:
+[Put all the reasons why you built homer here]
+
+
+Example Usage:
+==============
+from homer.options import options, namespaces
+from homer.core import Model
+
+# Configure Client Options for Memcached
+caches = ["localhost:1112", "localhost:1113", "localhost:1114",]
+m = CacheOptions(servers=caches, hash="crc32", username="test", password="test")
+
+# Configure Client Options for Cassandra.
+instances = ["localhost:9160", "localhost:9161",]
+c = DataStoreOptions(servers=instances, username="test", password="test")
+c.strategy = NetworkTopologyStrategy(factor = 3, options={"DC1": 1, "DC2": 2})
+
+
+# Tie them together into a Namespace object; 
+namespace = Namespace(name= "June", memcache = m, cassandra= c)
+
+# And tell the API about them.
+namespaces.add(namespace)
+namespaces.default = "June" # or you could use namespaces.default = namespace
+
+
+# Now, you can create and ordinary class and store it to Cassandra and Memcache easily
+@key("name")
+class Profile(Model):
+    name = String("")
+    link = URL("http://twitter.com")
+
+person = Profile(name = 'Yoda', link = 'http://faceboook.com')
+person.save() # Store the object person in Cassandra and Memcached automatically.
+
+found = Profile.read('Yoda') #This person is fetched from the cache instead of from db.
+assert person == found
+
 
 Installation:
+=============
 To install you can use pip or download the latest build from 
-[github](http://github.com/iroiso/homer)
+[github](http://github.com/junery/homer)
 
 pip:
-$ sudo pip install homer-sdk
+====
+$ sudo pip install homer
 
 from source:
+============
 Download the latest build by cloning master repository
 
 $ git clone git://github.com/iroiso/homer.git

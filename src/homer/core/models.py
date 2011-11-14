@@ -68,7 +68,7 @@ class Profile(Model):
     link = URL("http://twitter.com")
     
 """
-def key(name, expires = -1, namespace = "June"):
+def key(name, expires = -1, namespace = None):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
@@ -342,10 +342,10 @@ from homer.backend import Simpson
 """
 Model: 
 The Universal Unit of Persistence, a model is always 
-aware of the changes you make to it; ergo models only
-persist changes you make to it; thereby saving bandw-
-idth.
-simple usecase:
+aware of the changes you make to it; ergo models persist
+only changes you make to them; thereby saving bandwidth.
+
+Simple usecase:
 
 @key("name", expires = 2000)
 class Profile(Model):
@@ -389,7 +389,7 @@ class Model(object):
         self.differ.commit()
                
     @classmethod
-    def get(cls, keys, cache = True ):
+    def get(cls, keys, cache = True):
         """Retreives objects from the datastore, if @cache check the cache"""
         return Simpson.read(*keys)
     
