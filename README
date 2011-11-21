@@ -12,7 +12,7 @@ This is the backend for June. I built it for these reasons:
 
 Example Usage:
 ==============
-from homer.options import options, namespaces
+from homer.options import *
 from homer.core import Model
 
 # Configure Client Options for Memcached

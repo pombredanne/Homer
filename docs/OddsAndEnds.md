@@ -2,35 +2,9 @@ Odds and Ends:
 ==============
 Some things to note if you are using homer.
 
-1. Data Serialization:
-   No support for Mixins: Your type must either be a set, sequence, simple or mapping
+1. Write simple SerDe
+2. Fix the Type Quirk, to make sure that Type(Blog) works, I don't want to keep doing Type(type = str, default = "Hello")
 
-2. AppEngine does not support serialization of descriptors that are added later e.g.
-   
-   class Person(db.Model):
-       birthday = Date()
-   
-   if I'd do something like
-       Person.age = Integer()
-       p = Person()
-       p.birthday = #Some date here
-       p.age = 45 #May not work
-       p.put() # Will only store the birthday attribute to the datastore.
-   
-   Well Homer wisely avoided this :)
-
-3. By default all the common properties coerce types set on them. BUT containers
-   type do not try to coerce thier elements. I think devs should know. coercion
-   should be a convenience not a habit:::: Fixed Yeah, Now Homer will try to coerce all the elements in a container.
-
-4. Do normal type coercion, third party devs should make sure their Descriptors are callable
-
-5. Homer does not currently suppor ttl CF's in cassandra. how do I do this elegantly? --- Done; YEAH..
-6. Why didn't you implement automatic key Generation ?
-
-Odds:
-What about classes from different modules clashing; The @key decorator can prevent this
-by throwing an exception when the same kind is defined twice in the same namespace.
 
 Ten things I love about Homer-Simpson:
 1.  Autofailover

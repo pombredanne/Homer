@@ -22,7 +22,6 @@ Copyright 2011, June inc.
 
 Description:
 Provides a very nice abstraction around Cassandra; 
-
 """
 import time
 import itertools
