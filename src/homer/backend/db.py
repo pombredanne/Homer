@@ -317,7 +317,7 @@ from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSup
 ####  
 """
 Simpson:
-Provides a very simple way to use cassandra from python; It provides load balancing,
+Provides a **very** simple way to use cassandra from python; It provides load balancing,
 auto failover, connection pooling and its clever enough to batch calls so it
 has very low latency. And one more thing... It automatically implements the
 the store and cache pattern, So Gets are lightning fast...
@@ -360,11 +360,6 @@ class Simpson(object):
     @classmethod
     def put(cls, period, *Models):
         '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
-        pass
-    
-    @classmethod
-    def update(cls, *Models):
-        '''Updates @Models with values from the DataStore'''
         pass
     
     @classmethod

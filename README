@@ -39,10 +39,11 @@ class Profile(Model):
     name = String("")
     link = URL("http://twitter.com")
 
-person = Profile(name = 'Yoda', link = 'http://faceboook.com')
-person.save() # Store the object person in Cassandra and Memcached automatically.
+with Level.Quorum:
+    person = Profile(name = 'Yoda', link = 'http://faceboook.com')
+    person.save() # Put in memcache and Cassandra
 
-found = Profile.read('Yoda') #This person is fetched from the cache instead of from db.
+found = Profile.read('Yoda') # Reads come from cache first.
 assert person == found
 
 
