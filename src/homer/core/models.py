@@ -182,6 +182,7 @@ class Property(object):
         self.required = keywords.pop("required", False)
         self.choices = keywords.pop("choices", [])
         self.omit = keywords.pop("omit", False)
+        self.indexed = keywords.pop("indexed", False)
         self.name = None
         self.deleted = False
         self.default = default
@@ -200,7 +201,7 @@ class Property(object):
         if self.mode == READONLY:
             raise AttributeError("This is a READONLY attribute")
         value = self.validate(value)
-        if self.name is None : self.name = Property.search(instance,self)
+        if self.name is None : self.name = Property.search(instance, None,self)
         if self.name is not None:
             instance.__dict__[self.name] = value
             self.deleted = False
@@ -216,7 +217,7 @@ class Property(object):
         
     def __get__(self, instance, owner):
         """Read the value of this property"""
-        if self.name is None : self.name = Property.search(instance,self)
+        if self.name is None : self.name = Property.search(instance, owner,self)
         if self.name is not None:
             try:
                 if instance is not None:
@@ -232,15 +233,15 @@ class Property(object):
                     raise AttributeError("Cannot find %s in %s" 
                         % (self,instance))
         else:
-            raise AttributeError("Cannot find %s in: %s" % 
-                (self,instance))
+            raise AttributeError("Cannot find any property named %s in: %s" % 
+                (self.name, owner))
            
     def __delete__(self, instance):
         """ Delete this Property from @instance """
         if self.deleted: return 
         if self.mode != READWRITE:
             raise AttributeError("This is NOT a READWRITE Property, Error")
-        if self.name is None : self.name = Property.search(instance,self)
+        if self.name is None : self.name = Property.search(instance, None ,self)
         if self.name is not None:
             try:
                 del instance.__dict__[self.name]
@@ -255,18 +256,29 @@ class Property(object):
         return self.validate(value)
                              
     @staticmethod
-    def search(instance, descriptor):
+    def search(instance, owner, descriptor):
         """Returns the name of this descriptor by searching its class hierachy"""
         '''Search class dictionary first'''
-        for name, value in instance.__class__.__dict__.items():
-            if value is descriptor:
-                return name
-        '''Then search all the ancestors dictionary'''        
-        for cls in type(instance).__bases__:
-            for name, value in cls.__dict__.items():
+        if instance is not None:
+            for name, value in instance.__class__.__dict__.items():
                 if value is descriptor:
                     return name
+            '''Then search all the ancestors dictionary'''        
+            for cls in type(instance).__bases__:
+                for name, value in cls.__dict__.items():
+                    if value is descriptor:
+                        return name
+        elif owner is not None:
+            for name, value in owner.__dict__.items():
+                if value is descriptor:
+                    return name
+            '''Then search all the ancestors dictionary'''        
+            for cls in owner.__bases__:
+                for name, value in cls.__dict__.items():
+                    if value is descriptor:
+                        return name
         return None
+            
         
     def empty(self, value):
         """What does empty mean to this descriptor?"""
@@ -396,7 +408,7 @@ class Model(object):
     @classmethod
     def kind(cls):
         """The Type Name of @self in the Datastore"""
-        return self.__class__.__name__
+        return cls.__class__.__name__
         
     @classmethod
     def delete(cls, keys, cache = True):

@@ -164,6 +164,7 @@ def using(Pool):
 RoundRobinPool:
 This provides threadsafe client side load balancing for a Cassandra cluster, 
 It reuses addresses that are preconfigured in a round robin fashion.
+
 """
 class RoundRobinPool(Pool):
     '''Implements Load balancing for a Cluster'''
@@ -317,10 +318,9 @@ from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSup
 ####  
 """
 Simpson:
-Provides a **very** simple way to use cassandra from python; It provides load balancing,
-auto failover, connection pooling and its clever enough to batch calls so it
-has very low latency. And one more thing... It automatically implements the
-the store and cache pattern, So Gets are lightning fast...
+Provides a **very** simple way to use cassandra from python; It provides 
+load balancing, auto failover, connection pooling and its clever enough to batch calls so it
+has very low latency. 
 """
 class Simpson(object):
     '''An 'Model' Oriented Interface to Cassandra;'''
@@ -354,17 +354,17 @@ class Simpson(object):
            
     @classmethod
     def read(cls, *Keys):
-        '''Reads @keys from the Datastore; if @cache check Memcache first'''
+        '''Reads @keys from the Datastore;'''
         pass
         
     @classmethod
     def put(cls, period, *Models):
-        '''Persists @objects to the datastore, put a copy in the cache if cache = True'''
+        '''Persists @objects to the datastore'''
         pass
     
     @classmethod
     def delete(cls, *Models):
-        '''Deletes @objects from the datastore, remove copy in cache if cache is True'''
+        '''Deletes @objects from the datastore'''
         pass  
 
 ##

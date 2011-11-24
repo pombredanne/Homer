@@ -12,8 +12,7 @@ from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError
-
-
+  
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
     
@@ -75,7 +74,7 @@ class TestKeyAndModel(TestCase):
         for name, value in person.fields().items():
             print name, str(value)
 
-"""#.. Tests for homer.core.models.Type"""
+"""#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
     """Sanity Checks for Type"""
     def setUp(self):
@@ -137,9 +136,9 @@ class TestProperty(TestCase):
             """No bugs..."""
             name = Property()
             email = Property("iroiso@live.com", mode = READONLY)
-            girlfriend = Property("gwen", choices = ["amy","stacy","gwen"],required = True)   
+            girlfriend = Property("gwen", choices = ["amy","stacy","gwen"],required = True) 
         self.bug = Bug()
-         
+      
     def testReadWriteProperty(self):
         """Makes sure that ReadWrites can be read,written and deleted"""
         setattr(self.bug,"name","Emeka")
@@ -148,6 +147,13 @@ class TestProperty(TestCase):
         with self.assertRaises(AttributeError):
             print self.bug.name
     
+    def testIndexed(self):
+        """Tests if Indexed Properties work"""
+        class Bug(object):
+            name = Property("A bugs life", indexed = True)
+        self.assertTrue(Bug.name.indexed)
+    
+    @skip("Ignore for now")    
     def testSetDeleteSetGetWorks(self):
         """Tests this sequence, Delete,Set,Get does it work; Yup I know its crap"""
         setattr(self.bug,"name","First name")
@@ -165,7 +171,7 @@ class TestProperty(TestCase):
         self.bug.name = "Emeka"
         del self.bug.name
         self.assertRaises(Exception,lambda:getattr(self.bug,"name"))
-            
+         
     def testChoices(self):
         """Tries to set a value that is not a amongst the properties choices"""
         with self.assertRaises(BadValueError):
@@ -175,7 +181,7 @@ class TestProperty(TestCase):
         """Asserts that a required Property cannot be set to an empty value"""
         with self.assertRaises(BadValueError):
             self.bug.girlfriend = None
-       
+    
     def testReadOnlyProperty(self):
         """Makes sure that ReadOnlies are immutable """
         with self.assertRaises(ValueError):
