@@ -17,3 +17,4 @@ class Shinobi(Record):
     
 """
 version = "0.5.0"
+

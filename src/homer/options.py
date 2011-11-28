@@ -23,12 +23,13 @@ from homer.core.builtins import object
 ##
 class Strategy(object):
     '''Base class for all Strategy Types'''
-    pass
+    def __str__(self):
+        return self.name
     
 class NetworkTopologyStrategy(Strategy):
     name = String("NetworkTopologyStrategy", READONLY)
     factor = Integer(1)
-    options = Map(String, Integer)
+    options = Map(String, Integer, default = None)
 
 class OldNetworkTopologyStrategy(Strategy):
     '''Configuration options for the "OldNetworkTopologyStrategy" '''
@@ -43,7 +44,7 @@ class SimpleStrategy(Strategy):
 class DataStoreOptions(object):
     '''Configuration options for Cassandra'''
     size = Integer(25)
-    timeout = Float(0.5)
+    timeout = Float(30.0)
     recycle = Integer(8000)
     idle, retry = Integer(10),Integer(5)
     servers = Set(String,default = ["localhost:9160",])
@@ -74,8 +75,11 @@ class Settings(object):
 class Namespace(object):
     '''Used for grouping a CacheOption and DataStoreOption into one namespace'''
     memcache = None
-    name = String("June")
+    name = String("Test")
     cassandra = Type(type=DataStoreOptions, default= DataStoreOptions())
+    
+    def __str__(self):
+        return "[Namespace: %s]" % self.name
   
 
 class Namespaces(object):

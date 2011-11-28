@@ -34,8 +34,8 @@ from thrift.transport import TTransport, TSocket
 from thrift.protocol import TBinaryProtocol
 
 from cql.cursor import Cursor
-from cql.cassandra import Cassandra
-from cql.cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
+from cassandra import Cassandra
+from cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
 
 __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
@@ -46,6 +46,10 @@ POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 ####
 class ConnectionDisposedError(Exception):
     """A Error that is thrown if you try to use a Connection that has been disposed"""
+    pass
+
+class DuplicateError(Exception):
+    '''An Exception that is thrown when a duplicate keyspace or column family is detected'''
     pass
 
 class TimedOutException(Exception):
@@ -233,7 +237,7 @@ class Connection(object):
         self.local = local()
         host, port = address.split(":")
         socket = TSocket.TSocket(host, int(port))
-        socket.setTimeout(pool.timeout)
+        socket.setTimeout(pool.timeout * 1000.0)
         # Local Variables
         self.transport = TTransport.TFramedTransport(socket)
         protocol = TBinaryProtocol.TBinaryProtocolAccelerated(self.transport)
@@ -245,7 +249,6 @@ class Connection(object):
         self.transport.open()
         self.open = True
         self.keyspace = keyspace
-        self.client.set_keyspace(keyspace)
         if username and password:
             request = AuthenticationRequest(credentials = {"username": username, "password": password})
             self.client.login(request)
@@ -309,8 +312,7 @@ class EvictionThread(Thread):
 ###
 import time
 from homer.core.models import StorageSchema
-from cql.cassandra.ttypes import Mutation, Deletion, SlicePredicate, ColumnOrSuperColumn, Column,\
-     InvalidRequestException
+from cassandra.ttypes import *
 
 
 ####
@@ -329,28 +331,25 @@ class Simpson(object):
     
     @classmethod
     def create(cls, model):
-        from homer.options import Settings
+        """Creates a new ColumnFamily from this Model"""
+        from homer.options import namespaces
+        from homer.core.models import key, Model
+        assert issubclass(model, Model), "parameter model: %s must inherit from model" % model
         info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
         namespace = info[0]
         kind = info[1]
+        meta = MetaModel(model)
         # Create a new keyspace if necessary
-        if namespace not in keyspaces:
-            print 'Creating Keyspace: %s' % namespace
-#           found = Settings.Homer.Pool[namespace]                                  
-            pool = RoundRobinPool(found)
+        if namespace not in cls.keyspaces:  
+            found = namespaces.get(namespace)  #Returns an options.Namespace object 
+            print 'Creating Keyspace from: %s' % found                        
+            pool = RoundRobinPool(found.cassandra)
             print 'Connecting to Cassandra :)'
             with using(pool) as conn:
-                MetaModel(model).makeKeySpace(conn)
+                meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
-        # Create a new column family if necessary    
-        if kind not in columfamilies:
-            print 'Creating ColumnFamily: %s' % kind
-            pool = cls.pools[namespace]
-            with using(pool) as conn:
-                MetaModel(model).makeColumnFamily(conn) #MetaModels should be designed to be disposable.
-            cls.columnfamilies.add(kind)
-        #Create a indexes if necessary..
+        
            
     @classmethod
     def read(cls, *Keys):
@@ -377,7 +376,7 @@ class MetaModel(object):
     def __init__(self, model):
         '''Creates a Transform for this Model'''
         info = StorageSchema.Get(model)
-        self.model = Model
+        self.model = model
         self.namespace = info[0]
         self.kind = info[1]
         self.keyProperty = info[2]
@@ -389,7 +388,7 @@ class MetaModel(object):
         try:
             connection.client.system_add_keyspace(self.asKeySpace())
         except InvalidRequestException:
-            pass #Log invalid requests; They mean that there is a duplicate
+            raise DuplicateError("Another Keyspace with this name seems to exist")
             
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
@@ -398,15 +397,28 @@ class MetaModel(object):
         except InvalidRequestException:
             pass #Do nothing about invalid requests; They mean that there is a duplicate
     
-    def makeIndices(self, connection):
+    def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
         # This call should work by flipping bits. If Property.indexed == True, index it else unindex it
         pass
         
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
-        result = KsDef(name= self.namespace)
-        return result
+        from homer.options import namespaces, NetworkTopologyStrategy
+        
+        options = namespaces.get(self.namespace)
+        assert options is not None, "No configuration options for this keyspace"
+        name = options.name
+        strategy = options.cassandra.strategy
+        package = 'org.apache.cassandra.locator.%s' % strategy
+        replication = strategy.factor
+        if isinstance(strategy, NetworkTopologyStrategy):
+            print "Creating keyspace with %s, %s, %s" % (name, package, strategy.options)
+            return KsDef(name, package, strategy.options, replication, [])
+        else:
+            print "Creating keyspace with %s, %s, " % (name, package)
+            return KsDef(name, package, None, replication, [])
+      
     
     def asColumnFamily(self):
         '''Returns the native column family definition for this @Model'''

@@ -44,7 +44,9 @@ class TestKeyAndModel(TestCase):
             '''A key whose name is function'''
             number = Property()
             def name(self):
+                '''Useful for building composite keys'''
                 return "House: %s" % self.number
+                
         house = House(number = 50)
         self.assertEquals(house.key().key, "House: 50")
     
@@ -152,8 +154,7 @@ class TestProperty(TestCase):
         class Bug(object):
             name = Property("A bugs life", indexed = True)
         self.assertTrue(Bug.name.indexed)
-    
-    @skip("Ignore for now")    
+        
     def testSetDeleteSetGetWorks(self):
         """Tests this sequence, Delete,Set,Get does it work; Yup I know its crap"""
         setattr(self.bug,"name","First name")

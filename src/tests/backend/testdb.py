@@ -25,9 +25,8 @@ Tests for the the db module.
 """
 import time
 from homer.options import options, DataStoreOptions
-from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError
+from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson
 from unittest import TestCase, skip
-
 
 class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
@@ -69,7 +68,7 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    @skip("Takes to Long to Run..")
+    #@skip("Takes to Long to Run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -119,3 +118,53 @@ class TestConnection(TestCase):
         connection.dispose()
         with self.assertRaises(ConnectionDisposedError):
             connection.client
+
+###
+# Tests that use cql to confirm the behaviour of Cassandra.
+###
+
+import cql
+from homer.core.models import key, Model
+from homer.core.commons import *
+from homer.options import *
+
+class TestSimpson(TestCase):
+    '''Behavioural contract for Simpson'''
+    
+    def setUp(self):
+        self.db = Simpson()
+        self.connection = cql.connect("localhost", 9160).cursor()
+        
+    
+    def tearDown(self):
+        try:
+            self.connection.execute("DROP KEYSPACE Test;")
+            self.connection.close()
+        except:
+            pass
+    
+    def testSimpsonOnlyAcceptsModel(self):
+        '''Checks if Simpson accepts non models'''
+        class Person(object):
+            '''An ordinary new-style class'''
+            pass
+        self.assertRaises(AssertionError, lambda: self.db.create(Person))   
+        
+    def testCreate(self):
+        '''Tests if Simpson.create() actually creates a ColumnFamily in Cassandra'''
+        instances = ["localhost:9160",]
+        c = DataStoreOptions(servers=instances, username="", password="")
+        namespace = Namespace(name= "Test", cassandra= c)
+        namespaces.add(namespace)
+        namespaces.default = "Test"
+        
+        @key("name")
+        class Person(Model):
+            name = String("Homer Simpson", indexed = True)
+            twitter = URL("http://twitter.com/homer", indexed = True)
+            
+        self.db.create(Person); #Quantum Leap.
+        with self.assertRaises(Exception): # Try to create the wanted keyspace to see if it doesn't exist.
+            self.connection.execute("CREATE KEYSPACE Test;"); 
+        
+    
