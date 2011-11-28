@@ -139,11 +139,12 @@ class Key(object):
         if kind is None and key is None:
             try:
                 key, repr = namespace.split(":")
-                assert key == "key", "Key representation should start with 'key:'"
+                assert key == "key", "Key representation\
+                    should start with 'key:'"
                 namespace, kind, key = repr.split(",")
             except:
-                raise BadKeyError("Expected String of format 'key:\
-                    namespace, kind, key', Got: %s" % namespace)
+                raise BadKeyError("Expected String of"\
+                    + "format 'key: namespace, kind, key', Got:%s" % namespace)
         validate = Validation.validateString
         self.namespace, self.kind, self.key = \
             validate(namespace), validate(kind), validate(key)
