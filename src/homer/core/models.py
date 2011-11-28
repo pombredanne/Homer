@@ -209,10 +209,8 @@ class Property(object):
         else:
             raise AttributeError("Cannot find %s in  %s " % (self,instance))
     
-    #   For nested objects like lists and dicts, it is quite difficult to verify
-    # on each insert, so calling finalize() before storage should perform type checking.      
     def finalize(self, instance):
-        '''This method is called to do final verification before a property is stored'''
+        '''Yields the datastore representation of its value'''
         value = self.validate(getattr(instance, self.name)) # Validate values.
         return value
         
@@ -351,6 +349,7 @@ class Type(Property):
 ###
 # Model and Its Friends
 ###
+from homer.core.builtins import fields
 from homer.backend import Simpson
 """
 Model: 
@@ -370,7 +369,7 @@ class Model(object):
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new'])
-        for name in self.fields():
+        for name in fields(self, Property):
             if name in kwds:
                 setattr(self, name, kwds[name])
         self.new = True
@@ -391,7 +390,7 @@ class Model(object):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
     
-    def put(self, cache = True, period = CachePeriod):
+    def save(self, cache = True, period = CachePeriod):
         """Stores this object in the datastore and in the cache"""
         if self.new:
             print 'Creating %s at the backend' % self
@@ -402,7 +401,7 @@ class Model(object):
         self.differ.commit()
                
     @classmethod
-    def get(cls, keys, cache = True):
+    def read(cls, keys, cache = True):
         """Retreives objects from the datastore, if @cache check the cache"""
         return Simpson.read(*keys)
     
@@ -425,17 +424,7 @@ class Model(object):
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
         return CqlQuery('SELECT * FROM %s LIMIT=%s' % (cls.kind(), limit))
-        
-    def fields(self):
-        """Searches class hierachy and returns all known properties for this object"""
-        cls = self.__class__;
-        fields = {}
-        for root in reversed(cls.__mro__):
-            for name, prop in root.__dict__.items():
-                if isinstance(prop, Property):
-                    fields[name] = prop
-        return fields
-        
+            
     def __str__(self):
         '''A String representation of this Model'''
         format = "Model: %s" % (self.kind(),)

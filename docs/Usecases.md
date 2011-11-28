@@ -27,6 +27,6 @@ class Episode(Model):
     """An Episode of an Anime"""
     name = String()
     hits = Integer(indexed = True)
-    rating = Rating(indexed = True)
+    rating = Rating(indexed = True) #d
     video = Blob(size = "100MB", mime = "video/mp4")
     

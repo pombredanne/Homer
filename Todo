@@ -1,13 +1,19 @@
 Todo:
 1. Write a useful implementation for keyComparatorType, subComparatorType etc.
 2. Add indexing support through basic CQL, via MetaModel.makeIndexes().
+2.1 Add Expiry support through Properties
 3. Write Simpson.put()
 4. Write Simpson.read()
 5. Write Simpson.delete()
 6. Tag v0.7-alpha.
 7. Go out to a nice restaurant on campus for a break :).
+8. Create a Rating Property
 
 #Interim fix.
 You can only expire columns in Cassandra. not column families. this is fit
 because you can only create expiry for keys in memcached; this will give the
 framework more finely grained control.
+
+Feature #1.
+Different Property Types should have the cassandra type they map too. You can
+look through this map and find out which type a key is supposed to be.
