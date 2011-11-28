@@ -360,14 +360,15 @@ class Simpson(object):
                 meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
+            
         # Create a new column family if necessary    
         if kind not in cls.columnfamilies:
             print 'Creating ColumnFamily: %s' % kind
             pool = cls.pools[namespace]
             with using(pool) as conn:
                 meta.makeColumnFamily(conn) #MetaModels should be designed to be disposable.
+                meta.makeIndexes(conn)
             cls.columnfamilies.add(kind)
-        # Create indexes for all indexed properties
               
     @classmethod
     def read(cls, *Keys):
@@ -407,7 +408,7 @@ class MetaModel(object):
         try:
             connection.client.system_add_keyspace(self.asKeySpace())
         except InvalidRequestException:
-            raise DuplicateError("Another Keyspace with this name seems to exist")
+            pass#raise DuplicateError("Another Keyspace with this name seems to exist")
             
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
@@ -416,13 +417,26 @@ class MetaModel(object):
         try:
             connection.client.set_keyspace(options.name)
             connection.client.system_add_column_family(self.asColumnFamily())
-        except InvalidRequestException:
-            pass #Do nothing about invalid requests; They mean that there is a duplicate
+            self.wait(connection)
+        except InvalidRequestException as e:
+            raise e #Do nothing about invalid requests; They mean that there is a duplicate
     
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
-        # This call should work by flipping bits. If Property.indexed == True, index it else unindex it
-        pass
+        from homer.options import namespaces
+        options = namespaces.get(self.namespace)
+        
+        query = 'CREATE INDEX ON {kind}({name});'
+        for name, property in self.properties.items():
+            if property.indexed:
+                print "Creating index on: %s" % property
+                cursor = connection.cursor()
+                formatted = query.format(kind = self.kind, name= property.name)
+                print formatted
+                cursor.execute("USE %s;" % options.name)
+                cursor.execute(formatted)
+        self.wait(connection)
+                
         
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
@@ -459,12 +473,29 @@ class MetaModel(object):
             return 'org.apache.cassandra.db.marshal.%s' % value
         # Fill up some other properties which we can infer from the model   
         CF.comparator_type = expand(self.keyComparatorType())
-        CF.subcomparator_type = expand(self.subComparatorType())
         CF.default_validation_class = expand(self.defaultValidationClass())
         CF.key_validation_class = expand(self.keyValidationClass())  
-        #Any other configuration should be done manually
+        #Create column definitions
+        columns = self.asColumnDefinitions()
+        CF.column_metadata = columns
         return CF
-        
+    
+    def asColumnDefinitions(self):
+        '''Returns a set of column definitions for each descriptor in this model'''
+        def expand(value):
+            '''An inline function used to expand db package names'''
+            return 'org.apache.cassandra.db.marshal.%s' % value   
+        columns = []
+        for name, value in self.properties.items():
+            column = ColumnDef()
+            column.name = name
+            column.validation_class = expand("BytesType")
+            #column.index_type = IndexType.KEYS
+            print column
+            columns.append(column)
+        return columns
+           
+            
     def keyComparatorType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
         print self.properties
@@ -479,12 +510,19 @@ class MetaModel(object):
         
     def subComparatorType(self):
         '''Returns the SubComparatorType for a particular Model'''
-        return None #A shortcut for now, will do proper computation later.
+        return None # There is no support for SuperColumns yet
     
     def defaultValidationClass(self):
         '''Returns the default validation class for a particular Model'''
         return "BytesType"
-            
+    
+    def wait(self, conn):
+        while True:
+            versions = conn.client.describe_schema_versions()
+            if len(versions) == 1:
+                break
+            time.sleep(0.25) 
+                 
     @property
     def mutations(self):
         '''Creates Mutations from the changes that has occurred to this Model since the last commit'''

@@ -368,9 +368,10 @@ class Model(object):
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new'])
-        for name in self.fields():
+        for name,value in self.fields().items():
             if name in kwds:
                 setattr(self, name, kwds[name])
+            value.__configure__(name, type(self))
         self.new = True
         self.differ.commit()
     
