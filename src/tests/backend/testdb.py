@@ -68,7 +68,7 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    @skip("Takes to Long to Run..")
+    #@skip("Takes to Long to Run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -150,7 +150,7 @@ class TestSimpson(TestCase):
         class Person(object):
             '''An ordinary new-style class'''
             pass
-        self.assertRaises(AssertionError, lambda: self.db.create(Person))   
+        self.assertRaises(AssertionError, lambda: self.db.create(Person()))   
         
     def testCreate(self):
         '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
