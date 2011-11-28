@@ -37,6 +37,8 @@ from cql.cursor import Cursor
 from cassandra import Cassandra
 from cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
 
+import atexit
+
 __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 
@@ -185,6 +187,7 @@ class RoundRobinPool(Pool):
         self.username = options.username
         self.password = options.password
         self.evictionThread = EvictionThread(self, self.maxIdle, self.evictionDelay)
+        atexit.register(self.disposeAll)
         
     def get(self):
         '''Yields a valid connection to this Keyspace'''
@@ -218,6 +221,7 @@ class RoundRobinPool(Pool):
     
     def disposeAll(self):
         '''Disposes all the Connections in the Pool, typically called at System Exit'''
+        print "Disposing all the remaining Connections"
         while True:
             try:
                 connection = self.queue.get(False)
@@ -446,8 +450,8 @@ class MetaModel(object):
         CF.subcomparator_type = expand(self.subComparatorType())
         CF.default_validation_class = expand(self.defaultValidationClass())
         CF.key_validation_class = expand(self.keyValidationClass())  
-        
-        #Some other stuff here
+  
+        #Any other configuration should be done manually
         return CF
         
     def keyComparatorType(self):
