@@ -349,8 +349,14 @@ class Simpson(object):
                 meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
-        
-           
+        # Create a new column family if necessary    
+        if kind not in cls.columnfamilies:
+            print 'Creating ColumnFamily: %s' % kind
+            pool = cls.pools[namespace]
+            with using(pool) as conn:
+                meta.makeColumnFamily(conn) #MetaModels should be designed to be disposable.
+            cls.columnfamilies.add(kind)
+              
     @classmethod
     def read(cls, *Keys):
         '''Reads @keys from the Datastore;'''
@@ -382,6 +388,7 @@ class MetaModel(object):
         self.keyProperty = info[2]
         self.validity = info[3]
         self.comment = self.kind.__doc__
+        self.super = False;
     
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
@@ -405,7 +412,6 @@ class MetaModel(object):
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
         from homer.options import namespaces, NetworkTopologyStrategy
-        
         options = namespaces.get(self.namespace)
         assert options is not None, "No configuration options for this keyspace"
         name = options.name
@@ -419,17 +425,47 @@ class MetaModel(object):
             print "Creating keyspace with %s, %s, " % (name, package)
             return KsDef(name, package, None, replication, [])
       
-    
     def asColumnFamily(self):
         '''Returns the native column family definition for this @Model'''
-        result = CfDef(keyspace=self.namespace, name= self.model.kind())
-        result.comment = self.comment
-        return result
-    
-    def keyType(self):
+        from homer.options import namespaces, NetworkTopologyStrategy
+        options = namespaces.get(self.namespace)
+        assert options is not None, "No configuration options for this keyspace"
+        namespace = options.name
+        CF = CfDef()
+        CF.keyspace = namespace
+        CF.name = self.kind
+        CF.comment = self.comment
+        if self.super:
+            CF.column_type = "Super"
+        
+        def expand(value):
+            '''An inline function used to expand db package names'''
+            return 'org.apache.cassandra.db.marshal.%s' % value
+            
+        CF.comparator_type = expand(self.keyComparatorType())
+        CF.subcomparator_type = expand(self.subComparatorType())
+        CF.default_validation_class = expand(self.defaultValidationClass())
+        CF.key_validation_class = expand(self.keyValidationClass())  
+        
+        #Some other stuff here
+        return CF
+        
+    def keyComparatorType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
+        return "UTF8Type" #A shortcut for now, will do proper computation later.
+    
+    def keyValidationClass(self):
+        '''Return the key validation class for a particular Model'''
         return "UTF8Type"
-         
+        
+    def subComparatorType(self):
+        '''Returns the SubComparatorType for a particular Model'''
+        return None #A shortcut for now, will do proper computation later.
+    
+    def defaultValidationClass(self):
+        '''Returns the default validation class for a particular Model'''
+        return None
+            
     @property
     def mutations(self):
         '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
