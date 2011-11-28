@@ -451,7 +451,7 @@ class MetaModel(object):
         CF = CfDef()
         CF.keyspace = namespace
         CF.name = self.kind
-        CF.comment = self.comment
+        CF.comment = self.model.__doc__
         if self.super:
             CF.column_type = "Super"
         # Helper method for expanding db class names.
@@ -475,7 +475,7 @@ class MetaModel(object):
     
     def keyValidationClass(self):
         '''Return the key validation class for a particular Model'''
-        return "UTF8Type"
+        return self.keyComparatorType()
         
     def subComparatorType(self):
         '''Returns the SubComparatorType for a particular Model'''
@@ -483,7 +483,7 @@ class MetaModel(object):
     
     def defaultValidationClass(self):
         '''Returns the default validation class for a particular Model'''
-        return None
+        return "BytesType"
             
     @property
     def mutations(self):
