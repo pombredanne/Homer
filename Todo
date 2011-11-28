@@ -1,0 +1,8 @@
+Todo:
+1. Write a useful implementation for keyComparatorType, subComparatorType etc.
+2. Add indexing support through basic CQL, via MetaModel.makeIndexes().
+3. Write Simpson.put()
+4. Write Simpson.read()
+5. Write Simpson.delete()
+6. Tag v0.7-alpha.
+7. Go out to a nice restaurant on campus for a break :).
