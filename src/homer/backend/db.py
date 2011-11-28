@@ -221,7 +221,7 @@ class RoundRobinPool(Pool):
     
     def disposeAll(self):
         '''Disposes all the Connections in the Pool, typically called at System Exit'''
-        print "Disposing all the remaining Connections"
+        print "Pool Shutdown: Disposing off all the remaining Connections"
         while True:
             try:
                 connection = self.queue.get(False)
@@ -360,6 +360,7 @@ class Simpson(object):
             with using(pool) as conn:
                 meta.makeColumnFamily(conn) #MetaModels should be designed to be disposable.
             cls.columnfamilies.add(kind)
+        # Create indexes for all indexed properties
               
     @classmethod
     def read(cls, *Keys):
@@ -403,7 +404,10 @@ class MetaModel(object):
             
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
+        from homer.options import namespaces, NetworkTopologyStrategy
+        options = namespaces.get(self.namespace)
         try:
+            connection.client.set_keyspace(options.name)
             connection.client.system_add_column_family(self.asColumnFamily())
         except InvalidRequestException:
             pass #Do nothing about invalid requests; They mean that there is a duplicate
