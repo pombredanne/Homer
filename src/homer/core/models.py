@@ -68,11 +68,11 @@ class Profile(Model):
     link = URL("http://twitter.com")
     
 """
-def key(name, expires = -1, namespace = None):
+def key(name, namespace = None):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
-            StorageSchema.Put(namespace, cls, name, expires)
+            StorageSchema.Put(namespace, cls, name)
             return cls
         else:
             raise TypeError("You must pass in a subclass of  Model not: %s" % cls)
@@ -89,14 +89,14 @@ class StorageSchema(object):
     schema, keys = {}, {}
     
     @classmethod
-    def Put(cls, namespace, model, key, expiration):
+    def Put(cls, namespace, model, key):
         """Stores Meta Information for a particular class""" 
         kind = model.__name__
         if not namespace in cls.schema:
             cls.schema[namespace] = WeakValueDictionary()
         if kind not in cls.schema[namespace]:
             cls.schema[namespace][kind] = model
-            cls.keys[id(model)] = (namespace, kind, key, expiration,)
+            cls.keys[id(model)] = (namespace, kind, key, )
         else:
             raise BadModelError("Model: %s already exists in the Namespace: %s" % (model, namespace))
         
@@ -132,9 +132,9 @@ required to retreive a Model from Cassandra or any other Cache
 """
 class Key(object):
     """A GUID for Models"""
-    namespace, kind, key, expiry = None, None, None, None
+    namespace, kind, key = None, None, None
     
-    def __init__(self, namespace, kind = None, key = None, expiry = -1):
+    def __init__(self, namespace, kind = None, key = None):
         """Creates a key from keywords or from a str representation"""
         if kind is None and key is None:
             try:
@@ -145,8 +145,8 @@ class Key(object):
                 raise BadKeyError("Expected String of format 'key:\
                     namespace, kind, key', Got: %s" % namespace)
         validate = Validation.validateString
-        self.namespace, self.kind, self.key, self.expiry = \
-            validate(namespace), validate(kind), validate(key), int(expiry)
+        self.namespace, self.kind, self.key = \
+            validate(namespace), validate(kind), validate(key)
     
     def isComplete(self):
         """Checks if this key has a namespace, kind and key"""
@@ -377,12 +377,12 @@ class Model(object):
     
     def key(self):
         """Unique key for identifying this instance"""
-        namespace, kind, key, expiry = StorageSchema.Get(self)
+        namespace, kind, key = StorageSchema.Get(self)
         if hasattr(self, key):
             value = getattr(self, key)
             if value is not None:
                 key = value() if callable(value) else value
-                return Key(namespace, kind, key, expiry)
+                return Key(namespace, kind, key)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
         

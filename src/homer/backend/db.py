@@ -391,7 +391,6 @@ class MetaModel(object):
         self.namespace = info[0]
         self.kind = info[1]
         self.keyProperty = info[2]
-        self.validity = info[3]
         self.comment = self.kind.__doc__
         self.super = False;
     
@@ -439,22 +438,22 @@ class MetaModel(object):
         options = namespaces.get(self.namespace)
         assert options is not None, "No configuration options for this keyspace"
         namespace = options.name
+        # Create a ColumnFamilyDefinition and fill up its properties
         CF = CfDef()
         CF.keyspace = namespace
         CF.name = self.kind
         CF.comment = self.comment
         if self.super:
             CF.column_type = "Super"
-        
+        # Helper method for expanding db class names.
         def expand(value):
             '''An inline function used to expand db package names'''
             return 'org.apache.cassandra.db.marshal.%s' % value
-            
+        # Fill up some other properties which we can infer from the model   
         CF.comparator_type = expand(self.keyComparatorType())
         CF.subcomparator_type = expand(self.subComparatorType())
         CF.default_validation_class = expand(self.defaultValidationClass())
         CF.key_validation_class = expand(self.keyValidationClass())  
-  
         #Any other configuration should be done manually
         return CF
         
