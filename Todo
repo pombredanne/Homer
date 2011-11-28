@@ -17,3 +17,8 @@ framework more finely grained control.
 Feature #1.
 Different Property Types should have the cassandra type they map too. You can
 look through this map and find out which type a key is supposed to be.
+PropertyMap = {Float : "DecimalType", String : "UTF8Type", Integer : "IntegerType", Property : "BytesType"\
+                    , DateTime: "UTF8Type", Date: "UTF8Type", Time: "UTF8Type", Blob : "BytesType", \
+                        URL: "UTF8Type", Boolean: "UTF8Type", Set: "BytesType", List: "BytesType", Map: "BytesType"\
+                            Type: "BytesType" }
+                    

@@ -24,10 +24,12 @@ Description:
 Provides a very nice abstraction around Cassandra; 
 """
 import time
+import atexit
 import itertools
 from contextlib import contextmanager as Context
 from threading import Thread, local
 from Queue import Queue, Empty, Full
+
 
 from thrift import Thrift
 from thrift.transport import TTransport, TSocket
@@ -35,13 +37,11 @@ from thrift.protocol import TBinaryProtocol
 
 from cql.cursor import Cursor
 from cassandra import Cassandra
-from cassandra.ttypes import AuthenticationRequest, ConsistencyLevel
+from cassandra.ttypes import *
 
-import atexit
-
-__all__ = ["CqlQuery", "Simpson", "Level", ]
-POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
-
+from homer.core.commons import *
+from homer.core.builtins import fields
+from homer.core.models import Type, Property, StorageSchema
 
 ####
 # Module Exceptions
@@ -61,7 +61,18 @@ class TimedOutException(Exception):
 class AllServersUnAvailableError(Exception):
     '''Thrown when all the servers in a particular pool are unavailable'''
     pass
+    
+####
+# Constants
+####
+__all__ = ["CqlQuery", "Simpson", "Level", ]
+POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 
+
+PropertyMap = {Float : "DecimalType", String : "UTF8Type", Integer : "IntegerType", Property : "BytesType"\
+                    , DateTime: "UTF8Type", Date: "UTF8Type", Time: "UTF8Type", Blob : "BytesType", \
+                        URL: "UTF8Type", Boolean: "UTF8Type", Set: "BytesType", List: "BytesType", Map: "BytesType"\
+                            ,Type: "BytesType" }
 ####
 # CQL Query Support
 ####
@@ -309,16 +320,13 @@ class EvictionThread(Thread):
                 connection = self.pool.queue.get(False)
                 connection.dispose()
                 time.sleep(self.delay/1000)
-                
+
 
 ###
 # Cassandra Mapping Section;
 ###
-import time
-from homer.core.models import StorageSchema
-from cassandra.ttypes import *
 
-
+####################################################################################################
 ####
 # Simpson Implementation
 ####  
@@ -390,9 +398,10 @@ class MetaModel(object):
         self.model = model
         self.namespace = info[0]
         self.kind = info[1]
-        self.keyProperty = info[2]
+        self.key = info[2]
         self.comment = self.kind.__doc__
         self.super = False;
+        self.properties = fields(model, Property)
     
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
@@ -459,7 +468,10 @@ class MetaModel(object):
         
     def keyComparatorType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
-        return "UTF8Type" #A shortcut for now, will do proper computation later.
+        found = filter(lambda x: x.name == self.key, self.properties)
+        for kind in PropertyMap:
+            if isinstance(found, kind):
+                return PropertyMap[kind]
     
     def keyValidationClass(self):
         '''Return the key validation class for a particular Model'''
