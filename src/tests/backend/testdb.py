@@ -167,8 +167,6 @@ class TestSimpson(TestCase):
             twitter = URL("http://twitter.com/homer", indexed = True)
             
         self.db.create(Person); #Quantum Leap.
-        with self.assertRaises(Exception): # Try to create the wanted keyspace to see if it doesn't exist.
-            self.connection.execute("CREATE KEYSPACE Test;"); 
-            self.connection.execute("CREATE COLUMNFAMILY Person;");
-        
+        self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
+        self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
     
