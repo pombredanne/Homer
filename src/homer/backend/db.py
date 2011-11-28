@@ -40,7 +40,6 @@ from cassandra import Cassandra
 from cassandra.ttypes import *
 
 from homer.core.commons import *
-from homer.core.builtins import fields
 from homer.core.models import Type, Property, StorageSchema
 
 ####
@@ -346,7 +345,7 @@ class Simpson(object):
         """Creates a new ColumnFamily from this Model"""
         from homer.options import namespaces
         from homer.core.models import key, Model
-        assert issubclass(model, Model), "parameter model: %s must inherit from model" % model
+        assert issubclass(model.__class__, Model), "parameter model: %s must inherit from model" % model
         info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
         namespace = info[0]
         kind = info[1]
@@ -401,7 +400,7 @@ class MetaModel(object):
         self.key = info[2]
         self.comment = self.kind.__doc__
         self.super = False;
-        self.properties = fields(model, Property)
+        self.properties = model.fields()
     
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
@@ -468,10 +467,11 @@ class MetaModel(object):
         
     def keyComparatorType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
-        found = filter(lambda x: x.name == self.key, self.properties)
-        for kind in PropertyMap:
-            if isinstance(found, kind):
-                return PropertyMap[kind]
+        print self.properties
+        for name, value in self.properties.items():
+            if name == self.key:
+                return PropertyMap[type(value)]
+            
     
     def keyValidationClass(self):
         '''Return the key validation class for a particular Model'''

@@ -166,7 +166,7 @@ class TestSimpson(TestCase):
             name = String("Homer Simpson", indexed = True)
             twitter = URL("http://twitter.com/homer", indexed = True)
            
-        self.db.create(Person); #Quantum Leap.
+        self.db.create(Person()); #Quantum Leap.
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
     

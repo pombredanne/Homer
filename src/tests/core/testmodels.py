@@ -10,7 +10,6 @@ Unittests for the Models module...
 """
 from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
-from homer.core.builtins import fields
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError
   
@@ -74,7 +73,7 @@ class TestKeyAndModel(TestCase):
         for name in diction:
             self.assertEqual(getattr(person,name), diction[name])
         print "..........................................."
-        for name, value in fields(person, Property).items():
+        for name, value in person.fields().items():
             print name, str(value)
 
 """#.. Tests for homer.core.models.Type"""  

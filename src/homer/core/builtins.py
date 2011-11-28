@@ -17,14 +17,3 @@ class object(object):
         for name, value in keywords.items():
             setattr(self, name, value)
             
-
-def fields(object, type):
-        """Searches class hierachy and returns all known properties for this object"""
-        cls = object.__class__;
-        fields = {}
-        for root in reversed(cls.__mro__):
-            for name, prop in root.__dict__.items():
-                if isinstance(prop, type):
-                    fields[name] = prop
-        return fields
-                

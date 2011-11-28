@@ -349,7 +349,6 @@ class Type(Property):
 ###
 # Model and Its Friends
 ###
-from homer.core.builtins import fields
 from homer.backend import Simpson
 """
 Model: 
@@ -369,7 +368,7 @@ class Model(object):
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new'])
-        for name in fields(self, Property):
+        for name in self.fields():
             if name in kwds:
                 setattr(self, name, kwds[name])
         self.new = True
@@ -424,7 +423,17 @@ class Model(object):
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
         return CqlQuery('SELECT * FROM %s LIMIT=%s' % (cls.kind(), limit))
-            
+        
+    def fields(self):
+        """Searches class hierachy and returns all known properties for this object"""
+        cls = self.__class__;
+        fields = {}
+        for root in reversed(cls.__mro__):
+            for name, prop in root.__dict__.items():
+                if isinstance(prop, Property):
+                    fields[name] = prop
+        return fields
+        
     def __str__(self):
         '''A String representation of this Model'''
         format = "Model: %s" % (self.kind(),)
