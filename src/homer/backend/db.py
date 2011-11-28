@@ -495,7 +495,6 @@ class MetaModel(object):
             columns.append(column)
         return columns
            
-            
     def keyComparatorType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
         print self.properties
@@ -503,7 +502,6 @@ class MetaModel(object):
             if name == self.key:
                 return PropertyMap[type(value)]
             
-    
     def keyValidationClass(self):
         '''Return the key validation class for a particular Model'''
         return self.keyComparatorType()
@@ -517,6 +515,7 @@ class MetaModel(object):
         return "BytesType"
     
     def wait(self, conn):
+        '''Waits for schema agreement accross the entire cluster'''
         while True:
             versions = conn.client.describe_schema_versions()
             if len(versions) == 1:

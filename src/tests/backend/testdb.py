@@ -169,4 +169,6 @@ class TestSimpson(TestCase):
         self.db.create(Person()); #Quantum Leap.
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
+        self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
+        self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
     
