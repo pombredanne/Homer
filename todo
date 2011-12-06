@@ -5,7 +5,10 @@ Todo:
 3.1 Add Expiry support through Properties
 4. Write Simpson.read()
 5. Write Simpson.delete()
-6. Tag v0.7-alpha.
+6. Tag v0.7-alpha; When we add memcached support and SerDe, I'll tag v1.0.0.
 7. Go out to a nice restaurant on campus for a break :).
 8. Create a Rating Property
+
+
+Wide and Skinny Rows...; Merge the concepts into one model
 

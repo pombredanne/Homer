@@ -16,4 +16,3 @@ class object(object):
     def __init__(self, **keywords):
         for name, value in keywords.items():
             setattr(self, name, value)
-            

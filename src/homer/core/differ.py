@@ -20,7 +20,7 @@ from threading import Lock
 Differ:
 The differ module contains utilities that helps homer to diff objects
 and retrieve properties that have changed. This is helpful because it
-reduces the payload of thrift/redis protocol requests.
+reduces the payload of thrift or memcache protocol requests.
 """
 
 
@@ -53,11 +53,11 @@ class Differ(object):
    
     def revert(self):
         '''Reverts @self.model to the previous commit state'''
-        #This method will be used to implement a rollback feature for Models
+        # This method will be used to implement a rollback feature for Models
         clean = self.replica.__dict__
         dirty = self.model.__dict__
         dispose = [v for v in dirty if v not in clean]
-        #Revert all known attributes
+        # Revert all known attributes
         for name in clean:
             setattr(self.model, name, clean[name]) 
         # Delete all new attributes

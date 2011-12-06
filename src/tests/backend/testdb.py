@@ -68,7 +68,7 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    @skip("Takes to Long to Run..")
+    #@skip("Takes to Long to Run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -136,7 +136,6 @@ class TestSimpson(TestCase):
         self.db = Simpson()
         self.connection = cql.connect("localhost", 9160).cursor()
         
-    
     def tearDown(self):
         '''Release resources that have been allocated'''
         try:

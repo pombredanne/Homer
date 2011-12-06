@@ -360,8 +360,7 @@ class Simpson(object):
                 meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
-            
-        # Create a new column family if necessary    
+        # Create a new column family, columns and indexes if necessary    
         if kind not in cls.columnfamilies:
             print 'Creating ColumnFamily: %s' % kind
             pool = cls.pools[namespace]
@@ -437,7 +436,6 @@ class MetaModel(object):
                 cursor.execute(formatted)
         self.wait(connection)
                 
-        
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
         from homer.options import namespaces, NetworkTopologyStrategy
@@ -475,7 +473,7 @@ class MetaModel(object):
         CF.comparator_type = expand(self.keyComparatorType())
         CF.default_validation_class = expand(self.defaultValidationClass())
         CF.key_validation_class = expand(self.keyValidationClass())  
-        #Create column definitions
+        # Create column definitions
         columns = self.asColumnDefinitions()
         CF.column_metadata = columns
         return CF

@@ -29,6 +29,7 @@ import datetime
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
+from homer.core.builtins import object
 from homer.util import Validation
 from homer.core.differ import Differ, DiffError
 
@@ -213,7 +214,7 @@ class Property(object):
         '''Yields the datastore representation of its value'''
         value = self.validate(getattr(instance, self.name)) # Validate values.
         return value
-        
+    
     def __get__(self, instance, owner):
         """Read the value of this property"""
         if self.name is None : self.name = Property.search(instance, owner,self)
@@ -276,8 +277,7 @@ class Property(object):
                 for name, value in cls.__dict__.items():
                     if value is descriptor:
                         return name
-        return None
-            
+        return None         
         
     def empty(self, value):
         """What does empty mean to this descriptor?"""
@@ -358,12 +358,12 @@ only changes you make to them; thereby saving bandwidth.
 
 Simple usecase:
 
-@key("name", expires = 2000)
+@key("name")
 class Profile(Model):
     name = String("John Bull")
 
 """
-class Model(object):
+class Model(object, dict):
     '''Unit of persistence'''
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
@@ -385,7 +385,7 @@ class Model(object):
                 return Key(namespace, kind, key)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
-        
+       
     def rollback(self):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
@@ -418,12 +418,14 @@ class Model(object):
     @classmethod
     def cql(cls, query, *args, **kwds):
         """Interface to Cql from your model, which yields models"""
-        return CqlQuery('SELECT * FROM %s %s' % (cls.kind(), query), *args, **kwds)
+        return CqlQuery('SELECT * FROM %s %s' % (cls.kind()
+            , query), *args, **kwds)
     
     @classmethod
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
-        return CqlQuery('SELECT * FROM %s LIMIT=%s' % (cls.kind(), limit))
+        return CqlQuery('SELECT * FROM %s LIMIT=%s' %
+            (cls.kind(), limit))
         
     def fields(self):
         """Searches class hierachy and returns all known properties for this object"""

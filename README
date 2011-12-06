@@ -24,14 +24,12 @@ instances = ["localhost:9160", "localhost:9161",]
 c = DataStoreOptions(servers=instances, username="test", password="test")
 c.strategy = NetworkTopologyStrategy(factor = 3, options={"DC1": 1, "DC2": 2})
 
-
 # Tie them together into a Namespace object; 
 namespace = Namespace(name= "June", memcache = m, cassandra= c)
 
 # And tell the API about them.
 namespaces.add(namespace)
 namespaces.default = "June" # or you could use namespaces.default = namespace
-
 
 # Now, you can create and ordinary class and store it to Cassandra and Memcache easily
 @key("name")
@@ -45,7 +43,6 @@ with Level.Quorum:
 
 found = Profile.read('Yoda') # Reads come from cache first.
 assert person == found
-
 
 Installation:
 =============

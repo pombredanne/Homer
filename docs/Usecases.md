@@ -21,12 +21,40 @@ class Anime(Model):
         for e in self.episodes:
             rate += e.rating
         return rate/len(self.episodes)
-  
-@key("name")
-class Episode(Model):
-    """An Episode of an Anime"""
-    name = String()
-    hits = Integer(indexed = True)
+
+@key("id")
+class Product(Model):
+    """A Product in the database..."""
+    name = String("")
+    likes = Integer(indexed = True)
     rating = Rating(indexed = True) #
+    dateAdded = DateTime()
+    quantity = Integer()
     video = Blob(size = "100MB", mime = "video/mp4")
+    
+    def id(self):
+        '''Returns a unique identifier for this product'''
+        return     
+
+@Path("/recommend")
+class Recommendations(Request):
+    '''Recommendations and User FeedBack'''
+    
+    @GET("/{user}/{limit}")
+    @Produces(Map(Integer, Product))
+    def RecommendationsPerUser(self, user, limit):
+        '''Returns {@link limit} number of recommendations for a particular User'''
+        pass
+    
+    @POST("/{user}/liked/")
+    @Consumes((Set(Product))
+    def Liked(self, user, product):
+        '''A post is done to this route when a User likes a Product'''
+        pass
+    
+    @DELETE("/{user}/ignored/{product}")
+    def Ignored(self, user, product):
+        '''Invoked when a User ignores a particular Product'''
+        pass
+        
     
