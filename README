@@ -21,7 +21,7 @@ m = CacheOptions(servers=caches, hash="crc32", username="test", password="test")
 
 # Configure Client Options for Cassandra.
 instances = ["localhost:9160", "localhost:9161",]
-c = DataStoreOptions(servers=instances, username="test", password="test")
+c = DatastoreOptions(servers=instances, username="test", password="test")
 c.strategy = NetworkTopologyStrategy(factor = 3, options={"DC1": 1, "DC2": 2})
 
 # Tie them together into a Namespace object; 
@@ -33,7 +33,7 @@ namespaces.default = "June" # or you could use namespaces.default = namespace
 
 # Now, you can create and ordinary class and store it to Cassandra and Memcache easily
 @key("name")
-class Profile(Model):
+class Profile(Model): 
     name = String("")
     link = URL("http://twitter.com")
 
@@ -43,6 +43,9 @@ with Level.Quorum:
 
 found = Profile.read('Yoda') # Reads come from cache first.
 assert person == found
+
+# Subclasses of Model are useful for skinny rows, and retrieving all the columns at once.
+from homer.backend import Datastore
 
 Installation:
 =============

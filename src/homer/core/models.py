@@ -363,7 +363,7 @@ class Profile(Model):
     name = String("John Bull")
 
 """
-class Model(object, dict):
+class Model(dict):
     '''Unit of persistence'''
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
