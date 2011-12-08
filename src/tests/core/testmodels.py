@@ -11,7 +11,8 @@ Unittests for the Models module...
 from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
-from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError
+from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError,\
+    NamespaceCollisionError
   
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
@@ -56,7 +57,7 @@ class TestKeyAndModel(TestCase):
         class House(Model):
             pass
         
-        with self.assertRaises(Exception):
+        with self.assertRaises(NamespaceCollisionError):
             @key("name", namespace="April")
             class House(Model):
                 pass

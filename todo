@@ -8,5 +8,6 @@ Todo:
 8. Create a Rating Property
 
 
-Wide and Skinny Rows...; Merge the concepts into one model
+Wide and Skinny Rows...; Merge the concepts into one model: Simple implement the dictionary protocol
+for Model.
 

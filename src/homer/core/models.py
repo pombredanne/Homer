@@ -57,6 +57,10 @@ class BadModelError(Exception):
 class UnDeclaredPropertyError(Exception):
     """An exception that is thrown if you try to set an attribute that is not declared in a Model"""
     pass
+
+class NamespaceCollisionError(Exception):
+    """An Exception that is thrown when you declare to classes with the same name in one namespace"""
+    pass
         
 """
 @key:
@@ -99,7 +103,7 @@ class StorageSchema(object):
             cls.schema[namespace][kind] = model
             cls.keys[id(model)] = (namespace, kind, key, )
         else:
-            raise BadModelError("Model: %s already exists in the Namespace: %s" % (model, namespace))
+            raise NamespaceCollisionError("Model: %s already exists in the Namespace: %s" % (model, namespace))
         
     @classmethod
     def Get(cls, model):
@@ -363,7 +367,7 @@ class Profile(Model):
     name = String("John Bull")
 
 """
-class Model(dict):
+class Model(object):
     '''Unit of persistence'''
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
