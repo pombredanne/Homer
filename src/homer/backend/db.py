@@ -320,7 +320,6 @@ class EvictionThread(Thread):
                 connection.dispose()
                 time.sleep(self.delay/1000)
 
-
 ###
 # Cassandra Mapping Section;
 ###

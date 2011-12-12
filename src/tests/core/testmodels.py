@@ -12,7 +12,7 @@ from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError,\
-    NamespaceCollisionError
+    NamespaceCollisionError, StorageSchema
   
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
@@ -37,7 +37,7 @@ class TestKeyAndModel(TestCase):
             @key("name")
             class House(object):
                 name = Property("House M.D")
-    
+
     def testkeyAcceptsCallables(self):
         """Asserts that @key can accept a callable function"""
         @key("name")
@@ -77,6 +77,23 @@ class TestKeyAndModel(TestCase):
         for name, value in person.fields().items():
             print name, str(value)
 
+class TestModelDictability(TestCase):
+    '''Proves that a Model behaves like a dictionary'''
+        
+    def testModelSupportsInOperator(self):
+        '''Shows that you can iterate through attributes of a Model like a dictionary'''
+        @key("name")
+        class Dictable(Model):
+            name = Property()
+            house = Property()
+        
+        object = Dictable(name = "Iroiso", house="Blue house")
+        self.assertTrue('name' in object)
+        self.assertTrue('house' in object)
+        
+        
+    
+    
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
     """Sanity Checks for Type"""

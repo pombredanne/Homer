@@ -73,7 +73,7 @@ class Profile(Model):
     link = URL("http://twitter.com")
     
 """
-def key(name, namespace = None):
+def key(name, namespace = "default"):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
@@ -96,15 +96,15 @@ class StorageSchema(object):
     @classmethod
     def Put(cls, namespace, model, key):
         """Stores Meta Information for a particular class""" 
-        kind = model.__name__
+        kind = model.__name__    
         if not namespace in cls.schema:
-            cls.schema[namespace] = WeakValueDictionary()
+            cls.schema[namespace] = WeakValueDictionary()    
         if kind not in cls.schema[namespace]:
             cls.schema[namespace][kind] = model
             cls.keys[id(model)] = (namespace, kind, key, )
         else:
             raise NamespaceCollisionError("Model: %s already exists in the Namespace: %s" % (model, namespace))
-        
+           
     @classmethod
     def Get(cls, model):
         """Returns a tuple [namespace, kind, key, expiration] for this Model"""
@@ -120,7 +120,8 @@ class StorageSchema(object):
            @model : An instance of Model.
         """
         return cls.Get(model)[2] # Returns the expiration flag for the kind.
-               
+    
+    
     @classmethod
     def ClassForModel(cls, namespace, name):
         """Returns the class object for the Model with @name"""
@@ -353,6 +354,10 @@ class Type(Property):
 ###
 # Model and Its Friends
 ###
+def __setup__(name, bases, dict):
+    '''Meta Class for a Model'''
+    return type(name, bases, dict)
+    
 from homer.backend import Simpson
 """
 Model: 
@@ -369,6 +374,8 @@ class Profile(Model):
 """
 class Model(object):
     '''Unit of persistence'''
+    __metaclass__ = __setup__
+    
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new'])
@@ -389,7 +396,7 @@ class Model(object):
                 return Key(namespace, kind, key)
             raise BadKeyError("The value for %s is None" % key)
         raise BadKeyError("Incomplete Key for %s " % self)
-       
+           
     def rollback(self):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
@@ -440,6 +447,50 @@ class Model(object):
                 if isinstance(prop, Property):
                     fields[name] = prop
         return fields
+    
+    def keys(self):
+        '''Returns a copy of all the keys in this model excluding the key property'''
+        pass
+    
+    def values(self):
+        '''Returns all the values in this Model excluding the value for the key property'''
+        pass
+    
+    def items(self):
+        '''Returns a copy of key value pair of every property in the Model excluding the key'''
+        pass
+    
+    def iterkeys(self):
+        '''Yields all the keys one by one'''
+        pass
+    
+    def itervalues(self):
+        '''Yields all the values one by one'''
+        pass
+        
+    def iteritems(self):
+        '''Yields a key, value pair of each object'''
+        pass
+        
+    def __setitem__(self, key, value):
+        '''Equivalent to calling setattr(instance, key, value) on this object'''
+        setattr(self, key, value)
+        
+    def __getitem__(self, key):
+        '''Allows dictionary style access'''
+        return getattr(self, key)
+        
+    def __delitem__(self, key):
+        ''' Allows us to delete a deletable Property on this object'''
+        delattr(self, key)
+        
+    def __len__(self):
+        '''How many properties are contained in this object'''
+        pass
+    
+    def __contains__(self, key):
+        '''Does this model contain this key'''
+        pass
         
     def __str__(self):
         '''A String representation of this Model'''
