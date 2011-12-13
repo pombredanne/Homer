@@ -112,7 +112,7 @@ class TestModelDictability(TestCase):
         self.assertFalse("house" in bug)
         self.assertFalse("name" in bug)
 
-    def testShowThatPropertyIsReadOnly(self):
+    def testShowThatPropertyMemberIsReadOnly(self):
         '''Shows that properties of a Model is not deletable'''
         class Bug(Model):
             name = Property(default = "house", required = True)
@@ -120,9 +120,7 @@ class TestModelDictability(TestCase):
         with self.assertRaises(Exception):
             del bug.properties
             
-        
-    
-    
+  
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
     """Sanity Checks for Type"""
