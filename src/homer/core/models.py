@@ -354,10 +354,6 @@ class Type(Property):
 ###
 # Model and Its Friends
 ###
-def __setup__(name, bases, dict):
-    '''Meta Class for a Model'''
-    return type(name, bases, dict)
-    
 from homer.backend import Simpson
 """
 Model: 
@@ -374,15 +370,17 @@ class Profile(Model):
 """
 class Model(object):
     '''Unit of persistence'''
-    __metaclass__ = __setup__
     
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
-        self.differ = Differ(self, exclude = ['differ','new'])
+        self.differ = Differ(self, exclude = ['differ','new', 'properties'])
+        self.properties = set()
         for name,value in self.fields().items():
+            self.properties.add(name)
+            value.__configure__(name, type(self))
             if name in kwds:
                 setattr(self, name, kwds[name])
-            value.__configure__(name, type(self))
+           
         self.new = True
         self.differ.commit()
     
@@ -490,7 +488,7 @@ class Model(object):
     
     def __contains__(self, key):
         '''Does this model contain this key'''
-        pass
+        return key in self.properties
         
     def __str__(self):
         '''A String representation of this Model'''

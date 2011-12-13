@@ -44,8 +44,6 @@ with Level.Quorum:
 found = Profile.read('Yoda') # Reads come from cache first.
 assert person == found
 
-
-
 Installation:
 =============
 To install you can use pip or download the latest build from 
