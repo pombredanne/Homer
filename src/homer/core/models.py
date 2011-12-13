@@ -450,7 +450,7 @@ class Model(object):
     
     def keys(self):
         '''Returns a copy of all the keys in this model excluding the key property'''
-        pass
+        return self.properties
     
     def values(self):
         '''Returns all the values in this Model excluding the value for the key property'''

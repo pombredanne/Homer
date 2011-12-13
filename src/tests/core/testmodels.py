@@ -83,8 +83,7 @@ class TestModelDictability(TestCase):
         '''Common setup code'''
         class Bug(Model):
             name = Property(default = "house", required = True)
-            reporter = Property(type = str)
-            
+            reporter = Property(type = str) 
         self.bug = Bug(name = "Gilly")
     
     def testModelSupportsInOperator(self):
@@ -116,9 +115,13 @@ class TestModelDictability(TestCase):
    
     def testShowThatKeysPropertyWorks(self):
         '''Shows that keys() work properly'''
-        
-            
-  
+        class Person(Model):
+            name = Property(default = "house", required = True)
+            reporter = Property(type = str) 
+        person = Person()
+        self.assertTrue("name" in person.keys())
+        self.assertTrue("reporter" in person.keys())
+          
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
     """Sanity Checks for Type"""
