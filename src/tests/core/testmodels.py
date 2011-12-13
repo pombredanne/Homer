@@ -107,20 +107,23 @@ class TestModelDictability(TestCase):
         del self.bug["name"]
         self.assertFalse("house" in self.bug)
         self.assertFalse("name" in self.bug)
-
-    def testShowThatPropertyMemberIsReadOnly(self):
-        '''Shows that properties of a Model is not deletable'''
-        with self.assertRaises(Exception):
-            del bug.properties
    
     def testShowThatKeysPropertyWorks(self):
         '''Shows that keys() work properly'''
         class Person(Model):
             name = Property(default = "house", required = True)
             reporter = Property(type = str) 
-        person = Person()
+        person = Person(name="iroiso", reporter="Zainab")
         self.assertTrue("name" in person.keys())
         self.assertTrue("reporter" in person.keys())
+
+    def testShowsThatValuesPropertyWorks(self):
+        '''Shows that values() work properly'''
+        class Values(Model):
+            name = Property(default = "house", required = True)
+            reporter = Property(type = str) 
+        person = Values(name="iroiso", reporter="Zainab")
+        print person.values()
           
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):

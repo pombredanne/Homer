@@ -32,10 +32,12 @@ class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
     
     def setUp(self):
+        '''Create the Pool'''
         print "Creating a Pool with the default connections"
         self.pool = RoundRobinPool(DataStoreOptions())
     
     def tearDown(self):
+        '''Dispose all alive connections in the Pool'''
         self.pool.disposeAll()
         
     def testGet(self):

@@ -371,18 +371,15 @@ class Profile(Model):
 """
 class Model(object):
     '''Unit of persistence'''
-    from homer.core.commons import Set
-    properties = Set(type= str, mode = READONLY) 
-   
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new', 'properties'])
+        self.properties = set()
         for name,value in self.fields().items():
             self.properties.add(name)
             value.__configure__(name, type(self))
             if name in kwds:
                 setattr(self, name, kwds[name])
-           
         self.new = True
         self.differ.commit()
     
@@ -454,7 +451,11 @@ class Model(object):
     
     def values(self):
         '''Returns all the values in this Model excluding the value for the key property'''
-        pass
+        result = []
+        print self.keys()
+        for name in self.keys():
+            result.append(getattr(self, name))
+        return result
     
     def items(self):
         '''Returns a copy of key value pair of every property in the Model excluding the key'''
@@ -471,7 +472,7 @@ class Model(object):
     def iteritems(self):
         '''Yields a key, value pair of each object'''
         pass
-        
+    
     def __setitem__(self, key, value):
         '''Equivalent to calling setattr(instance, key, value) on this object'''
         setattr(self, key, value)
