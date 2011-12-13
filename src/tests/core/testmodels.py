@@ -88,19 +88,28 @@ class TestModelDictability(TestCase):
         object = Dictable(name = "Iroiso", house="Blue house")
         self.assertTrue('name' in object)
         self.assertTrue('house' in object)
-    
-    
-    def testModelSupportsDictLikeAddition(self):
-        '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
-        @key("name", namespace = "Test")
-        class Bug(Model):
-            name = Property(required = True)
-            
-        self.bug = Bug(name = "Billy")
-        self.bug["issue_number"] = 1245
-        self.assertTrue("issue_number" in self.bug)
-        self.assertTrue("name" in self.bug)
         
+    def testModelSupportsDictLikeKeyAddition(self):
+        '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
+        class Bug(Model):
+            name = Property(required = True)   
+        bug = Bug(name = "Billy")
+        bug["issue_number"] = 1245
+        self.assertEquals(bug.issue_number, 1245)
+        self.assertTrue("issue_number" in bug)
+        self.assertTrue("name" in bug)
+        
+    def testModelSupportsDictLikeKeySubtraction(self):
+        '''Shows that dict-like subtraction of properties work'''
+        class Bug(Model):
+            name = Property(default = "house", required = True)
+        bug = Bug(name = "Gilly")
+        bug["house"] = "blue"
+        self.assertEquals(bug.house, "blue")
+        del bug["house"]
+        del bug["name"]
+        self.assertFalse("house" in bug)
+        self.assertFalse("name" in bug)
         
     
     
