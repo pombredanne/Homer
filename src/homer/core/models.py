@@ -371,11 +371,12 @@ class Profile(Model):
 """
 class Model(object):
     '''Unit of persistence'''
-    
+    from homer.core.commons import Set
+    properties = Set(type= str, mode = READONLY) 
+   
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new', 'properties'])
-        self.properties = set()
         for name,value in self.fields().items():
             self.properties.add(name)
             value.__configure__(name, type(self))

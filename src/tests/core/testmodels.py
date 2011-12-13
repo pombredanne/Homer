@@ -79,6 +79,7 @@ class TestKeyAndModel(TestCase):
 
 class TestModelDictability(TestCase):
     '''Proves that a Model behaves like a dictionary'''
+    
     def testModelSupportsInOperator(self):
         '''Shows that you can iterate through attributes of a Model like a dictionary'''
         @key("name")
@@ -110,6 +111,15 @@ class TestModelDictability(TestCase):
         del bug["name"]
         self.assertFalse("house" in bug)
         self.assertFalse("name" in bug)
+
+    def testShowThatPropertyIsReadOnly(self):
+        '''Shows that properties of a Model is not deletable'''
+        class Bug(Model):
+            name = Property(default = "house", required = True)
+        bug = Bug(name = "Gilly")
+        with self.assertRaises(Exception):
+            del bug.properties
+            
         
     
     
