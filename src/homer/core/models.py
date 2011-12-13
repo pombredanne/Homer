@@ -73,7 +73,7 @@ class Profile(Model):
     link = URL("http://twitter.com")
     
 """
-def key(name, namespace = "default"):
+def key(name, namespace = None):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
@@ -95,7 +95,7 @@ class StorageSchema(object):
     
     @classmethod
     def Put(cls, namespace, model, key):
-        """Stores Meta Information for a particular class""" 
+        """Stores Meta Information for a particular class"""
         kind = model.__name__    
         if not namespace in cls.schema:
             cls.schema[namespace] = WeakValueDictionary()    
@@ -103,7 +103,8 @@ class StorageSchema(object):
             cls.schema[namespace][kind] = model
             cls.keys[id(model)] = (namespace, kind, key, )
         else:
-            raise NamespaceCollisionError("Model: %s already exists in the Namespace: %s" % (model, namespace))
+            raise NamespaceCollisionError("Model: %s already exists\
+                in the Namespace: %s" % (model, namespace))
            
     @classmethod
     def Get(cls, model):
@@ -473,6 +474,7 @@ class Model(object):
     def __setitem__(self, key, value):
         '''Equivalent to calling setattr(instance, key, value) on this object'''
         setattr(self, key, value)
+        self.properties.add(key)
         
     def __getitem__(self, key):
         '''Allows dictionary style access'''
@@ -481,10 +483,11 @@ class Model(object):
     def __delitem__(self, key):
         ''' Allows us to delete a deletable Property on this object'''
         delattr(self, key)
+        self.properties.remove(key)
         
     def __len__(self):
         '''How many properties are contained in this object'''
-        pass
+        return len(self.properties)
     
     def __contains__(self, key):
         '''Does this model contain this key'''
