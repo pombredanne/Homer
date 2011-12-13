@@ -79,17 +79,27 @@ class TestKeyAndModel(TestCase):
 
 class TestModelDictability(TestCase):
     '''Proves that a Model behaves like a dictionary'''
-        
     def testModelSupportsInOperator(self):
         '''Shows that you can iterate through attributes of a Model like a dictionary'''
         @key("name")
         class Dictable(Model):
             name = Property()
             house = Property()
-        
         object = Dictable(name = "Iroiso", house="Blue house")
         self.assertTrue('name' in object)
         self.assertTrue('house' in object)
+    
+    
+    def testModelSupportsDictLikeAddition(self):
+        '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
+        @key("name", namespace = "Test")
+        class Bug(Model):
+            name = Property(required = True)
+            
+        self.bug = Bug(name = "Billy")
+        self.bug["issue_number"] = 1245
+        self.assertTrue("issue_number" in self.bug)
+        self.assertTrue("name" in self.bug)
         
         
     
