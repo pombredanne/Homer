@@ -435,7 +435,7 @@ class Model(object):
     @classmethod
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
-        return CqlQuery('SELECT * FROM %s LIMIT=%s' %
+        return CqlQuery('SELECT * FROM %s LIMIT=%s'%
             (cls.kind(), limit))
         
     def fields(self):

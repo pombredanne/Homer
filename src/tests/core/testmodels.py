@@ -79,46 +79,44 @@ class TestKeyAndModel(TestCase):
 
 class TestModelDictability(TestCase):
     '''Proves that a Model behaves like a dictionary'''
+    def setUp(self):
+        '''Common setup code'''
+        class Bug(Model):
+            name = Property(default = "house", required = True)
+            reporter = Property(type = str)
+            
+        self.bug = Bug(name = "Gilly")
     
     def testModelSupportsInOperator(self):
         '''Shows that you can iterate through attributes of a Model like a dictionary'''
-        @key("name")
-        class Dictable(Model):
-            name = Property()
-            house = Property()
-        object = Dictable(name = "Iroiso", house="Blue house")
-        self.assertTrue('name' in object)
-        self.assertTrue('house' in object)
+        self.bug["house"] = "Blue house"
+        self.assertTrue('name' in self.bug)
+        self.assertTrue('house' in self.bug)
         
     def testModelSupportsDictLikeKeyAddition(self):
         '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
-        class Bug(Model):
-            name = Property(required = True)   
-        bug = Bug(name = "Billy")
-        bug["issue_number"] = 1245
-        self.assertEquals(bug.issue_number, 1245)
-        self.assertTrue("issue_number" in bug)
-        self.assertTrue("name" in bug)
+        self.bug["issue_number"] = 1245
+        self.assertEquals(self.bug.issue_number, 1245)
+        self.assertTrue("issue_number" in self.bug)
+        self.assertTrue("name" in self.bug)
         
     def testModelSupportsDictLikeKeySubtraction(self):
         '''Shows that dict-like subtraction of properties work'''
-        class Bug(Model):
-            name = Property(default = "house", required = True)
-        bug = Bug(name = "Gilly")
-        bug["house"] = "blue"
-        self.assertEquals(bug.house, "blue")
-        del bug["house"]
-        del bug["name"]
-        self.assertFalse("house" in bug)
-        self.assertFalse("name" in bug)
+        self.bug["house"] = "blue"
+        self.assertEquals(self.bug.house, "blue")
+        del self.bug["house"]
+        del self.bug["name"]
+        self.assertFalse("house" in self.bug)
+        self.assertFalse("name" in self.bug)
 
     def testShowThatPropertyMemberIsReadOnly(self):
         '''Shows that properties of a Model is not deletable'''
-        class Bug(Model):
-            name = Property(default = "house", required = True)
-        bug = Bug(name = "Gilly")
         with self.assertRaises(Exception):
             del bug.properties
+   
+    def testShowThatKeysPropertyWorks(self):
+        '''Shows that keys() work properly'''
+        
             
   
 """#.. Tests for homer.core.models.Type"""  
