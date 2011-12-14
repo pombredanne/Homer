@@ -126,8 +126,21 @@ class TestModelDictability(TestCase):
         self.assertTrue("iroiso", "zainab" in person.values())
         
     def testItems(self):
-        '''Shows that items() works properly on a model'''
-        pass
+        '''Shows that items() works properly on a Model'''
+        class Items(Model):
+            pass
+        item = Items()
+        for i in range(50):
+            item[str(i)] = i
+        print item.items()
+        comparison = []
+        for i in range(50):
+            tup = (str(i), i)
+            comparison.append(tup)
+        bag = item.items()
+        for tup in comparison:
+            self.assertTrue(tup in bag)
+        
           
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
