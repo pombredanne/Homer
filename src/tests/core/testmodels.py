@@ -151,6 +151,16 @@ class TestModelDictability(TestCase):
             comparison.append(tup)
         for tup in item.iteritems():
             self.assertTrue(tup in comparison)
+
+    def testIterKeys(self):
+        '''Tests that Iteration of over keys work'''
+        item = Model()
+        comparison = set()
+        for i in range(50):
+            item[str(i)] = i
+            comparison.add(str(i))
+        for i in item.iterkeys():
+            self.assertTrue(i in comparison)
             
             
         
