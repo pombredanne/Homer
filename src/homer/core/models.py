@@ -456,7 +456,7 @@ class Model(object):
         print self.keys()
         for name in self.keys():
             result.append(getattr(self, name))
-        return result
+        return copy(result)
     
     def __setitem__(self, key, value):
         '''Equivalent to calling setattr(instance, key, value) on this object'''
@@ -474,8 +474,11 @@ class Model(object):
     
     def items(self):
         '''Returns a copy of key value pair of every property in the Model'''
-        
-    
+        results = []
+        for name in self.keys():
+            results.append((name, getattr(self, name)))
+        return results
+            
     def iterkeys(self):
         '''Yields all the keys one by one'''
         pass

@@ -92,14 +92,14 @@ class TestModelDictability(TestCase):
         self.assertTrue('name' in self.bug)
         self.assertTrue('house' in self.bug)
         
-    def testModelSupportsDictLikeSet(self):
+    def testSet(self):
         '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
         self.bug["issue_number"] = 1245
         self.assertEquals(self.bug.issue_number, 1245)
         self.assertTrue("issue_number" in self.bug)
         self.assertTrue("name" in self.bug)
         
-    def testModelSupportsDictLikeRemove(self):
+    def testRemove(self):
         '''Shows that dict-like subtraction of properties work'''
         self.bug["house"] = "blue"
         self.assertEquals(self.bug.house, "blue")
@@ -108,7 +108,7 @@ class TestModelDictability(TestCase):
         self.assertFalse("house" in self.bug)
         self.assertFalse("name" in self.bug)
    
-    def testShowThatKeysPropertyWorks(self):
+    def testKeys(self):
         '''Shows that keys() work properly'''
         class Person(Model):
             name = Property(default = "house", required = True)
@@ -117,13 +117,17 @@ class TestModelDictability(TestCase):
         self.assertTrue("name" in person.keys())
         self.assertTrue("reporter" in person.keys())
 
-    def testShowsThatValuesPropertyWorks(self):
+    def testValues(self):
         '''Shows that values() work properly'''
         class Values(Model):
             name = Property(default = "house", required = True)
             reporter = Property(type = str) 
-        person = Values(name="iroiso", reporter="Zainab")
-        print person.values()
+        person = Values(name="iroiso", reporter="zainab")
+        self.assertTrue("iroiso", "zainab" in person.values())
+        
+    def testItems(self):
+        '''Shows that items() works properly on a model'''
+        pass
           
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
