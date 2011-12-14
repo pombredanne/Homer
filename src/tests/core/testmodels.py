@@ -127,9 +127,7 @@ class TestModelDictability(TestCase):
         
     def testItems(self):
         '''Shows that items() works properly on a Model'''
-        class Items(Model):
-            pass
-        item = Items()
+        item = Model()
         for i in range(50):
             item[str(i)] = i
         print item.items()
@@ -140,6 +138,21 @@ class TestModelDictability(TestCase):
         bag = item.items()
         for tup in comparison:
             self.assertTrue(tup in bag)
+
+    def testIterItems(self):
+        '''Test iteritems() to show that it works'''
+        item = Model()
+        for i in range(50):
+            item[str(i)] = i
+        print item.items()
+        comparison = []
+        for i in range(50):
+            tup = (str(i), i)
+            comparison.append(tup)
+        for tup in item.iteritems():
+            self.assertTrue(tup in comparison)
+            
+            
         
           
 """#.. Tests for homer.core.models.Type"""  

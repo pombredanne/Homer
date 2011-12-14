@@ -481,15 +481,19 @@ class Model(object):
             
     def iterkeys(self):
         '''Yields all the keys one by one'''
-        pass
+        for i in self.keys():
+            yield i
     
     def itervalues(self):
         '''Yields all the values one by one'''
-        pass
+        for i in self.values():
+            yield i
         
     def iteritems(self):
         '''Yields a key, value pair of each object'''
-        pass
+        results = []
+        for name in self.keys():
+            yield name, getattr(self, name)
            
     def __len__(self):
         '''How many properties are contained in this object'''
