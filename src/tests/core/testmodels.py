@@ -86,7 +86,7 @@ class TestModelDictability(TestCase):
             reporter = Property(type = str) 
         self.bug = Bug(name = "Gilly")
     
-    def testModelSupportsInOperator(self):
+    def testContains(self):
         '''Shows that you can iterate through attributes of a Model like a dictionary'''
         self.bug["house"] = "Blue house"
         self.assertTrue('name' in self.bug)
@@ -171,6 +171,13 @@ class TestModelDictability(TestCase):
             comparison.add(i)
         for i in item.itervalues():
             self.assertTrue(i in comparison)
+
+    def testLen(self):
+        '''Tests for the length of a Model'''
+        item = Model()
+        for i in range(50):
+            item[str(i)] = i
+        self.assertTrue(len(item) == 50)
                 
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
