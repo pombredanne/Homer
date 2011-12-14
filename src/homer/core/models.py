@@ -355,6 +355,7 @@ class Type(Property):
 ###
 # Model and Its Friends
 ###
+from copy import copy, deepcopy
 from homer.backend import Simpson
 """
 Model: 
@@ -447,7 +448,7 @@ class Model(object):
     
     def keys(self):
         '''Returns a copy of all the keys in this model excluding the key property'''
-        return self.properties
+        return copy(self.properties)
     
     def values(self):
         '''Returns all the values in this Model excluding the value for the key property'''
@@ -456,22 +457,6 @@ class Model(object):
         for name in self.keys():
             result.append(getattr(self, name))
         return result
-    
-    def items(self):
-        '''Returns a copy of key value pair of every property in the Model excluding the key'''
-        pass
-    
-    def iterkeys(self):
-        '''Yields all the keys one by one'''
-        pass
-    
-    def itervalues(self):
-        '''Yields all the values one by one'''
-        pass
-        
-    def iteritems(self):
-        '''Yields a key, value pair of each object'''
-        pass
     
     def __setitem__(self, key, value):
         '''Equivalent to calling setattr(instance, key, value) on this object'''
@@ -486,7 +471,23 @@ class Model(object):
         ''' Allows us to delete a deletable Property on this object'''
         delattr(self, key)
         self.properties.remove(key)
+    
+    def items(self):
+        '''Returns a copy of key value pair of every property in the Model'''
         
+    
+    def iterkeys(self):
+        '''Yields all the keys one by one'''
+        pass
+    
+    def itervalues(self):
+        '''Yields all the values one by one'''
+        pass
+        
+    def iteritems(self):
+        '''Yields a key, value pair of each object'''
+        pass
+           
     def __len__(self):
         '''How many properties are contained in this object'''
         return len(self.properties)

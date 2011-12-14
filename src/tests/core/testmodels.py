@@ -92,14 +92,14 @@ class TestModelDictability(TestCase):
         self.assertTrue('name' in self.bug)
         self.assertTrue('house' in self.bug)
         
-    def testModelSupportsDictLikeKeyAddition(self):
+    def testModelSupportsDictLikeSet(self):
         '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
         self.bug["issue_number"] = 1245
         self.assertEquals(self.bug.issue_number, 1245)
         self.assertTrue("issue_number" in self.bug)
         self.assertTrue("name" in self.bug)
         
-    def testModelSupportsDictLikeKeySubtraction(self):
+    def testModelSupportsDictLikeRemove(self):
         '''Shows that dict-like subtraction of properties work'''
         self.bug["house"] = "blue"
         self.assertEquals(self.bug.house, "blue")
