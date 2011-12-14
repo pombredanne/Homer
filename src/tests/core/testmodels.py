@@ -161,10 +161,17 @@ class TestModelDictability(TestCase):
             comparison.add(str(i))
         for i in item.iterkeys():
             self.assertTrue(i in comparison)
-            
-            
-        
-          
+    
+    def testIterValues(self):
+        '''Tests that Iteration over values work'''
+        item = Model()
+        comparison = set()
+        for i in range(50):
+            item[str(i)] = i
+            comparison.add(i)
+        for i in item.itervalues():
+            self.assertTrue(i in comparison)
+                
 """#.. Tests for homer.core.models.Type"""  
 class TestType(TestCase):
     """Sanity Checks for Type"""
