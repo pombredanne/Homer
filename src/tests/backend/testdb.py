@@ -113,7 +113,7 @@ class TestConnection(TestCase):
         poolSize = self.pool.queue.qsize()
         connection.toPool()
         self.assertTrue(self.pool.queue.qsize() > poolSize)
-        
+       
     def testDispose(self):
         '''Close this connection and mark it as DISPOSED'''
         connection = self.pool.get()
@@ -135,19 +135,20 @@ class TestSimpson(TestCase):
     
     def setUp(self):
         '''Create the Simpson instance, we all know and love'''
-        instances = ["localhost:9160",]
-        c = DataStoreOptions(servers=instances, username="", password="")
+        self.db = Simpson()
+        self.connection = cql.connect("localhost", 9160).cursor()
+       
+        c = DataStoreOptions(servers=["localhost:9160",], username="", password="")
         namespace = Namespace(name= "Test", cassandra= c)
         namespaces.add(namespace)
         namespaces.default = "Test"
-        self.db = Simpson()
-        self.connection = cql.connect("localhost", 9160).cursor()
         
     def tearDown(self):
         '''Release resources that have been allocated'''
         try:
             self.connection.execute("DROP KEYSPACE Test;")
             self.connection.close()
+            self.db.clear()
         except:
             pass
     
@@ -162,11 +163,10 @@ class TestSimpson(TestCase):
         '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
         @key("name")
         class Person(Model):
-            '''An ordinary netizen'''
             name = String("Homer Simpson", indexed = True)
             twitter = URL("http://twitter.com/homer", indexed = True)
            
-        self.db.create(Person()); #Quantum Leap.
+        self.db.create(Person()); #=> Quantum Leap.
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
@@ -180,7 +180,10 @@ class TestSimpson(TestCase):
             fullname = String(indexed = True)
         
         cursor = self.connection
-        profile = Profile(key = "1234", fullname = "Iroiso Ikpokonte")
+        profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
         self.db.put(profile)
-        results = cursor.execute("SELECT key, fullname FROM Profile WHERE KEY=1234;")
-        self.assertTrue(results is not None)
+        cursor.execute("USE Test;")
+        cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
+        self.assertTrue(cursor.rowcount == 1)
+        print(cursor.fetchone())
+        

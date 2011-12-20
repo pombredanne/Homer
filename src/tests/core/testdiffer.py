@@ -24,17 +24,18 @@ class TestDiffer(TestCase):
             instances = Integer()
             
         simple = Simple(pi = 3.142, name = "Hello", instances = 500)
+        simple.differ.commit()
         del simple.name
-        self.assertEquals(list(simple.differ.deleted()), ["name",])
+        self.assertTrue("name" in simple.differ.deleted())
         simple.instances = 20
-        self.assertEquals(list(simple.differ.modified()), ["instances",])
+        self.assertTrue("instances" in simple.differ.modified())
         simple.stuff = ["Some stuff here".split()]
-        self.assertEquals(list(simple.differ.added()), ["stuff",])
+        self.assertTrue("stuff" in simple.differ.added())
         simple.differ.commit()
         simple.name = "Another-name"
         simple.stuff.append("Some-more")
-        self.assertEquals(list(simple.differ.added()), ["name",])
-        self.assertEquals(list(simple.differ.modified()), ["stuff",])
+        self.assertTrue("name" in simple.differ.added())
+        self.assertTrue("stuff" in simple.differ.modified())
     
     def testRevert(self):
         '''Tests differ.revert()'''
@@ -43,6 +44,7 @@ class TestDiffer(TestCase):
             name = String()
             instances = Integer()
         simple = Simple(pi = 3.142, name = "Hello", instances = 500)
+        simple.differ.commit()
         del simple.pi; del simple.name; del simple.instances
         simple.differ.revert()
         self.assertEquals(simple.pi, 3.142); self.assertEquals(simple.name, "Hello"); self.assertEquals(simple.instances, 500)

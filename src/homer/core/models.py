@@ -218,8 +218,7 @@ class Property(object):
     
     def finalize(self, instance):
         '''Yields the datastore representation of its value'''
-        value = self.validate(getattr(instance, self.name)) # Validate values.
-        return value
+        return str(getattr(instance, self.name)) #Default return str(value) for now
     
     def __get__(self, instance, owner):
         """Read the value of this property"""
@@ -382,8 +381,7 @@ class Model(object):
             if name in kwds:
                 setattr(self, name, kwds[name])
         self.new = True
-        self.differ.commit()
-    
+       
     def key(self):
         """Unique key for identifying this instance"""
         namespace, kind, key = StorageSchema.Get(self)

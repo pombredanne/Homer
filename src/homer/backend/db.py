@@ -331,8 +331,8 @@ class EvictionThread(Thread):
 """
 Simpson:
 Provides a **very** simple way to use cassandra from python; It provides 
-load balancing, auto failover, connection pooling and its clever enough to batch calls so it
-has very low latency. 
+load balancing, auto failover, connection pooling and its clever enough to 
+batch calls so it has very low latency. 
 """
 class Simpson(object):
     '''An 'Model' Oriented Interface to Cassandra;'''
@@ -349,9 +349,9 @@ class Simpson(object):
         namespace = info[0]
         kind = info[1]
         meta = MetaModel(model)
-        # Create a new keyspace if necessary
+        #=> Create a new keyspace if necessary
         if namespace not in cls.keyspaces:  
-            found = namespaces.get(namespace)  #Returns an options.Namespace object 
+            found = namespaces.get(namespace)  #=> Returns an options.Namespace object 
             print 'Creating Keyspace from: %s' % found                        
             pool = RoundRobinPool(found.cassandra)
             print 'Connecting to Cassandra :)'
@@ -359,7 +359,7 @@ class Simpson(object):
                 meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
-        # Create a new column family, columns and indexes if necessary    
+        #=> Create a new column family, columns and indexes if necessary    
         if kind not in cls.columnfamilies:
             print 'Creating ColumnFamily: %s' % kind
             pool = cls.pools[namespace]
@@ -367,18 +367,48 @@ class Simpson(object):
                 meta.makeColumnFamily(conn) #MetaModels should be designed to be disposable.
                 meta.makeIndexes(conn)
             cls.columnfamilies.add(kind)
-              
+    
+    @classmethod
+    def put(cls, *Models):
+        '''Persists @Models to the datastore, Puts are idempotent'''
+        # The goal here is to persist all the objects in one batch operation
+        from homer.options import namespaces
+        from homer.core.models import key, Model
+        # Create helper method for storing mutations.
+        def commit(namespace, mutations):
+            '''Stores all the mutations in one batch operation'''
+            print 'Committing a single model to Cassandra'
+            pool = cls.pools[namespace]
+            with using(pool) as conn:
+                conn.client.batch_mutate(mutations, cls.consistency)
+        # Iterate through all the Models and collect all their mutations in one list.
+        for model in Models:
+            assert issubclass(model.__class__, Model), "parameter model: \
+                %s must inherit from Model" % model
+            print 'Storing all the changes in a batch'
+            info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
+            namespace = info[0]
+            kind = info[1]
+            print cls.keyspaces
+            if kind not in cls.columnfamilies:
+                cls.create(model)
+                meta = MetaModel(model)
+            print model.key()
+            changes = { model.key().key: meta.mutations()} # A single batch
+            commit(namespace, changes)
+        
+    @classmethod
+    def clear(cls):
+        '''Clears internal state of the DataStore Mapper'''
+        print 'Clearing internal state of the Datastore Mapper'
+        cls.keyspaces.clear()
+        cls.columnfamilies.clear()
+        cls.pools.clear()
+                      
     @classmethod
     def read(cls, *Keys):
         '''Reads @keys from the Datastore;'''
         pass
-        
-    @classmethod
-    def put(cls, *Models):
-        '''Persists @Models to the datastore'''
-        # The goal here is to persist all the objects in one batch operation
-        for model in Models:
-            pass
             
     @classmethod
     def delete(cls, *Models):
@@ -388,7 +418,8 @@ class Simpson(object):
 ##
 # MetaModel:
 # Transforms {@link Model} instances to Cassandra's native Data Model.
-# 'A mix of CQL and Thrift as I see fit...'
+# 'A mix of CQL and Thrift as I see fit...', It is a disposable helper
+# class that allows me to mix and match homer's and cassandra datamodel
 ##
 class MetaModel(object):
     '''Changes a Model to Cassandra's DataModel..'''
@@ -401,7 +432,7 @@ class MetaModel(object):
         self.key = info[2]
         self.comment = self.kind.__doc__
         self.super = False;
-        self.properties = model.fields()
+        self.fields = model.fields()
     
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
@@ -427,7 +458,7 @@ class MetaModel(object):
         options = namespaces.get(self.namespace)
         
         query = 'CREATE INDEX ON {kind}({name});'
-        for name, property in self.properties.items():
+        for name, property in self.fields.items():
             if property.indexed:
                 print "Creating index on: %s" % property
                 cursor = connection.cursor()
@@ -475,17 +506,17 @@ class MetaModel(object):
         CF.default_validation_class = expand(self.defaultValidationClass())
         CF.key_validation_class = expand(self.keyValidationClass())  
         # Create column definitions
-        columns = self.asColumnDefinitions()
+        columns = self.getColumnDefinitions()
         CF.column_metadata = columns
         return CF
     
-    def asColumnDefinitions(self):
+    def getColumnDefinitions(self):
         '''Returns a set of column definitions for each descriptor in this model'''
         def expand(value):
             '''An inline function used to expand db package names'''
             return 'org.apache.cassandra.db.marshal.%s' % value   
         columns = []
-        for name, value in self.properties.items():
+        for name in self.fields:
             column = ColumnDef()
             column.name = name
             column.validation_class = expand("BytesType")
@@ -494,8 +525,8 @@ class MetaModel(object):
            
     def keyComparatorType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
-        print self.properties
-        for name, value in self.properties.items():
+        print self.fields
+        for name, value in self.fields.items():
             if name == self.key:
                 return PropertyMap[type(value)]
             
@@ -518,34 +549,54 @@ class MetaModel(object):
             if len(versions) == 1:
                 break
             time.sleep(0.25) 
-                 
-    @property
+    
+    def getColumn(self, name):
+        '''Returns a Native Column from a property with this name'''
+        column = Column()
+        column.name = name
+        if name in self.fields:
+            # Use the descriptor to do marshalling and set ttl if it exists
+            property = self.fields[name]
+            column.value = property.finalize(self.model)  
+            # Todo: Add Expiry support
+        else: 
+            column.value = str(self.model[name]) # Or Just use the str() function to marshalling
+        column.timestamp = time.time()
+        return column
+                  
     def mutations(self):
-        '''Creates Mutations from the changes that has occurred to this Model since the last commit'''
-        ## Expected Results and Constants ##
-        mutations = {}
-        key = self.key(); name = self.name(); when = time.time()
+        '''Returns a {} of mutations that have occurred since last commit'''
+        # See Page 151 and Page 78 in the Cassandra Guide.
+        mutations = { self.kind : [] }
         differ = self.model.differ
-        mutations[key] = { name : [] }
-        mutationList =  mutations[key][name]
-        ## Marshal Deletions from the Differ ##
-        print "Marshalling Deletions from the Model"
-        affectedColumns = list(differ.deleted)
-        pred = SlicePredicate(column_names = affectedColumns)
-        deletes = Mutation(deletion = Deletion(timestamp = when, predicate = pred))
-        mutationList.append(deletes)
-        ## Marshal Modifications from the Differ ##
-        print "Marshalling Modifications from the Model"
-        for name in differ.modified:
-            column = self.toColumn(name)
-            cosc = ColumnOrSuperColumn(column= column)
-            mutation = Mutation(column_or_supercolumn = cosc)
-            mutationList.append(mutation)
-        ## Marshall Additions
-        print "Marshalling Additions from the Model"
-        for name in differ.added:
-            column = self.toColumn(name)
-            cosc = ColumnOrSuperColumn(column= column)
-            mutation = Mutation(column_or_supercolumn = cosc)
-            mutationList.append(mutation)
-        return mutations 
+        # Marshalling additions
+        print 'Marshalling additions'
+        for name in differ.added():
+            column = self.getColumn(name) #=> Fetch the Column for this name
+            cosc = ColumnOrSuperColumn()
+            cosc.column = column
+            mutation = Mutation()
+            mutation.column_or_supercolumn = cosc
+            print mutation
+            mutations[self.kind].append(mutation)
+        # Marshalling modifications
+        for name in differ.modified():
+            column = self.getColumn(name) #=> Fetch the Column for this name
+            cosc = ColumnOrSuperColumn()
+            cosc.column = column
+            mutation = Mutation()
+            mutation.column_or_supercolumn = cosc
+            mutations[self.kind].append(mutation)  
+        # Remove all the deleted columns
+        print 'Marshalling deletions'
+        deletion = Deletion()
+        deletion.timestamp = time.time()
+        predicate = SlicePredicate()
+        predicate.column_names = list(differ.deleted())
+        deletion.predicate = predicate
+        deletions = Mutation()
+        deletions.deletion = deletion
+        mutations[self.kind].append(deletions) 
+        return mutations
+            
+        
