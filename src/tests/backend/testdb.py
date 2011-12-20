@@ -135,6 +135,11 @@ class TestSimpson(TestCase):
     
     def setUp(self):
         '''Create the Simpson instance, we all know and love'''
+        instances = ["localhost:9160",]
+        c = DataStoreOptions(servers=instances, username="", password="")
+        namespace = Namespace(name= "Test", cassandra= c)
+        namespaces.add(namespace)
+        namespaces.default = "Test"
         self.db = Simpson()
         self.connection = cql.connect("localhost", 9160).cursor()
         
@@ -155,12 +160,6 @@ class TestSimpson(TestCase):
         
     def testCreate(self):
         '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
-        instances = ["localhost:9160",]
-        c = DataStoreOptions(servers=instances, username="", password="")
-        namespace = Namespace(name= "Test", cassandra= c)
-        namespaces.add(namespace)
-        namespaces.default = "Test"
-        
         @key("name")
         class Person(Model):
             '''An ordinary netizen'''
@@ -172,4 +171,16 @@ class TestSimpson(TestCase):
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
-    
+        
+    def testPut(self):
+        '''Tests if Simpson.put() actually stores the model to Cassandra'''
+        @key("id")
+        class Profile(Model):
+            id = String(required = True, indexed = True)
+            fullname = String(indexed = True)
+        
+        cursor = self.connection
+        profile = Profile(key = "1234", fullname = "Iroiso Ikpokonte")
+        self.db.put(profile)
+        results = cursor.execute("SELECT key, fullname FROM Profile WHERE KEY=1234;")
+        self.assertTrue(results is not None)

@@ -374,10 +374,12 @@ class Simpson(object):
         pass
         
     @classmethod
-    def put(cls, period, *Models):
-        '''Persists @objects to the datastore'''
-        pass
-    
+    def put(cls, *Models):
+        '''Persists @Models to the datastore'''
+        # The goal here is to persist all the objects in one batch operation
+        for model in Models:
+            pass
+            
     @classmethod
     def delete(cls, *Models):
         '''Deletes @objects from the datastore'''
@@ -406,7 +408,7 @@ class MetaModel(object):
         try:
             connection.client.system_add_keyspace(self.asKeySpace())
         except InvalidRequestException:
-            pass#raise DuplicateError("Another Keyspace with this name seems to exist")
+            pass #raise DuplicateError("Another Keyspace with this name seems to exist")
             
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
@@ -487,8 +489,6 @@ class MetaModel(object):
             column = ColumnDef()
             column.name = name
             column.validation_class = expand("BytesType")
-            #column.index_type = IndexType.KEYS
-            print column
             columns.append(column)
         return columns
            

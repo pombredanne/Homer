@@ -1,5 +1,5 @@
 Todo:
-3. Write Simpson.put()
+3. Write Simpson.put() and Model.save() => Model.save() will not include Memcache for now.
 3.1 Add Expiry support through Properties
 4. Write Simpson.read()
 5. Write Simpson.delete()

@@ -406,7 +406,7 @@ class Model(object):
             Simpson.create(self)
             self.new = False
         print 'Putting %s at the backend' % self
-        Simpson.put(period, self)
+        Simpson.put(self)
         self.differ.commit()
                
     @classmethod
