@@ -181,11 +181,9 @@ class Property(object):
     def __init__(self, default = None, mode = READWRITE, **keywords):
         """Initializes the Property"""
         if mode not in [READWRITE, READONLY]:
-            raise ValueError("@mode must be one of READONLY,\
-            READWRITE")
+            raise ValueError("@mode must be one of READONLY,READWRITE")
         if mode == READONLY and default is None:
-            raise ValueError("You must provide a @default value\
-            in READONLY mode")
+            raise ValueError("You must provide a @default value in READONLY mode")
         self.mode = mode
         self.required = keywords.pop("required", False)
         self.choices = keywords.pop("choices", [])
@@ -218,7 +216,7 @@ class Property(object):
     
     def finalize(self, instance):
         '''Yields the datastore representation of its value'''
-        return str(getattr(instance, self.name)) #Default return str(value) for now
+        return str(getattr(instance, self.name)) #Todo: Rewrite this to do custom validation l8r
     
     def __get__(self, instance, owner):
         """Read the value of this property"""
@@ -375,9 +373,10 @@ class Model(object):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ','new', 'properties'])
         self.properties = set()
-        for name,value in self.fields().items():
+        required = set()
+        for name, prop in self.fields().items():
             self.properties.add(name)
-            value.__configure__(name, type(self))
+            prop.__configure__(name, type(self))
             if name in kwds:
                 setattr(self, name, kwds[name])
         self.new = True

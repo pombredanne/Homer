@@ -37,7 +37,7 @@ class TestKeyAndModel(TestCase):
             @key("name")
             class House(object):
                 name = Property("House M.D")
-
+    
     def testkeyAcceptsCallables(self):
         """Asserts that @key can accept a callable function"""
         @key("name")
@@ -242,6 +242,7 @@ class TestProperty(TestCase):
             name = Property()
             email = Property("iroiso@live.com", mode = READONLY)
             girlfriend = Property("gwen", choices = ["amy","stacy","gwen"],required = True) 
+        self.Bug = Bug
         self.bug = Bug()
       
     def testReadWriteProperty(self):
@@ -282,7 +283,7 @@ class TestProperty(TestCase):
             self.bug.girlfriend = "steph"
             
     def testRequired(self):
-        """Asserts that a required Property cannot be set to an empty value"""
+        """Asserts that a required Property cannot be set to None"""
         with self.assertRaises(BadValueError):
             self.bug.girlfriend = None
     
