@@ -191,18 +191,18 @@ class TestSimpson(TestCase):
     def testOtherCommonTypeKeyWork(self):
         '''Shows that keys of other common types work'''
         @key("id")
-        class Log(Model):
+        class Message(Model):
             id = Integer(indexed = True)
             message = String(indexed = True)
         
         cursor = self.connection
-        self.db.put(Log(id=1, message="Something broke damn"))
+        self.db.put(Message(id=1, message="Something broke damn"))
         cursor.execute("USE Test;")
-        cursor.execute("SELECT id, message FROM Log WHERE KEY=1")
+        cursor.execute("SELECT id, message FROM Message WHERE KEY='1'")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
         print(row)
-        self.assertTrue(row[1] == 1 and row[2] == "Something broke damn")
+        self.assertTrue(row[1] == '1' and row[2] == "Something broke damn")
         
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''

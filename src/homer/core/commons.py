@@ -8,6 +8,7 @@ Copyright 2011, June inc.
 Description:
 Common descriptors for day to day usage
 """
+import struct
 import urlparse
 import datetime
 from contextlib import closing
@@ -51,7 +52,8 @@ class Balls(object)
 class Integer(Type):
     """Data descriptor for an Integer"""
     type = long
-    
+
+   
 """
 String:
 The String data descriptor, is used to create String Properties in your models.

@@ -68,8 +68,8 @@ __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 
 
-PropertyMap = {Float : "DecimalType", String : "UTF8Type", Integer : "IntegerType", Property : "BytesType"\
-                    , DateTime: "UTF8Type", Date: "UTF8Type", Time: "UTF8Type", Blob : "BytesType", \
+PropertyMap = {Float : "BytesType", String : "UTF8Type", Integer : "UTF8Type", Property : "BytesType"\
+                    , DateTime: "BytesType", Date: "UTF8Type", Time: "UTF8Type", Blob : "BytesType", \
                         URL: "UTF8Type", Boolean: "UTF8Type", Set: "BytesType", List: "BytesType", Map: "BytesType"\
                             ,Type: "BytesType" }
 ####
@@ -389,10 +389,8 @@ class Simpson(object):
             info = Schema.Get(model) #=> Schema returns meta information.
             namespace = info[0]
             kind = info[1]
-            print cls.keyspaces
             if kind not in cls.columnfamilies:
                 cls.create(model)
-            
             print model.key()
             meta = MetaModel(model)
             changes = { meta.id(): meta.mutations()} # A single batch
@@ -439,7 +437,9 @@ class MetaModel(object):
     def id(self):
         '''Returns the appropriate representation of the key of self.model'''
         property = self.fields[self.key]
-        return property.convert(self.model)
+        value = property.convert(self.model)
+        print 'Id: ' + value
+        return value
         
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
@@ -523,7 +523,7 @@ class MetaModel(object):
             '''An inline function used to expand db package names'''
             return 'org.apache.cassandra.db.marshal.%s' % value   
         columns = []
-        for name in self.fields:
+        for name,prop in self.fields.items():
             column = ColumnDef()
             column.name = name
             column.validation_class = expand(self.defaultType())
