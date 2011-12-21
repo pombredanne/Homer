@@ -189,6 +189,7 @@ class Property(object):
         self.choices = keywords.pop("choices", [])
         self.omit = keywords.pop("omit", False)
         self.indexed = keywords.pop("indexed", False)
+        self.ttl = keywords.pop("ttl", None)
         self.name = None
         self.deleted = False
         self.default = default

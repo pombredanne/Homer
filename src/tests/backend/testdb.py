@@ -186,4 +186,20 @@ class TestSimpson(TestCase):
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         print(cursor.fetchone())
+
+    def testTTL(self):
+        '''Tests if put() supports ttl in columns'''
+        import time
+        @key("id")
+        class House(Model):
+            id = String(required = True, indexed = True)
+            fullname = String(indexed = True, ttl = 2)
         
+        cursor = self.connection
+        profile = House(id = "1234", fullname = "Iroiso Ikpokonte")
+        self.db.put(profile)
+        time.sleep(3)
+        cursor.execute("USE Test;")
+        cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
+        row = cursor.fetchone()
+        self.assertTrue(row[1] == None)

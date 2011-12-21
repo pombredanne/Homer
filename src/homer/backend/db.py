@@ -559,6 +559,9 @@ class MetaModel(object):
             property = self.fields[name]
             column.value = property.finalize(self.model)  
             # Todo: Add Expiry support
+            ttl = property.ttl
+            if ttl:
+             column.ttl = ttl
         else: 
             column.value = str(self.model[name]) # Or Just use the str() function to marshalling
         column.timestamp = time.time()

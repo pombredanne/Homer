@@ -1,5 +1,5 @@
 Todo:
-3.  Write Simpson.put() 
+3.  Write Simpson.put() => Done
 3.1 Add Expiry support through Properties
 4.  Write Simpson.read()
 5.  Write Simpson.delete()
@@ -12,3 +12,9 @@ Todo:
 Wide and Skinny Rows...; Merge the concepts into one model: Simple implement the dictionary protocol
 for Model => Done
 
+lifespan = 60* 60* 3600
+
+@key("id")
+class Profile(Model):
+    id = String(required = True)
+    house = String( default = 'Blue', ttl = lifespan)
