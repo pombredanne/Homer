@@ -392,9 +392,10 @@ class Simpson(object):
             print cls.keyspaces
             if kind not in cls.columnfamilies:
                 cls.create(model)
-                meta = MetaModel(model)
+            
             print model.key()
-            changes = { model.key().key: meta.mutations()} # A single batch
+            meta = MetaModel(model)
+            changes = { meta.id(): meta.mutations()} # A single batch
             commit(namespace, changes)
     
     @classmethod
@@ -435,6 +436,11 @@ class MetaModel(object):
         self.super = False;
         self.fields = model.fields()
     
+    def id(self):
+        '''Returns the appropriate representation of the key of self.model'''
+        property = self.fields[self.key]
+        return property.convert(self.model)
+        
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
         try:
@@ -503,9 +509,9 @@ class MetaModel(object):
             '''An inline function used to expand db package names'''
             return 'org.apache.cassandra.db.marshal.%s' % value
         # Fill up some other properties which we can infer from the model   
-        CF.comparator_type = expand(self.keyComparatorType())
-        CF.default_validation_class = expand(self.defaultValidationClass())
-        CF.key_validation_class = expand(self.keyValidationClass())  
+        CF.comparator_type = expand(self.keyType())
+        CF.default_validation_class = expand(self.defaultType())
+        CF.key_validation_class = expand(self.keyType())  
         # Create column definitions
         columns = self.getColumnDefinitions()
         CF.column_metadata = columns
@@ -520,26 +526,23 @@ class MetaModel(object):
         for name in self.fields:
             column = ColumnDef()
             column.name = name
-            column.validation_class = expand("BytesType")
+            column.validation_class = expand(self.defaultType())
             columns.append(column)
         return columns
            
-    def keyComparatorType(self):
+    def keyType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
-        print self.fields
-        for name, value in self.fields.items():
-            if name == self.key:
-                return PropertyMap[type(value)]
-            
-    def keyValidationClass(self):
-        '''Return the key validation class for a particular Model'''
-        return self.keyComparatorType()
-        
-    def subComparatorType(self):
-        '''Returns the SubComparatorType for a particular Model'''
-        return None # There is no support for SuperColumns yet
+        property = self.fields[self.key]
+        return self.getDatastoreType(property)
     
-    def defaultValidationClass(self):
+    def getDatastoreType(self, property):
+        '''Returns the DataStoreType for a Descriptor'''
+        if isinstance(property, Property):
+            return PropertyMap[type(property)]
+        else:
+            return self.defaultType()
+        
+    def defaultType(self):
         '''Returns the default validation class for a particular Model'''
         return "BytesType"
     
@@ -558,13 +561,13 @@ class MetaModel(object):
         if name in self.fields:
             # Use the descriptor to do marshalling and set ttl if it exists
             property = self.fields[name]
-            column.value = property.finalize(self.model)  
+            column.value = property.convert(self.model)  
             ttl = property.ttl
             if ttl:
              column.ttl = ttl
         else: 
             column.value = str(self.model[name]) # Or Just use the str() function to marshalling
-        column.timestamp = time.time()
+        column.timestamp = int(time.time())
         return column
                   
     def mutations(self):
@@ -593,7 +596,7 @@ class MetaModel(object):
         # Remove all the deleted columns
         print 'Marshalling deletions'
         deletion = Deletion()
-        deletion.timestamp = time.time()
+        deletion.timestamp = int(time.time())
         predicate = SlicePredicate()
         predicate.column_names = list(differ.deleted())
         deletion.predicate = predicate

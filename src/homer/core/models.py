@@ -37,9 +37,7 @@ from homer.core.differ import Differ, DiffError
 __all__ = ["Model", "key",]
 
 READWRITE, READONLY = 1, 2
-Limit = 500
-CachePeriod = 24 * 3600 * 30 #Normally objects will last in the cache for 30 days
-
+Limit = 5000
 
 """Exceptions """
 class BadKeyError(Exception):
@@ -139,7 +137,7 @@ class Schema(object):
 """
 Key:
 A GUID for Model objects. A Key contains all the information 
-required to retreive a Model from Cassandra or any other Cache
+required to retreive a Model from any Backend
 "key: {namespace}, {kind}, {key}"
 """
 class Key(object):
@@ -158,8 +156,7 @@ class Key(object):
                 raise BadKeyError("Expected String of"\
                     + "format 'key: namespace, kind, key', Got:%s" % namespace)
         validate = Validation.validateString
-        self.namespace, self.kind, self.key = \
-            validate(namespace), validate(kind), validate(key)
+        self.namespace, self.kind, self.key = validate(namespace), validate(kind), key
     
     def isComplete(self):
         """Checks if this key has a namespace, kind and key"""
@@ -219,10 +216,6 @@ class Property(object):
             self.deleted = False
         else:
             raise AttributeError("Cannot find %s in  %s " % (self,instance))
-    
-    def finalize(self, instance):
-        '''Yields the datastore representation of its value'''
-        return str(getattr(instance, self.name)) #Todo: Rewrite this to do custom validation l8r
     
     def __get__(self, instance, owner):
         """Read the value of this property"""
@@ -304,8 +297,16 @@ class Property(object):
         if self.validator is not None:
             value = self.validator(value)
         return value
+    
+    def convert(self, instance):
+        '''Yields the datastore representation of its value'''
+        return str(getattr(instance, self.name)) #Todo: Rewrite this to do custom validation l8r
+    
+    def deconvert(self, instance, value):
+        '''Converts a value from the datastore to a native python object'''
+        return self.__set__(instance, value)
            
-    def __configure__(self, name, owner):
+    def configure(self, name, owner):
         """Allow this property to know its name, and owner"""
         self.name = name
         self.owner = owner
@@ -382,7 +383,7 @@ class Model(object):
         required = set()
         for name, prop in self.fields().items():
             self.properties.add(name)
-            prop.__configure__(name, type(self))
+            prop.configure(name, type(self))
             if name in kwds:
                 setattr(self, name, kwds[name])
         self.new = True
@@ -404,6 +405,7 @@ class Model(object):
     
     def save(self, cache = True):
         """Stores this object in the datastore and in the cache"""
+        #Todo: Check that all required properties are set before every save.
         if self.new:
             print 'Creating %s at the backend' % self
             Simpson.create(self)
@@ -436,11 +438,10 @@ class Model(object):
     @classmethod
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
-        return CqlQuery('SELECT * FROM %s LIMIT=%s'%
-            (cls.kind(), limit))
+        return CqlQuery('SELECT * FROM %s LIMIT=%s'% (cls.kind(), limit))
         
     def fields(self):
-        """Searches class hierachy and returns all known properties for this object"""
+        """Returns all the Descriptors for @this by searching the class heirachy"""
         cls = self.__class__;
         fields = {}
         for root in reversed(cls.__mro__):

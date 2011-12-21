@@ -70,7 +70,7 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    #@skip("Takes to Long to Run..")
+    @skip("Takes to Long to Run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -164,7 +164,7 @@ class TestSimpson(TestCase):
         class Person(Model):
             name = String("Homer Simpson", indexed = True)
             twitter = URL("http://twitter.com/homer", indexed = True)
-           
+        
         self.db.create(Person()); #=> Quantum Leap.
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
@@ -184,8 +184,26 @@ class TestSimpson(TestCase):
         cursor.execute("USE Test;")
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
-        print(cursor.fetchone())
+        row = cursor.fetchone()
+        print(row)
+        self.assertTrue(row[1] == "1234" and row[2] == "Iroiso Ikpokonte")
 
+    def testOtherCommonTypeKeyWork(self):
+        '''Shows that keys of other common types work'''
+        @key("id")
+        class Log(Model):
+            id = Integer(indexed = True)
+            message = String(indexed = True)
+        
+        cursor = self.connection
+        self.db.put(Log(id=1, message="Something broke damn"))
+        cursor.execute("USE Test;")
+        cursor.execute("SELECT id, message FROM Log WHERE KEY=1")
+        self.assertTrue(cursor.rowcount == 1)
+        row = cursor.fetchone()
+        print(row)
+        self.assertTrue(row[1] == 1 and row[2] == "Something broke damn")
+        
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
         import time

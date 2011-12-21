@@ -1,20 +1,26 @@
 Todo:
 3.  Write Simpson.put() => Done
 3.1 Add Expiry support through Properties => Done
+3.2 Add support of patterns in Key()
 4.  Write Simpson.read() => WIP
 5.  Write Simpson.delete()
-5.1 Wire the appropriate model methods.
+5.1 Write Code for Reference(Model), homer's equivalent of a foreign key
+5.2 Create a Rating, BlowFishHash, Md5Hash
+5.3 Wire the appropriate model methods.
+5.3 Tag v0.7.5.beta
+6.  Add memcached support
+6.1 Tag
+7.  Add SERDE support
 6.  Tag v0.7-alpha; When we add memcached support and SerDe, I'll tag v1.0.0.
 7.  Go out to a nice restaurant on campus for a break :).
-8.  Create a Rating Property
+
 
 
 Wide and Skinny Rows...; Merge the concepts into one model: Simple implement the dictionary protocol
 for Model => Done
 
-lifespan = 60 * 60 * 3600
+Reading Columns through homer; 
 
-@key("id")
-class Profile(Model):
-    id = String(required = True)
-    house = String( default = 'Blue', ttl = lifespan)
+from homer.backend import Simpson
+
+key = Key(
