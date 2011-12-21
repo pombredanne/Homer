@@ -1,7 +1,7 @@
 Todo:
 3.  Write Simpson.put() => Done
-3.1 Add Expiry support through Properties
-4.  Write Simpson.read()
+3.1 Add Expiry support through Properties => Done
+4.  Write Simpson.read() => WIP
 5.  Write Simpson.delete()
 5.1 Wire the appropriate model methods.
 6.  Tag v0.7-alpha; When we add memcached support and SerDe, I'll tag v1.0.0.
@@ -12,7 +12,7 @@ Todo:
 Wide and Skinny Rows...; Merge the concepts into one model: Simple implement the dictionary protocol
 for Model => Done
 
-lifespan = 60* 60* 3600
+lifespan = 60 * 60 * 3600
 
 @key("id")
 class Profile(Model):

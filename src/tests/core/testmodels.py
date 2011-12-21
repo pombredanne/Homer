@@ -12,11 +12,16 @@ from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError,\
-    NamespaceCollisionError, StorageSchema
+    NamespaceCollisionError, Schema
   
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
     
+    def tearDown(self):
+        '''Clears the internal state of the schema object'''
+        print 'Clearing internal state of the Schema object'
+        Schema.clear()
+        
     def testkeySanity(self):
         """Makes sure that basic usage for @key works"""
         @key("name")

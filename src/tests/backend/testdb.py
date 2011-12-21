@@ -70,7 +70,7 @@ class TestRoundRobinPool(TestCase):
         self.pool.disposeAll()
         assert self.pool.queue.qsize() == 0
     
-    @skip("Takes to Long to Run..")
+    #@skip("Takes to Long to Run..")
     def testEviction(self):
         '''Checks if Idle connections are eventually evicted from the Connection Pool'''
         cons = []
@@ -82,8 +82,7 @@ class TestRoundRobinPool(TestCase):
         time.sleep(45)
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
-
-        
+   
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
@@ -190,6 +189,7 @@ class TestSimpson(TestCase):
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
         import time
+        
         @key("id")
         class House(Model):
             id = String(required = True, indexed = True)
@@ -198,8 +198,12 @@ class TestSimpson(TestCase):
         cursor = self.connection
         profile = House(id = "1234", fullname = "Iroiso Ikpokonte")
         self.db.put(profile)
-        time.sleep(3)
+        time.sleep(3) #=> Sleep for 3 secs and see if you can still find it in the datastore
         cursor.execute("USE Test;")
         cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
         row = cursor.fetchone()
         self.assertTrue(row[1] == None)
+        
+    def testRead(self):
+        '''Tests if Simpson.read() behaves as usual'''
+        pass

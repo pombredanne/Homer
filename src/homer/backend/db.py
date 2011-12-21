@@ -40,7 +40,7 @@ from cassandra import Cassandra
 from cassandra.ttypes import *
 
 from homer.core.commons import *
-from homer.core.models import Type, Property, StorageSchema
+from homer.core.models import Type, Property, Schema
 
 ####
 # Module Exceptions
@@ -344,8 +344,8 @@ class Simpson(object):
         """Creates a new ColumnFamily from this Model"""
         from homer.options import namespaces
         from homer.core.models import key, Model
-        assert issubclass(model.__class__, Model), "parameter model: %s must inherit from model" % model
-        info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
+        assert issubclass(model.__class__, Model),"parameter model: %s must inherit from model" % model
+        info = Schema.Get(model) #=> Schema returns meta information.
         namespace = info[0]
         kind = info[1]
         meta = MetaModel(model)
@@ -383,10 +383,10 @@ class Simpson(object):
                 conn.client.batch_mutate(mutations, cls.consistency)
         # Iterate through all the Models and collect all their mutations in one list.
         for model in Models:
-            assert issubclass(model.__class__, Model), "parameter model: \
+            assert issubclass(model.__class__, Model), "parameter model:\
                 %s must inherit from Model" % model
             print 'Storing all the changes in a batch'
-            info = StorageSchema.Get(model) #=> StorageSchema returns meta information.
+            info = Schema.Get(model) #=> Schema returns meta information.
             namespace = info[0]
             kind = info[1]
             print cls.keyspaces
@@ -396,19 +396,20 @@ class Simpson(object):
             print model.key()
             changes = { model.key().key: meta.mutations()} # A single batch
             commit(namespace, changes)
-        
-    @classmethod
-    def clear(cls):
-        '''Clears internal state of the DataStore Mapper'''
-        print 'Clearing internal state of the Datastore Mapper'
-        cls.keyspaces.clear()
-        cls.columnfamilies.clear()
-        cls.pools.clear()
-                      
+    
     @classmethod
     def read(cls, *Keys):
         '''Reads @keys from the Datastore;'''
         pass
+        
+            
+    @classmethod
+    def clear(cls):
+        '''Clears internal state of @this'''
+        print 'Clearing internal state of the Datastore Mapper'
+        cls.keyspaces.clear()
+        cls.columnfamilies.clear()
+        cls.pools.clear()
             
     @classmethod
     def delete(cls, *Models):
@@ -425,7 +426,7 @@ class MetaModel(object):
     '''Changes a Model to Cassandra's DataModel..'''
     def __init__(self, model):
         '''Creates a Transform for this Model'''
-        info = StorageSchema.Get(model)
+        info = Schema.Get(model)
         self.model = model
         self.namespace = info[0]
         self.kind = info[1]
@@ -558,7 +559,6 @@ class MetaModel(object):
             # Use the descriptor to do marshalling and set ttl if it exists
             property = self.fields[name]
             column.value = property.finalize(self.model)  
-            # Todo: Add Expiry support
             ttl = property.ttl
             if ttl:
              column.ttl = ttl
@@ -601,5 +601,4 @@ class MetaModel(object):
         deletions.deletion = deletion
         mutations[self.kind].append(deletions) 
         return mutations
-            
         

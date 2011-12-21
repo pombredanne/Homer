@@ -77,19 +77,19 @@ def key(name, namespace = None):
     """The @key decorator""" 
     def inner(cls):
         if issubclass(cls, Model):
-            StorageSchema.Put(namespace, cls, name)
+            Schema.Put(namespace, cls, name)
             return cls
         else:
             raise TypeError("You must pass in a subclass of  Model not: %s" % cls)
     return inner
     
 """
-StorageSchema:
+Schema:
 Holds Global Storage Configuration for all Models. It stores things like
 the key attribute of a Model, Its cache expiration settings, finally it
 maps names to classes which is useful during deserialization.
 """
-class StorageSchema(object):
+class Schema(object):
     """Maps classes to attributes which will store their keys"""
     schema, keys = {}, {}
     
@@ -105,7 +105,13 @@ class StorageSchema(object):
         else:
             raise NamespaceCollisionError("Model: %s already exists\
                 in the Namespace: %s" % (model, namespace))
-           
+    
+    @classmethod
+    def clear(cls):
+        '''Clears the internal state of the Schema object'''
+        cls.schema.clear()
+        cls.keys.clear()
+              
     @classmethod
     def Get(cls, model):
         """Returns a tuple [namespace, kind, key, expiration] for this Model"""
@@ -121,7 +127,6 @@ class StorageSchema(object):
            @model : An instance of Model.
         """
         return cls.Get(model)[2] # Returns the expiration flag for the kind.
-    
     
     @classmethod
     def ClassForModel(cls, namespace, name):
@@ -384,7 +389,7 @@ class Model(object):
        
     def key(self):
         """Unique key for identifying this instance"""
-        namespace, kind, key = StorageSchema.Get(self)
+        namespace, kind, key = Schema.Get(self)
         if hasattr(self, key):
             value = getattr(self, key)
             if value is not None:
@@ -397,7 +402,7 @@ class Model(object):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
     
-    def save(self, cache = True, period = CachePeriod):
+    def save(self, cache = True):
         """Stores this object in the datastore and in the cache"""
         if self.new:
             print 'Creating %s at the backend' % self
@@ -509,5 +514,6 @@ class Model(object):
     def __unicode__(self):
         """Unicode representation of this model"""
         return u'%s' % self.__str__()
+       
               
 
