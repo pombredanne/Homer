@@ -68,7 +68,7 @@ __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 
 
-PropertyMap = {Float : "BytesType", String : "UTF8Type", Integer : "UTF8Type", Property : "BytesType"\
+PropertyMap = {Float : "UTF8Type", String : "UTF8Type", Integer : "UTF8Type", Property : "BytesType"\
                     , DateTime: "BytesType", Date: "UTF8Type", Time: "UTF8Type", Blob : "BytesType", \
                         URL: "UTF8Type", Boolean: "UTF8Type", Set: "BytesType", List: "BytesType", Map: "BytesType"\
                             ,Type: "BytesType" }

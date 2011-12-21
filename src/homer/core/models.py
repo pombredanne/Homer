@@ -24,6 +24,7 @@ Description:
 Contains Model, Key and @key
 """
 import copy
+import cPickle as pickle
 from weakref import WeakValueDictionary
 import datetime
 from functools import update_wrapper as update
@@ -300,7 +301,7 @@ class Property(object):
     
     def convert(self, instance):
         '''Yields the datastore representation of its value'''
-        return str(getattr(instance, self.name)) #Todo: Rewrite this to do custom validation l8r
+        return str(getattr(instance, self.name))
     
     def deconvert(self, instance, value):
         '''Converts a value from the datastore to a native python object'''

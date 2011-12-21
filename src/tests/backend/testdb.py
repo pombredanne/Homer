@@ -125,7 +125,7 @@ class TestConnection(TestCase):
 ###
 
 import cql
-from homer.core.models import key, Model
+from homer.core.models import key, Model, Schema
 from homer.core.commons import *
 from homer.options import *
 
@@ -142,12 +142,18 @@ class TestSimpson(TestCase):
         namespaces.add(namespace)
         namespaces.default = "Test"
         
+        b = DataStoreOptions(servers=["localhost:9160",], username="", password="")
+        namespace = Namespace(name= "Host", cassandra= c)
+        namespaces.add(namespace)
+        
     def tearDown(self):
         '''Release resources that have been allocated'''
         try:
             self.connection.execute("DROP KEYSPACE Test;")
+            self.connection.execute("DROP KEYSPACE Host;")
             self.connection.close()
             self.db.clear()
+            Schema.clear()
         except:
             pass
     
@@ -190,14 +196,14 @@ class TestSimpson(TestCase):
 
     def testOtherCommonTypeKeyWork(self):
         '''Shows that keys of other common types work'''
-        @key("id")
+        @key("id", namespace = "Host")
         class Message(Model):
             id = Integer(indexed = True)
             message = String(indexed = True)
         
         cursor = self.connection
         self.db.put(Message(id=1, message="Something broke damn"))
-        cursor.execute("USE Test;")
+        cursor.execute("USE Host;")
         cursor.execute("SELECT id, message FROM Message WHERE KEY='1'")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
