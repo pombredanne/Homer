@@ -321,13 +321,17 @@ class EvictionThread(Thread):
                 time.sleep(self.delay/1000)
 
 ###
+# Utilities
+###
+@context
+def redo(function):
+    '''Retries a particular operation for a num of times until it fails'''
+    pass
+
+
+###
 # Cassandra Mapping Section;
 ###
-
-####################################################################################################
-####
-# Simpson Implementation
-####  
 """
 Simpson:
 Provides a **very** simple way to use cassandra from python; It provides 

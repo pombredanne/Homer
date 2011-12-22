@@ -24,7 +24,6 @@ Description:
 Contains Model, Key and @key
 """
 import copy
-import cPickle as pickle
 from weakref import WeakValueDictionary
 import datetime
 from functools import update_wrapper as update
@@ -157,7 +156,8 @@ class Key(object):
                 raise BadKeyError("Expected String of"\
                     + "format 'key: namespace, kind, key', Got:%s" % namespace)
         validate = Validation.validateString
-        self.namespace, self.kind, self.key = validate(namespace), validate(kind), key
+        self.namespace, self.kind, self.key =\
+            validate(namespace), validate(kind), key #We do not validate the key.
     
     def isComplete(self):
         """Checks if this key has a namespace, kind and key"""
@@ -379,7 +379,7 @@ class Model(object):
     '''Unit of persistence'''
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
-        self.differ = Differ(self, exclude = ['differ','new', 'properties'])
+        self.differ = Differ(self, exclude = ['differ', 'properties'])
         self.properties = set()
         required = set()
         for name, prop in self.fields().items():
@@ -387,7 +387,6 @@ class Model(object):
             prop.configure(name, type(self))
             if name in kwds:
                 setattr(self, name, kwds[name])
-        self.new = True
        
     def key(self):
         """Unique key for identifying this instance"""
@@ -407,10 +406,6 @@ class Model(object):
     def save(self, cache = True):
         """Stores this object in the datastore and in the cache"""
         #Todo: Check that all required properties are set before every save.
-        if self.new:
-            print 'Creating %s at the backend' % self
-            Simpson.create(self)
-            self.new = False
         print 'Putting %s at the backend' % self
         Simpson.put(self)
         self.differ.commit()

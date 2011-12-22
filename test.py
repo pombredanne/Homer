@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+##
+# Copyright 2011 June Inc.
+##
 """
 Author : Iroiso . I (iroiso@live.com)
 Copyright 2011
