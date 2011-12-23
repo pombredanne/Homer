@@ -5,7 +5,7 @@ Todo:
 4.2 Add support of patterns in Key()
 5.  Write Simpson.delete()
 5.1 Write Code for Reference(Model), homer's equivalent of a foreign key
-5.2 Create a Rating, BlowFishHash, Md5Hash
+5.2 Create a Rating, BlowFishHash and Md5Hash Property
 5.3 Wire the appropriate model methods.
 5.3 Tag v0.7.5.beta
 6.  Add memcached support

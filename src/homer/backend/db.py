@@ -30,7 +30,6 @@ from contextlib import contextmanager as Context
 from threading import Thread, local
 from Queue import Queue, Empty, Full
 
-
 from thrift import Thrift
 from thrift.transport import TTransport, TSocket
 from thrift.protocol import TBinaryProtocol
