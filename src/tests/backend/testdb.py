@@ -149,11 +149,11 @@ class TestSimpson(TestCase):
     def tearDown(self):
         '''Release resources that have been allocated'''
         try:
+            self.db.clear()
+            Schema.clear()
             self.connection.execute("DROP KEYSPACE Test;")
             self.connection.execute("DROP KEYSPACE Host;")
             self.connection.close()
-            self.db.clear()
-            Schema.clear()
         except:
             pass
     

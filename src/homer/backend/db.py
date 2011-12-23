@@ -66,6 +66,7 @@ class AllServersUnAvailableError(Exception):
 ####
 __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
+RETRY = 3
 
 
 PropertyMap = {Float : "UTF8Type", String : "UTF8Type", Integer : "UTF8Type", Property : "BytesType"\
@@ -324,9 +325,18 @@ class EvictionThread(Thread):
 # Utilities
 ###
 def redo(function):
-    '''Retries a particular operation for a num of times until it fails'''
-    pass
-
+    '''Retries a particular operation for a fixed number of times until it fails'''
+    def do(*arguments, **keywords):
+        attempts = 1
+        while True:
+            try:
+                print 'Calling: %s; count: %s' % (function.__name__, attempts)
+                return function(*arguments, **keywords)
+            except Exception, e:
+                if not attempts < RETRY:
+                    raise e
+                attempts += 1
+    return do
 
 ###
 # Cassandra Mapping Section;
@@ -443,14 +453,16 @@ class MetaModel(object):
         value = property.convert(self.model)
         print 'Id: ' + value
         return value
-        
+    
+    @redo   
     def makeKeySpace(self, connection):
         '''Creates a new keyspace from the namespace property of this Model'''
         try:
             connection.client.system_add_keyspace(self.asKeySpace())
         except InvalidRequestException:
             pass #raise DuplicateError("Another Keyspace with this name seems to exist")
-            
+    
+    @redo       
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
         from homer.options import namespaces, NetworkTopologyStrategy
@@ -555,7 +567,7 @@ class MetaModel(object):
             versions = conn.client.describe_schema_versions()
             if len(versions) == 1:
                 break
-            time.sleep(0.25) 
+            time.sleep(0.10) 
     
     def getColumn(self, name):
         '''Returns a Native Column from a property with this name'''
