@@ -323,7 +323,6 @@ class EvictionThread(Thread):
 ###
 # Utilities
 ###
-@context
 def redo(function):
     '''Retries a particular operation for a num of times until it fails'''
     pass
