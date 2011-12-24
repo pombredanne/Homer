@@ -12,7 +12,7 @@ from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError,\
-    NamespaceCollisionError, Schema
+    NamespaceCollisionError, Schema, UnIndexable
   
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
@@ -54,7 +54,7 @@ class TestKeyAndModel(TestCase):
                 return "House: %s" % self.number
                 
         house = House(number = 50)
-        self.assertEquals(house.key().key, "House: 50")
+        self.assertEquals(house.key().id, "House: 50")
     
     def testkeyDetectsNamespaceCollision(self):
         """Asserts that the attribute passed in to @key must exist in the class"""
@@ -261,8 +261,10 @@ class TestProperty(TestCase):
     def testIndexed(self):
         """Tests if Indexed Properties work"""
         class Bug(object):
-            name = Property("A bugs life", indexed = True)
-        self.assertTrue(Bug.name.indexed)
+            name = Property("A bugs life", indexed = False)
+            avatar = UnIndexable()
+        self.assertFalse(Bug.name.indexed())
+        self.assertFalse(Bug.avatar.indexed())
         
     def testSetDeleteSetGetWorks(self):
         """Tests this sequence, Delete,Set,Get does it work; Yup I know its crap"""

@@ -22,10 +22,12 @@ class TestDiffer(TestCase):
             pi = Float()
             name = String()
             instances = Integer()
+            _hidden = Float()
             
-        simple = Simple(pi = 3.142, name = "Hello", instances = 500)
+        simple = Simple(pi = 3.142, name = "Hello", instances = 500, _hidden = 1.0)
         simple.differ.commit()
         del simple.name
+        self.assertTrue("_hidden" not in simple.differ.added())
         self.assertTrue("name" in simple.differ.deleted())
         simple.instances = 20
         self.assertTrue("instances" in simple.differ.modified())

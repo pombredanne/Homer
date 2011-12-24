@@ -142,35 +142,36 @@ required to retreive a Model from any Backend
 """
 class Key(object):
     """A GUID for Models"""
-    def __init__(self, namespace, kind = None, key = None):
+    def __init__(self, namespace, kind = None, id = None):
         """Creates a key from keywords or from a str representation"""
-        if kind is None and key is None:
+        if kind is None and id is None:
             try:
                 key, repr = namespace.split(":")
                 assert key == "key", "Key representation\
                     should start with 'key:'"
-                namespace, kind, key = repr.split(",")
+                namespace, kind, id = repr.split(",")
             except:
                 raise BadKeyError("Expected String of"\
                     + "format 'key: namespace, kind, key', Got:%s" % namespace)
         self.saved = False
         self.columns = []
-        self.namespace, self.kind, self.key = namespace, kind, key 
+        self.namespace, self.kind, self.id = namespace, kind, id
     
     def complete(self):
         """Checks if this key has a namespace, kind and key"""
-        if self.namespace and self.kind and self.key:
+        if self.namespace and self.kind and self.id:
             return True
         return False
         
     def __unicode__(self):
         """Unicode representation of a key"""
-        format = u"key: {self.namespace}, {self.kind}, {self.key}"
-        return format.format(self = self)
+        return unicode(self)
     
     def __str__(self):
         """String representation of a key"""
-        return unicode(self)
+        format = u"key: {self.namespace}, {self.kind}, {self.id}"
+        return format.format(self = self)
+        
    
 """
 Property:
@@ -189,7 +190,7 @@ class Property(object):
         self.required = keywords.pop("required", False)
         self.choices = keywords.pop("choices", [])
         self.omit = keywords.pop("omit", False)
-        self.indexed = keywords.pop("indexed", False)
+        self.__indexed = keywords.pop("indexed", False)
         self.ttl = keywords.pop("ttl", None)
         self.name = None
         self.deleted = False
@@ -203,7 +204,11 @@ class Property(object):
         else:
             raise ValueError("keyword: validator must be a callable or None")
         self.counter += 1
-        
+    
+    def indexed(self):
+        '''Checks if this property should be indexed'''
+        return self.__indexed
+         
     def __set__(self, instance, value):
         """Put @value in @instance's class dictionary"""
         if self.mode == READONLY:
@@ -314,6 +319,17 @@ class Property(object):
         return "Property: {self.name}".format(self = self)
 
 """
+UnIndexable:
+The base class of all Properties that cannot be indexed
+"""
+class UnIndexable(Property):
+    '''A Property that cannot be indexed'''
+    
+    def indexed(self):
+        '''Blobs cannot be indexed'''
+        return False
+        
+"""
 Type:
 A Property that does type coercion, checking and validation. This is base
 class for all the common descriptors.
@@ -355,6 +371,14 @@ class Type(Property):
                 raise BadValueError("Cannot coerce: %s to %s"% (value, self.type))
         return value
 
+"""
+UnIndexableType:
+A Type that cannot be indexed
+"""
+class UnIndexedType(UnIndexable, Type):
+    '''A Type that cannot be indexed'''
+    pass
+    
 ###
 # Model and Its Friends
 ###
@@ -379,6 +403,7 @@ class Model(object):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ', 'properties'])
         self.properties = set()
+        self.__key = None
         required = set()
         for name, prop in self.fields().items():
             self.properties.add(name)
@@ -388,15 +413,21 @@ class Model(object):
        
     def key(self):
         """Unique key for identifying this instance"""
-        namespace, kind, key = Schema.Get(self)
-        if hasattr(self, key):
-            value = getattr(self, key)
-            if value is not None:
-                key = value() if callable(value) else value
-                return Key(namespace, kind, key)
-            raise BadKeyError("The value for %s is None" % key)
-        raise BadKeyError("Incomplete Key for %s " % self)
-           
+        def validate(key):
+            found = getattr(self,key)
+            value = found() if callable(found) else found
+            if not value:
+                raise BadKeyError("Empty Id...")
+            return value  
+        if self.__key is None:
+            namespace, kind, key = Schema.Get(self)
+            self.__id = key
+            value = validate(key)
+            self.__key = Key(namespace, kind, value)
+        else:
+            self.__key.id = validate(self.__id)
+        return self.__key
+                  
     def rollback(self):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();

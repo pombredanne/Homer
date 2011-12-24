@@ -479,13 +479,15 @@ class MetaModel(object):
         
         query = 'CREATE INDEX ON {kind}({name});'
         for name, property in self.fields.items():
-            if property.indexed:
+            if property.indexed():
                 print "Creating index on: %s" % property
                 cursor = connection.cursor()
                 formatted = query.format(kind = self.kind, name= property.name)
                 print formatted
                 cursor.execute("USE %s;" % options.name)
                 cursor.execute(formatted)
+            else:
+                print "Cannot index: %s" % property
         self.wait(connection)
                 
     def asKeySpace(self):

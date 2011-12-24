@@ -53,7 +53,7 @@ found = db.read(key) # Only fills some members of the Profile object
 assert "email", "picture" in found.keys()
 
 # Using CQL to search the index.
-found = Profile.cql("WHERE link=:link", link="http://facebook.com/iroiso")
+found = Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
 
 
 Installation:

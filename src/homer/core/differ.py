@@ -37,6 +37,10 @@ class Differ(object):
         self.excluded = exclude
         self.replica = copy.deepcopy(model)
         self.model = model
+    
+    def forbidden(self, name):
+        '''Attributes that start with '_' are automatically avoided'''
+        return name.startswith("_") or name in self.excluded
               
     def added(self):
         '''Yields the names of the attributes that were recently added to this model'''
@@ -44,7 +48,7 @@ class Differ(object):
         dict = self.model.__dict__
         for name in dict:
             if not getattr(self.replica, name, None):
-                if name not in self.excluded:
+                if not self.forbidden(name):
                     yield name
             
     def commit(self):
@@ -70,7 +74,7 @@ class Differ(object):
         dict = self.replica.__dict__
         for name in dict:
             if not hasattr(self.model, name):
-                if name not in self.excluded:
+                if not self.forbidden(name):
                     yield name
     
     def modified(self):
@@ -79,7 +83,7 @@ class Differ(object):
         for name in dict:
             if hasattr(self.model, name):
                 if dict[name] != getattr(self.model, name):
-                    if name not in self.excluded:
+                    if not self.forbidden(name):
                         yield name
         
 

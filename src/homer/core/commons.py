@@ -14,7 +14,7 @@ import datetime
 from contextlib import closing
 from collections import Hashable
 from homer.util import Size
-from homer.core.models import Type, BadValueError, Property
+from homer.core.models import Type, BadValueError, Property, UnIndexable, UnIndexedType
 
 # TODO: Add common types; MD5, SHA512, SHA256, Email, Tuple, Rating
 __all__ = [
@@ -106,7 +106,7 @@ avatar = Blob.fromFile(filelike)
 
 ....
 """   
-class Blob(Type):
+class Blob(UnIndexedType):
     """Store Blobs"""
     def __init__(self, default= "", size = -1, path = None, **arguments):
         """
@@ -120,7 +120,7 @@ class Blob(Type):
         if path and default:
             raise ValueError("You cannot use keyword arguments 'path'\
                 and 'default' together")
-        self._size = size
+        self.__size = size
         if path is not None:
             file = open(path,'rb')
             default = self.read(file)
@@ -132,8 +132,12 @@ class Blob(Type):
         Whatever you store in this Blob MUST not be larger than the 
         size property
         """
-        return self._size
+        return self.__size
     
+    def indexed(self):
+        '''Blobs cannot be indexed'''
+        return False
+        
     def validate(self,value):
         """Makes sure that whatever you are putting, does not exceed size"""
         value = super(Blob,self).validate(value)
@@ -178,13 +182,17 @@ class Person(object):
     spouses = Set(User)
 
 """
-class Set(Property):
+class Set(UnIndexable):
     """A data descriptor for storing sets"""
     def __init__(self, cls = object,default = set(),**arguments):
         """The type keyword here has a different meaning"""
         self.cls = cls
         super(Set, self).__init__(default, **arguments)
     
+    def indexed(self):
+        '''Blobs cannot be indexed'''
+        return False
+        
     def validate(self,value):
         """Validates the type you are setting and its contents"""
         value = super(Set,self).validate(value)
@@ -233,12 +241,16 @@ person = Person()
 person.harem.extend(["Aisha","Halima","Safia",])
 
 """
-class List(Property):
+class List(UnIndexable):
     """Stores a List of objects,You can specify the type of the objects this list contains"""
     def __init__(self,cls = object, default = [], **arguments ):    
         self.cls = cls
         super(List, self).__init__(default, **arguments)
     
+    def indexed(self):
+        '''Lists cannot be indexed'''
+        return False
+        
     def validate(self,value):
         """Validates a list and all its contents"""
         value = super(List,self).validate(value)
@@ -279,12 +291,16 @@ A descriptor for dict-like objects;
 class Person(object):
     bookmarks = Map(String, URL)
 """
-class Map(Property):
+class Map(UnIndexable):
     ''' A descriptor for dict-like objects '''
     def __init__(self, key=object, value=object, default = {}, **arguments):
         self.key, self.value = key, value
         super(Map, self).__init__(default, **arguments)
     
+    def indexed(self):
+        '''Blobs cannot be indexed'''
+        return False
+        
     def validate(self, value):
         '''Simply does type checking'''
         value = super(Map, self).validate(value)
