@@ -412,8 +412,7 @@ class Simpson(object):
     def read(cls, *Keys):
         '''Reads @keys from the Datastore;'''
         pass
-        
-            
+               
     @classmethod
     def clear(cls):
         '''Clears internal state of @this'''

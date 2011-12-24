@@ -142,8 +142,6 @@ required to retreive a Model from any Backend
 """
 class Key(object):
     """A GUID for Models"""
-    namespace, kind, key = None, None, None
-    
     def __init__(self, namespace, kind = None, key = None):
         """Creates a key from keywords or from a str representation"""
         if kind is None and key is None:
@@ -155,11 +153,11 @@ class Key(object):
             except:
                 raise BadKeyError("Expected String of"\
                     + "format 'key: namespace, kind, key', Got:%s" % namespace)
-        validate = Validation.validateString
-        self.namespace, self.kind, self.key =\
-            validate(namespace), validate(kind), key #We do not validate the key.
+        self.saved = False
+        self.columns = []
+        self.namespace, self.kind, self.key = namespace, kind, key 
     
-    def isComplete(self):
+    def complete(self):
         """Checks if this key has a namespace, kind and key"""
         if self.namespace and self.kind and self.key:
             return True
@@ -426,7 +424,7 @@ class Model(object):
         Simpson.delete(*keys)
        
     @classmethod
-    def cql(cls, query, *args, **kwds):
+    def query(cls, query, *args, **kwds):
         """Interface to Cql from your model, which yields models"""
         return CqlQuery('SELECT * FROM %s %s' % (cls.kind()
             , query), *args, **kwds)

@@ -27,7 +27,7 @@ c.strategy = NetworkTopologyStrategy(factor = 3, options={"DC1": 1, "DC2": 2})
 # Tie them together into a Namespace object; 
 namespace = Namespace(name= "June", memcache = m, cassandra= c)
 
-# And tell the API about thdem.
+# And tell the API about them.
 namespaces.add(namespace)
 namespaces.default = "June" # or you could use namespaces.default = namespace
 
@@ -46,7 +46,7 @@ found = Profile.read('Yoda') # Reads come from cache first.
 assert person == found
 
 key = Key("Home", "Profile", "Yoda")
-found = db.read(key) # Reads the entire properties of the object from the datastore.
+found = db.read(key) # Reads only the static properties of the object from the datastore.
 
 key.columns = ["email", "picture"]
 found = db.read(key) # Only fills some members of the Profile object

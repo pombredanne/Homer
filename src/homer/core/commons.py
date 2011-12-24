@@ -16,7 +16,7 @@ from collections import Hashable
 from homer.util import Size
 from homer.core.models import Type, BadValueError, Property
 
-# TODO: Add common types; MD5, SHA512, SHA256, Email, Tuple
+# TODO: Add common types; MD5, SHA512, SHA256, Email, Tuple, Rating
 __all__ = [
             "Integer","String","Blob","Set","Boolean","List","URL", "Time", "DateTime",
             "Date","Float", "Map",

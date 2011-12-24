@@ -1,24 +1,26 @@
-Todo:
-3.  Write Simpson.put() => Done
-3.1 Add Expiry support through Properties => Done
-4.  Write Simpson.read() => WIP
-4.2 Add support of patterns in Key()
-5.  Write Simpson.delete()
-5.1 Write Code for Reference(Model), homer's equivalent of a foreign key
-5.2 Create a Rating, BlowFishHash and Md5Hash Property
-5.3 Wire the appropriate model methods.
-5.3 Tag v0.7.5.beta
-6.  Add memcached support
-6.1 Tag
-7.  Add SERDE support
-6.  Tag v0.7-alpha; When we add memcached support and SerDe, I'll tag v1.0.0.
-7.  Go out to a nice restaurant on campus for a break :).
+FEATURE LIST
+============
+Cassandra Support
+1.  Write Key.saved => Done
+2.  Separate Indexed and UnIndexed Heirachies.
+3.  Write Property.convert for each property with unittests.
+4.  Write Property.deconvert() [Write SERDE routine for properties.]
+4.  Rewrite Simpson.put() 
+5.  Write Simpson.read(), add support for Key.columns, and individual column access
+6.  Write CQLQuery and Model.query()
+7.  Write Simpson.delete()
+8.  Write Simpson.count()
+9.  Create a Rating, Reference, BlowFishHash and Md5Hash Property
+9.  Tag v0.5.0.beta
 
-
-Design issues:
-==============
-1.  Wide and Skinny Rows...; Merge the concepts into one model: Simple implement the dictionary protocol
-    for Model => Done
-
-2.  Separate Heirachy of Indexable and non indexable properties. !?
-
+Memcached Support
+1.  Write Cache.create("Store metadata")
+2.  Cache.put("Batch put") 
+3.  Cache.read("Batch Read"), add support for Key.columns, and individual column access.
+4.  Cache.delete("Delete Entire class or separate instances")
+5.  Wire the appropriate model methods. __getattr__, read, save, delete, update !?
+6.  Write JSON Serialization and Deserialization
+7.  Tag v1.0.0.beta
+8.  Debug and Test for Concurrent Use (Probably use tornado and AB todo a flood)
+9.  Tag v1.0.0.final
+10.  Go out to a nice restaurant on campus for a break :).

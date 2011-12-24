@@ -26,6 +26,7 @@ Ten things I love about Homer-Simpson:
 17. Dynamically expandable models.... No need for db.Expando I guess; ??? => WIP
 18. Homer minds its own bussiness. You can't poke around with the internals of Model and shouldn't be able to => NA
 19. Homer is ThreadSafe => Done
+20. Wide and Skinny Rows...; Using properties and the dict protocol.
 17. .... Oops I've gone past 10; Its time to stop I guess...
 
 
