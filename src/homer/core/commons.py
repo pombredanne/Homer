@@ -338,10 +338,11 @@ class URL(String):
     
     def validate(self,value):
         """Uses urlsplit to validate urls"""
+        print "Validating URL..."
         value = super(URL,self).validate(value)
         if value is not None:
-            scheme,domain,path,params,query,fragment = urlparse.urlparse(value)
-            if not scheme or not domain:
+            parsed = urlparse.urlparse(value)
+            if not parsed.scheme or not parsed.netloc:
                 raise BadValueError('Property %s must be a full URL (\'%s\')' %
                     (self.name, value))
         return value

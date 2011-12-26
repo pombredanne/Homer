@@ -233,7 +233,7 @@ class TestMap(TestCase):
         with self.assertRaises(Exception):
             self.test.bookmarks["hello"] = 1
             self.cls.bookmarks.convert(self.test)
-             
+        
              
 class TestSet(TestCase):
     """Tests for Set() descriptor"""

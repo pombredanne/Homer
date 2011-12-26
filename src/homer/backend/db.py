@@ -373,7 +373,7 @@ class Simpson(object):
                 meta.makeColumnFamily(conn) #MetaModels should be designed to be disposable.
                 meta.makeIndexes(conn)
             cls.columnfamilies.add(kind)
-    
+       
     @classmethod
     def put(cls, *Models):
         '''Persists @Models to the datastore, Puts are idempotent'''
@@ -383,25 +383,33 @@ class Simpson(object):
         # Create helper method for storing mutations.
         def commit(namespace, mutations):
             '''Stores all the mutations in one batch operation'''
-            print 'Committing a single model to Cassandra'
-            pool = cls.pools[namespace]
+            pool = None
+            if namespace not in cls.keyspaces:  
+                found = namespaces.get(namespace)  #=> Returns an options.Namespace object                        
+                pool = RoundRobinPool(found.cassandra)
+                cls.pools[namespace] = pool
+            else:
+                pool = cls.pools[namespace]
+            print 'Committing a single model batch to Cassandra'
             with using(pool) as conn:
-                conn.client.batch_mutate(mutations, cls.consistency)
+                conn.client.set_keyspace(namespace)
+                conn.client.batch_mutate(mutations, cls.consistency)    
         # Iterate through all the Models and collect all their mutations in one list.
         for model in Models:
             assert issubclass(model.__class__, Model), "parameter model:\
                 %s must inherit from Model" % model
-            print 'Storing all the changes in a batch'
             info = Schema.Get(model) #=> Schema returns meta information.
-            namespace = info[0]
+            namespace = namespaces.get(info[0]).name
             kind = info[1]
             if kind not in cls.columnfamilies:
                 cls.create(model)
-            print model.key()
             meta = MetaModel(model)
             changes = { meta.id(): meta.mutations()} # A single batch
             commit(namespace, changes)
-    
+            model.key().namespace = namespace
+            model.key().saved = True
+            assert model.key().complete()
+           
     @classmethod
     def read(cls, *Keys):
         '''Reads @keys from the Datastore;'''
@@ -436,15 +444,12 @@ class MetaModel(object):
         self.kind = info[1]
         self.key = info[2]
         self.comment = self.kind.__doc__
-        self.super = False;
+        self.super = False; # No super column support for now
         self.fields = model.fields()
     
     def id(self):
         '''Returns the appropriate representation of the key of self.model'''
-        property = self.fields[self.key]
-        value = property.convert(self.model)
-        print 'Id: ' + value
-        return value
+        return str(self.model.key().id)
     
     @redo   
     def makeKeySpace(self, connection):
@@ -470,7 +475,6 @@ class MetaModel(object):
         '''Creates Indices for all the indexed properties in the model'''
         from homer.options import namespaces
         options = namespaces.get(self.namespace)
-        
         query = 'CREATE INDEX ON {kind}({name});'
         for name, property in self.fields.items():
             if property.indexed():
@@ -565,7 +569,7 @@ class MetaModel(object):
             column.value = property.convert(self.model)  
             ttl = property.ttl
             if ttl:
-             column.ttl = ttl
+                column.ttl = ttl
         else: 
             column.value = str(self.model[name]) # Or Just use the str() function to marshalling
         column.timestamp = int(time.time())

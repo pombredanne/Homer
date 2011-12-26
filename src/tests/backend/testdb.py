@@ -188,15 +188,16 @@ class TestSimpson(TestCase):
         cursor = self.connection
         profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
         profile.bookmarks["google"] = "http://google.com"
-        profile.bookmarks["twitter"] = "twitter 2.0"
+        profile.bookmarks["twitter"] = "http://twitter.com"
         self.db.put(profile)
         cursor.execute("USE Test;")
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
-        print(row)
         self.assertTrue(row[1] == "1234" and row[2] == "Iroiso Ikpokonte")
-
+        assert profile.key().complete() == True #Make sure the object has a complete Key
+        assert profile.key().saved
+    
     def testOtherCommonTypeKeyWork(self):
         '''Shows that keys of other common types work'''
         @key("id", namespace = "Host")

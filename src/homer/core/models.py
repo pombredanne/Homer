@@ -153,9 +153,10 @@ class Key(object):
     
     def complete(self):
         """Checks if this key has a namespace, kind and key"""
-        if self.namespace and self.kind and self.id:
+        if bool(self.namespace) and bool(self.kind) and bool(self.id):
             return True
-        return False
+        else:
+            return False
         
     def __unicode__(self):
         """Unicode representation of a key"""
@@ -413,8 +414,7 @@ class Model(object):
         for name, prop in self.fields().items():
             self.properties.add(name)
             prop.configure(name, type(self))
-            if name in kwds:
-                setattr(self, name, kwds[name])
+            setattr(self, name, kwds.get(name, prop.default))
        
     def key(self):
         """Unique key for identifying this instance"""

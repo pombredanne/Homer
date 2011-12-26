@@ -31,7 +31,6 @@ class DiffError(Exception):
 
 class Differ(object):
     """A class that knows how to calculate changes in an object"""
-    
     def __init__(self, model, exclude):
         '''Inserts all the objects in @args to this differ'''
         self.excluded = exclude
