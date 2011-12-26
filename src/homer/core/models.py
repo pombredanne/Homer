@@ -26,6 +26,7 @@ Contains Model, Key and @key
 import copy
 from weakref import WeakValueDictionary
 import datetime
+import cPickle as pickle
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
@@ -118,13 +119,6 @@ class Schema(object):
             return cls.keys[id(model)]
         except KeyError:
             raise BadModelError("Class: %s is not a valid Model, are you sure it has an @key; ",(model))
-    
-    @classmethod
-    def ExpiresIn(cls, model):
-        """Returns the expiration setting for this model in seconds
-           @model : An instance of Model.
-        """
-        return cls.Get(model)[2] # Returns the expiration flag for the kind.
     
     @classmethod
     def ClassForModel(cls, namespace, name):
@@ -308,7 +302,7 @@ class Property(object):
     
     def deconvert(self, instance, value):
         '''Converts a value from the datastore to a native python object'''
-        return self.__set__(instance, value)
+        return setattr(instance, self.name, value)
            
     def configure(self, name, owner):
         """Allow this property to know its name, and owner"""
@@ -320,11 +314,22 @@ class Property(object):
 
 """
 UnIndexable:
-The base class of all Properties that cannot be indexed
+The base class of all Properties that cannot be indexed. Normally
+properties that cannot be indexed will be pickled into the datastore
 """
 class UnIndexable(Property):
     '''A Property that cannot be indexed'''
     
+    def convert(self, instance):
+        '''Pickles this object to the datastore'''
+        value = getattr(instance, self.name)
+        self.validate(value)
+        return pickle.dumps(value)
+    
+    def deconvert(self, instance, value):
+        '''Converts a raw datastore back to a native python object'''
+        setattr(instance, self.name, pickle.loads(value))
+        
     def indexed(self):
         '''Blobs cannot be indexed'''
         return False

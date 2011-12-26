@@ -183,12 +183,12 @@ class TestList(TestCase):
         '''List should throw an error for Nones'''
         self.test.birthdays = None
     
-    @expectedFailure
     def testListTypeChecking(self):
         """This test should fail. It verifies that List type checking works"""
         sample = [i for i in range(10)]
-        self.test.birthdays = sample
-        print self.test.birthdays
+        with self.assertRaises(Exception):
+            self.test.birthdays = sample
+        
               
 class TestBoolean(TestCase):
     """Tests for the Boolean() descriptor"""
@@ -219,6 +219,7 @@ class TestMap(TestCase):
         '''Creates a test object'''
         class Person(object):
             bookmarks = Map(String, URL)
+        self.cls = Person
         self.test = Person()
         
     def testMapSanity(self):
@@ -226,7 +227,14 @@ class TestMap(TestCase):
         map = {"Google": "http://google.com", 234: "http://234next.com", 1.345: "http://base.com"}
         self.test.bookmarks = map
         self.assertEquals(self.test.bookmarks, {"Google": "http://google.com", "234": "http://234next.com", "1.345": "http://base.com"})
-                   
+    
+    def testMapDoesValidation(self):
+        """Makes sure that Maps do validation"""
+        with self.assertRaises(Exception):
+            self.test.bookmarks["hello"] = 1
+            self.cls.bookmarks.convert(self.test)
+             
+             
 class TestSet(TestCase):
     """Tests for Set() descriptor"""
     def setUp(self):

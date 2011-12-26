@@ -38,7 +38,6 @@ from cql.cursor import Cursor
 from cassandra import Cassandra
 from cassandra.ttypes import *
 
-from homer.core.commons import *
 from homer.core.models import Type, Property, Schema
 
 ####
@@ -67,11 +66,6 @@ __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
 
-
-PropertyMap = {Float : "UTF8Type", String : "UTF8Type", Integer : "UTF8Type", Property : "BytesType"\
-                    , DateTime: "BytesType", Date: "UTF8Type", Time: "UTF8Type", Blob : "BytesType", \
-                        URL: "UTF8Type", Boolean: "UTF8Type", Set: "BytesType", List: "BytesType", Map: "BytesType"\
-                            ,Type: "BytesType" }
 ####
 # CQL Query Support
 ####
@@ -547,19 +541,11 @@ class MetaModel(object):
            
     def keyType(self):
         '''Returns the Comparator type of the Key Descriptor of this Model'''
-        property = self.fields[self.key]
-        return self.getDatastoreType(property)
+        return "UTF8Type"
     
-    def getDatastoreType(self, property):
-        '''Returns the DataStoreType for a Descriptor'''
-        if isinstance(property, Property):
-            return PropertyMap[type(property)]
-        else:
-            return self.defaultType()
-        
     def defaultType(self):
         '''Returns the default validation class for a particular Model'''
-        return "BytesType"
+        return "UTF8Type"
     
     def wait(self, conn):
         '''Waits for schema agreement accross the entire cluster'''

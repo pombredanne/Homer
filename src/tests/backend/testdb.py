@@ -176,16 +176,19 @@ class TestSimpson(TestCase):
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
-       
+      
     def testPut(self):
         '''Tests if Simpson.put() actually stores the model to Cassandra'''
         @key("id")
         class Profile(Model):
             id = String(required = True, indexed = True)
             fullname = String(indexed = True)
+            bookmarks = Map(String, URL)
             
         cursor = self.connection
         profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
+        profile.bookmarks["google"] = "http://google.com"
+        profile.bookmarks["twitter"] = "twitter 2.0"
         self.db.put(profile)
         cursor.execute("USE Test;")
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")

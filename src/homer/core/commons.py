@@ -210,9 +210,6 @@ class Set(UnIndexable):
                 except: 
                     raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls)) 
             return coerced
-        raise BadValueError("Validation could not complete successfully, Please contact the mailing\
-                             list or file a bug report, Thanks.")    
-
 """
 List:
 A descriptor that stores homogeneous lists, it works like the Set descriptor except
@@ -262,10 +259,7 @@ class List(UnIndexable):
                     coerced.append(i)   
                 except: 
                     raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls))        
-            return coerced
-        raise BadValueError("Validation could not complete successfully, Please contact the mailing\
-                             list or file a bug report, Thanks.")
-                          
+            return coerced                
 """
 Map:
 A descriptor for dict-like objects;
