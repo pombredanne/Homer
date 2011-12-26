@@ -5,13 +5,13 @@ Cassandra Support
 2.  Separate Indexed and UnIndexed Heirachies => Done
 3.  Write Property.convert for each property with unittests. => Done
 4.  Write Property.deconvert() [Write SERDE routine for properties.] => Done
-4.  Rewrite Simpson.put() and fill up a key when a Model is saved 
-5.  Write Simpson.read(), add support for Key.columns, and individual column access
-6.  Write CQLQuery and Model.query()
-7.  Write Simpson.delete()
-8.  Write Simpson.count()
-9.  Create a Rating, Reference, BlowFishHash and Md5Hash Property
-9.  Tag v0.5.0.beta
+5.  Rewrite Simpson.put() and fill up a key when a Model is saved => Done
+6.  Write Simpson.read(), add support for Key.columns, and individual column access
+7.  Write CQLQuery and Model.query()
+8.  Write Simpson.delete()
+9.  Write Simpson.count()
+10.  Create a Rating, Reference, BlowFishHash and Md5Hash Property
+11.  Tag v0.5.0.beta
 
 Memcached Support
 1.  Write Cache.create("Store metadata")
