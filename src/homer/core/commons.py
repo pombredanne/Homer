@@ -8,7 +8,6 @@ Copyright 2011, June inc.
 Description:
 Common descriptors for day to day usage
 """
-import struct
 import urlparse
 import datetime
 from contextlib import closing
@@ -59,13 +58,8 @@ String:
 The String data descriptor, is used to create String Properties in your models.
 e.g. The following snippet shows various usecases for String()
 
-from things.commons import String
-from things.core import READONLY
-
 class Story(object):
     '''Models a Story Object'''
-    headline = String("Barcelona FC meats Real Madrid in UEFA Champs Final")
-    anchor = String("Zeinab Badawi")
     channel = String("BBC World News")
     reporter = String(length = 30)
     
@@ -134,10 +128,6 @@ class Blob(UnIndexedType):
         """
         return self.__size
     
-    def indexed(self):
-        '''Blobs cannot be indexed'''
-        return False
-        
     def validate(self,value):
         """Makes sure that whatever you are putting, does not exceed size"""
         value = super(Blob,self).validate(value)
@@ -189,10 +179,6 @@ class Set(UnIndexable):
         self.cls = cls
         super(Set, self).__init__(default, **arguments)
     
-    def indexed(self):
-        '''Blobs cannot be indexed'''
-        return False
-        
     def validate(self,value):
         """Validates the type you are setting and its contents"""
         value = super(Set,self).validate(value)
@@ -246,11 +232,7 @@ class List(UnIndexable):
     def __init__(self,cls = object, default = [], **arguments ):    
         self.cls = cls
         super(List, self).__init__(default, **arguments)
-    
-    def indexed(self):
-        '''Lists cannot be indexed'''
-        return False
-        
+     
     def validate(self,value):
         """Validates a list and all its contents"""
         value = super(List,self).validate(value)
@@ -296,11 +278,7 @@ class Map(UnIndexable):
     def __init__(self, key=object, value=object, default = {}, **arguments):
         self.key, self.value = key, value
         super(Map, self).__init__(default, **arguments)
-    
-    def indexed(self):
-        '''Blobs cannot be indexed'''
-        return False
-        
+      
     def validate(self, value):
         '''Simply does type checking'''
         value = super(Map, self).validate(value)
