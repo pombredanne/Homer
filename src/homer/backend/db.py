@@ -39,6 +39,7 @@ from cql.cursor import Cursor
 from cassandra import Cassandra
 from cassandra.ttypes import *
 
+from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
 
 ####
@@ -351,55 +352,42 @@ class Simpson(object):
         """Creates a new ColumnFamily from this Model"""
         from homer.options import namespaces
         from homer.core.models import key, Model
+        # OUR GOAL HERE IS TO CREATE CASSANDRA DATA MODELS FROM
+        # METADATA GLEANED FROM THESE THE INSTANCE PASSED IN TO
+        # THIS METHOD
         assert issubclass(model.__class__, Model),"parameter model: %s must inherit from model" % model
-        info = Schema.Get(model) #=> Schema returns meta information.
+        info = Schema.Get(model) 
         namespace = info[0]
         kind = info[1]
         meta = MetaModel(model)
-        #=> Create a new keyspace if necessary
-        if namespace not in cls.keyspaces:  
-            found = namespaces.get(namespace)  #=> Returns an options.Namespace object 
-            print 'Creating Keyspace from: %s' % found                        
-            pool = RoundRobinPool(found.cassandra)
-            print 'Connecting to Cassandra :)'
-            with using(pool) as conn:
-                meta.makeKeySpace(conn)
+        pool = cls.pool(namespace)
+        with using(pool) as conn:
+            meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
-        #=> Create a new column family, columns and indexes if necessary    
-        if kind not in cls.columnfamilies:
-            print 'Creating ColumnFamily: %s' % kind
-            pool = cls.pools[namespace]
-            with using(pool) as conn:
-                meta.makeColumnFamily(conn) #MetaModels should be designed to be disposable.
-                meta.makeIndexes(conn)
+            meta.makeColumnFamily(conn) 
+            meta.makeIndexes(conn)
             cls.columnfamilies.add(kind)
-       
+             
     @classmethod
     def put(cls, *Models):
         '''Persists @Models to the datastore, Puts are idempotent'''
-        # The goal here is to persist all the objects in one batch operation
         from homer.options import namespaces
         from homer.core.models import key, Model
-        # Create helper method for storing mutations.
+        # PUT PERSISTS ALL CHANGES IN A MODEL IN A SINGLE BATCH
+        # THIS ISOLATES THE FAILURES IN ANY WRITE
         def commit(namespace, mutations):
             '''Stores all the mutations in one batch operation'''
-            pool = None
-            if namespace not in cls.keyspaces:  
-                found = namespaces.get(namespace)  #=> Returns an options.Namespace object                        
-                pool = RoundRobinPool(found.cassandra)
-                cls.pools[namespace] = pool
-            else:
-                pool = cls.pools[namespace]
+            pool = cls.pool(namespace)
             print 'Committing a single model batch to Cassandra'
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
                 conn.client.batch_mutate(mutations, cls.consistency)    
-        # Iterate through all the batch all the individual changes.
+        # ITERATE THROUGH ALL THE BATCH ALL THE INDIVIDUAL CHANGES.
         for model in Models:
             assert issubclass(model.__class__, Model), "parameter model:\
                 %s must inherit from Model" % model
-            info = Schema.Get(model) #=> Schema returns meta information.
+            info = Schema.Get(model)
             namespace = namespaces.get(info[0]).name
             kind = info[1]
             if kind not in cls.columnfamilies:
@@ -417,18 +405,26 @@ class Simpson(object):
         from homer.options import namespaces
         from homer.core.models import key, Model
         results = []
+        # READ HAPPENS KEY BY KEY HERE.
         for key in keys:
             assert key.complete(), "Your key has to be complete"
+            print "Reading %s from Cassandra" % key
             id = key.id
             parent = ColumnParent(column_family = key.kind)
-            predicate = SlicePredicate(column_names = key.columns)
-            pool = None
-            if key.namespace not in cls.keyspaces:  
-                found = namespaces.get(key.namespace)  #=> Returns an options.Namespace object                        
-                pool = RoundRobinPool(found.cassandra)
-                cls.pools[key.namespace] = pool
+            # THE GOAL HERE IS TOO AVOID PULLING ALL THE CONTENTS OF WIDE ROWS
+            # OVER THE WIRE WHEN DOING A READ. IF THE CALLER DOES NOT EXPLICITLY
+            # SPECIFY THE COLUMNS HE WANTS TO RETREIVE VIA KEY.COLUMNS, SIMPSON
+            # SETS IT FOR HIM BY READING ALL THE DESCRIPTORS THAT THE MODEL
+            # CONTAINS BY DEFAULT.
+            predicate = None
+            if key.columns:
+                predicate = SlicePredicate(column_names = key.columns)
             else:
-                pool = cls.pools[key.namespace]
+                type = Schema.ClassForModel(key.namespace, key.kind)
+                names = fields(type, Property).keys() 
+                columns = list(names)
+                predicate = SlicePredicate(column_names = columns)
+            pool = cls.pool(key.namespace)
             with using(pool) as conn:
                 conn.client.set_keyspace(key.namespace)
                 coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
@@ -436,20 +432,30 @@ class Simpson(object):
         return results
     
     @classmethod
+    def pool(cls, namespace):
+        '''Returns or creates a pool for this namespace'''
+        from homer.options import namespaces
+        from homer.core.models import key, Model
+        pool = None
+        if namespace not in cls.keyspaces:  
+            found = namespaces.get(namespace)                    
+            pool = RoundRobinPool(found.cassandra)
+            cls.pools[namespace] = pool
+        else:
+            pool = cls.pools[namespace]
+        return pool
+        
+    @classmethod
     def delete(cls, *keys):
         '''Deletes objects with these keys from the datastore'''
+        # A DELETE IS USED FOR DELETING AN INSTANCE OF A CLASS FROM CASSANDRA
         for key in keys:
             assert key.complete(), "Your Key has to be complete to a delete"
             path = ColumnPath(column_family = key.kind)
             clock = int(time.time())
-            pool = None
-            if key.namespace not in cls.keyspaces:  
-                found = namespaces.get(key.namespace)  #=> Returns an options.Namespace object                        
-                pool = RoundRobinPool(found.cassandra)
-                cls.pools[key.namespace] = pool
-            else:
-                pool = cls.pools[key.namespace]
+            pool = cls.pool(key.namespace)
             with using(pool) as conn:
+                print "DELETING %s FROM CASSANDRA" % key 
                 conn.client.set_keyspace(key.namespace)
                 conn.client.remove(key.id, path, clock, cls.consistency)
               
@@ -461,8 +467,6 @@ class Simpson(object):
         cls.columnfamilies.clear()
         cls.pools.clear()
             
-    
-
 ##
 # MetaModel:
 # Transforms {@link Model} instances to Cassandra's native Data Model.
@@ -544,20 +548,16 @@ class MetaModel(object):
         options = namespaces.get(self.namespace)
         assert options is not None, "No configuration options for this keyspace"
         namespace = options.name
-        # Create a ColumnFamilyDefinition and fill up its properties
         CF = CfDef()
         CF.keyspace = namespace
         CF.name = self.kind
         CF.comment = self.model.__doc__
-        # Helper method for expanding db class names.
         def expand(value):
             '''An inline function used to expand db package names'''
             return 'org.apache.cassandra.db.marshal.%s' % value
-        # Fill up some other properties which we can infer from the model   
         CF.comparator_type = expand(self.keyType())
         CF.default_validation_class = expand(self.defaultType())
         CF.key_validation_class = expand(self.keyType())  
-        # Create column definitions
         columns = self.getColumnDefinitions()
         CF.column_metadata = columns
         return CF

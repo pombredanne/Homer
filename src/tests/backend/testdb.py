@@ -82,7 +82,8 @@ class TestRoundRobinPool(TestCase):
         time.sleep(45)
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
-   
+
+
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
@@ -125,7 +126,7 @@ class TestConnection(TestCase):
 ###
 
 import cql
-from homer.core.models import key, Model, Schema, Key
+from homer.core.models import key, Model, Schema, Key, Reference    
 from homer.core.commons import *
 from homer.options import *
 
@@ -279,5 +280,60 @@ class TestSimpson(TestCase):
         row = cursor.fetchone()
         print "Deleted row: %s" % row
         self.assertTrue(row[1] == None)
+
+class TestReference(TestCase):
+    '''Tests for the Reference Property'''
+    
+    def setUp(self):
+        '''Create the Simpson instance, we all know and love'''
+        self.db = Simpson()
+        self.connection = cql.connect("localhost", 9160).cursor()
+        # Do Datastore configuration, setup stuff like namespaces and etcetera
+        b = DataStoreOptions(servers=["localhost:9160",], username="", password="")
+        namespace = Namespace(name= "Host", cassandra= b)
+        namespaces.add(namespace)
         
+    def tearDown(self):
+        '''Release resources that have been allocated'''
+        try:
+            self.db.clear()
+            Schema.clear()
+            self.connection.execute("DROP KEYSPACE Host;")
+            self.connection.close()
+        except:
+            pass
+            
+    def testSanity(self):
+        '''Tests the sanity of Reference Property'''
+        from homer.core.commons import String
         
+        print "Creating Models"
+        @key("name", namespace = "Host")    
+        class Person(Model):
+            name = String(required = True)
+            
+        @key("name", namespace = "Host")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = Reference(Person)
+        
+        print "Persisting Person"
+        person = Person(name = "sasuke")
+        self.db.put(person)
+        print "Persisting Book"
+        book = Book(name = "Pride", author = person)
+        self.db.put(book)
+        
+        print "Checking Conversion Routine"
+        k = eval(Book.author.convert(book))
+        self.assertTrue(k == Key("Host","Person","sasuke"))
+        with self.assertRaises(Exception):
+            book.author = "Hello"
+        
+        print "Checking Automatic Reference Read"
+        id = Key("Host","Book","Pride")
+        id.columns = ["name", "author"]
+        found = self.db.read(id)[0]
+        self.assertTrue(found.author.name == "sasuke")
+        self.assertTrue(found.author == person)
+            

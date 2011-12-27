@@ -10,10 +10,10 @@ Unittests for the Models module...
 """
 from unittest import TestCase,expectedFailure,skip
 from datetime import datetime, date
-from homer.core.models import key, Model, Property, Type, READONLY, READWRITE
+from homer.core.models import key, Model, Property, Type, READONLY, READWRITE, Reference, Key
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError,\
     NamespaceCollisionError, Schema, UnIndexable
-  
+      
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
     
@@ -304,4 +304,4 @@ class TestProperty(TestCase):
         with self.assertRaises(AttributeError):
             print("You cannot delete a read only Property")
             delattr(self.bug,"email")
-    
+

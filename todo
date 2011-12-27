@@ -7,10 +7,12 @@ Cassandra Support
 4.  Write Property.deconvert() [Write SERDE routine for properties.] => Done
 5.  Rewrite Simpson.put() and fill up a key when a Model is saved => Done
 6.  Write Simpson.read(), add support for Key.columns, and individual column access => Done
-7.  Create a Rating, Reference[implemented], BlowFishHash and Md5Hash Property => Suspended
-8.  Write Simpson.delete()
-9.  Write Simpson.count()
+7.  Write Reference => Done
+8.  Write Simpson.delete() => Done
+9.  Write Simpson.count() ?=? Ignored, CQLQuery will have to do for now.
 10. Write CQLQuery and Model.query()
+11. Wire Model
+12. Create a Rating, BlowFishHash and Md5Hash Property => Suspended
 
 Memcached Support
 1.  Write Cache.create("Store metadata")

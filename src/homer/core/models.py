@@ -30,7 +30,7 @@ import cPickle as pickle
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
-from homer.core.builtins import object
+from homer.core.builtins import object, fields
 from homer.util import Validation
 from homer.core.differ import Differ, DiffError
 
@@ -138,19 +138,12 @@ class Key(object):
     """A GUID for Models"""
     def __init__(self, namespace, kind = None, id = None):
         """Creates a key from keywords or from a str representation"""
-        if kind is None and id is None:
-            try:
-                key, repr = namespace.split(":")
-                assert key == "key", "Key representation\
-                    should start with 'key:'"
-                namespace, kind, id = repr.split(",")
-            except:
-                raise BadKeyError("Expected String of"\
-                    + "format 'key: namespace, kind, key', Got:%s" % namespace)
+        self.namespace = namespace
+        self.kind = kind
+        self.id = id
         self.saved = False
         self.columns = []
-        self.namespace, self.kind, self.id = namespace, kind, id
-    
+     
     def complete(self):
         """Checks if this key has a namespace, kind and key"""
         if bool(self.namespace) and bool(self.kind) and bool(self.id):
@@ -166,11 +159,11 @@ class Key(object):
         '''Compare two keys for equality'''
         return self.namespace == other.namespace and self.kind\
             == other.kind and self.id == other.id
-            
-    def __str__(self):
-        """String representation of a key"""
-        format = u"key: {self.namespace}, {self.kind}, {self.id}"
+    
+    def __repr__(self):
+        format = "Key('{self.namespace}', '{self.kind}', '{self.id}')"
         return format.format(self = self)
+         
         
    
 """
@@ -400,10 +393,11 @@ in the database.
 """  
 class Reference(Property):
     '''A Pointer to another persisted Model'''
-    def __init__(self, cls=object, default = object, **arguments):
+    def __init__(self, cls, default = None, **arguments):
+        '''Override the properties constructor'''
         assert issubclass(cls, Model), "A Reference must point to a Model"
         self.cls = cls
-        super(Property, self).__init__(default, **arguments)
+        Property.__init__(self, default, **arguments)
     
     def convert(self, instance):
         '''References are stored as Keys in the datastore'''
@@ -414,24 +408,18 @@ class Reference(Property):
     def deconvert(self, instance, value):
         '''Pulls the referenced model from the datastore, and sets it'''
         key = eval(value) #Change the key back to a key.
-        model = Simpson.read(key)
+        assert key.complete()
+        model = Simpson.read(key)[0]
         setattr(instance, self.name, model)
       
     def validate(self, value):
         '''Make sure that instance you set on a Reference has a complete key, and do type checking'''
-        assert value.key().complete() , "Your Model's key must be complete"
-        value = super(Property, self).validate(value)
         if value is None:
             return None
-        if not isinstance(value, self.cls):
-            try: value = self.cls(value)
-            except:
-                raise BadValueError("This property has to be set, got a : %s" % type(value))
+        assert isinstance(value, Model), "You must use a subclass of Model"
+        assert value.key().complete() , "Your Model's key must be complete"
         return value
-        
-        
-        
-          
+                 
 ###
 # Model and Its Friends
 ###
@@ -473,7 +461,7 @@ class Model(object):
             found = getattr(self,key)
             value = found() if callable(found) else found
             if not value:
-                raise BadKeyError("Empty Id...")
+                raise BadKeyError("Incomplete key")
             return value  
         if self.__key is None:
             namespace, kind, key = Schema.Get(self)

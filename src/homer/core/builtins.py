@@ -18,3 +18,15 @@ class object(object):
             setattr(self, name, value)
 
 
+def fields(cls, type):
+        '''Searches a class heirachy for instances of a particular object'''
+        results = {}
+        def add(name, prop):
+            if isinstance(prop, type) and not name.startswith("_"):
+                results[name] = prop
+        for root in reversed(cls.__bases__):
+            for name, prop in root.__dict__.items():
+                add(name, prop) 
+        for name, prop in cls.__dict__.items():
+            add(name, prop)
+        return results
