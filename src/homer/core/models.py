@@ -35,7 +35,7 @@ from homer.util import Validation
 from homer.core.differ import Differ, DiffError
 
 
-__all__ = ["Model", "key",]
+__all__ = ["Model", "key", "Key"]
 
 READWRITE, READONLY = 1, 2
 Limit = 5000
@@ -162,6 +162,11 @@ class Key(object):
         """Unicode representation of a key"""
         return unicode(self)
     
+    def __eq__(self, other):
+        '''Compare two keys for equality'''
+        return self.namespace == other.namespace and self.kind\
+            == other.kind and self.id == other.id
+            
     def __str__(self):
         """String representation of a key"""
         format = u"key: {self.namespace}, {self.kind}, {self.id}"
@@ -287,8 +292,7 @@ class Property(object):
     def validate(self, value):
         """Asserts that the value provided is compatible with this property"""
         if self.required and self.empty(value):
-            raise BadValueError("This property is required, it\
-                cannot be empty") 
+            raise BadValueError("This property is required, it cannot be empty") 
         if self.choices:
             if value not in self.choices:
                 raise BadValueError("The property %s is %r; it must\
@@ -411,10 +415,16 @@ class Model(object):
         self.properties = set()
         self.__key = None
         required = set()
+        # For the Differs sake we have to find all the properties and set their default values
         for name, prop in self.fields().items():
             self.properties.add(name)
             prop.configure(name, type(self))
-            setattr(self, name, kwds.get(name, prop.default))
+            if prop.required and not prop.default:
+                value = kwds.get(name, None)
+                if value:
+                    setattr(self, name, value)
+            else:
+                setattr(self, name, kwds.get(name, prop.default))
        
     def key(self):
         """Unique key for identifying this instance"""
@@ -452,7 +462,7 @@ class Model(object):
     @classmethod
     def kind(cls):
         """The Type Name of @self in the Datastore"""
-        return cls.__class__.__name__
+        return cls.__name__
         
     @classmethod
     def delete(cls, keys, cache = True):
@@ -528,7 +538,11 @@ class Model(object):
         results = []
         for name in self.keys():
             yield name, getattr(self, name)
-           
+    
+    def __eq__(self, other):
+        '''Two Models are equal if and only if their keys are equal'''
+        return self.key() == other.key()
+            
     def __len__(self):
         '''How many properties are contained in this object'''
         return len(self.properties)
@@ -539,7 +553,7 @@ class Model(object):
         
     def __str__(self):
         '''A String representation of this Model'''
-        format = "Model: %s" % (self.kind(),)
+        format = "Model: %s" % (self.kind(), )
         return format
         
     def __unicode__(self):

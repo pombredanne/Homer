@@ -26,6 +26,7 @@ Provides a very nice abstraction around Cassandra;
 import time
 import atexit
 import itertools
+import cPickle as pickle
 from contextlib import contextmanager as Context
 from threading import Thread, local
 from Queue import Queue, Empty, Full
@@ -85,7 +86,7 @@ class CqlQuery(object):
         '''Executes this query, normally this is called automatically'''
         pass
     
-    def fetchOne(self):
+    def fetchone(self):
         '''Returns one result from the query'''
         pass
         
@@ -394,7 +395,7 @@ class Simpson(object):
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
                 conn.client.batch_mutate(mutations, cls.consistency)    
-        # Iterate through all the Models and collect all their mutations in one list.
+        # Iterate through all the batch all the individual changes.
         for model in Models:
             assert issubclass(model.__class__, Model), "parameter model:\
                 %s must inherit from Model" % model
@@ -404,17 +405,36 @@ class Simpson(object):
             if kind not in cls.columnfamilies:
                 cls.create(model)
             meta = MetaModel(model)
-            changes = { meta.id(): meta.mutations()} # A single batch
+            changes = { meta.id() : meta.mutations() }
             commit(namespace, changes)
             model.key().namespace = namespace
             model.key().saved = True
             assert model.key().complete()
            
     @classmethod
-    def read(cls, *Keys):
+    def read(cls, *keys):
         '''Reads @keys from the Datastore;'''
-        pass
-               
+        from homer.options import namespaces
+        from homer.core.models import key, Model
+        results = []
+        for key in keys:
+            assert key.complete(), "Your key has to be complete"
+            id = key.id
+            parent = ColumnParent(column_family = key.kind)
+            predicate = SlicePredicate(column_names = key.columns)
+            pool = None
+            if key.namespace not in cls.keyspaces:  
+                found = namespaces.get(key.namespace)  #=> Returns an options.Namespace object                        
+                pool = RoundRobinPool(found.cassandra)
+                cls.pools[key.namespace] = pool
+            else:
+                pool = cls.pools[key.namespace]
+            with using(pool) as conn:
+                conn.client.set_keyspace(key.namespace)
+                coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
+                results.append(MetaModel.fromColumns(key, coscs))
+        return results
+            
     @classmethod
     def clear(cls):
         '''Clears internal state of @this'''
@@ -564,17 +584,31 @@ class MetaModel(object):
         column = Column()
         column.name = name
         if name in self.fields:
-            # Use the descriptor to do marshalling and set ttl if it exists
             property = self.fields[name]
             column.value = property.convert(self.model)  
             ttl = property.ttl
             if ttl:
                 column.ttl = ttl
         else: 
-            column.value = str(self.model[name]) # Or Just use the str() function to marshalling
+            column.value = pickle.dumps(self.model[name]) # Just pickle it over the wire
         column.timestamp = int(time.time())
         return column
-                  
+    
+    @classmethod
+    def fromColumns(self, key, coscs):
+        '''Creates a Model from a lists of ColumnOrSuperColumns'''
+        cls = Schema.ClassForModel(key.namespace, key.kind)
+        model = cls()
+        for cosc in coscs:
+            name = cosc.column.name
+            if name in model.fields():
+                prop = model.fields()[name]
+                prop.deconvert(model, cosc.column.value)
+            else:
+                value = pickle.loads(cosc.column.value)
+                model[name] = value
+        return model
+         
     def mutations(self):
         '''Returns a {} of mutations that have occurred since last commit'''
         # See Page 151 and Page 78 in the Cassandra Guide.

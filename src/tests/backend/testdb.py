@@ -25,7 +25,7 @@ Tests for the the db module.
 """
 import time
 from homer.options import options, DataStoreOptions
-from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson
+from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level
 from unittest import TestCase, skip
 
 class TestRoundRobinPool(TestCase):
@@ -125,7 +125,7 @@ class TestConnection(TestCase):
 ###
 
 import cql
-from homer.core.models import key, Model, Schema
+from homer.core.models import key, Model, Schema, Key
 from homer.core.commons import *
 from homer.options import *
 
@@ -151,8 +151,8 @@ class TestSimpson(TestCase):
         try:
             self.db.clear()
             Schema.clear()
-            self.connection.execute("DROP KEYSPACE Test;")
             self.connection.execute("DROP KEYSPACE Host;")
+            self.connection.execute("DROP KEYSPACE Test;")
             self.connection.close()
         except:
             pass
@@ -163,7 +163,7 @@ class TestSimpson(TestCase):
             '''An ordinary new-style class'''
             pass
         self.assertRaises(AssertionError, lambda: self.db.create(Person()))   
-        
+      
     def testCreate(self):
         '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
         @key("name")
@@ -176,7 +176,7 @@ class TestSimpson(TestCase):
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
-      
+     
     def testPut(self):
         '''Tests if Simpson.put() actually stores the model to Cassandra'''
         @key("id")
@@ -213,11 +213,10 @@ class TestSimpson(TestCase):
         row = cursor.fetchone()
         print(row)
         self.assertTrue(row[1] == '1' and row[2] == "Something broke damn")
-        
+     
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
         import time
-        
         @key("id")
         class House(Model):
             id = String(required = True, indexed = True)
@@ -234,4 +233,27 @@ class TestSimpson(TestCase):
         
     def testRead(self):
         '''Tests if Simpson.read() behaves as usual'''
-        pass
+        @key("name", namespace = "Host")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = String(indexed = True)
+            isbn = String(indexed = True)
+            titles = Map(String, Integer)
+        
+        book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
+        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
+        self.db.put(book)
+        
+        k = Key("Host", "Book", "Lord of the Rings")
+        k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
+        b = self.db.read(k)[0]
+        assert isinstance(b, Book)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        print b.name
+        print b.author
+        print b.isbn
+        self.assertTrue(b == book)
+        self.assertTrue(b.name == "Lord of the Rings")
+        self.assertTrue(b.author == "J.R.R Tolkein")
+        self.assertTrue(b.isbn == "12345")
+        self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
