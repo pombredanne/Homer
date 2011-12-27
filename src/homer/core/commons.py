@@ -338,7 +338,6 @@ class URL(String):
     
     def validate(self,value):
         """Uses urlsplit to validate urls"""
-        print "Validating URL..."
         value = super(URL,self).validate(value)
         if value is not None:
             parsed = urlparse.urlparse(value)

@@ -388,12 +388,53 @@ A Type that cannot be indexed
 class UnIndexedType(UnIndexable, Type):
     '''A Type that cannot be indexed'''
     pass
+
+from copy import copy, deepcopy
+from homer.backend import Simpson
+
+"""
+Reference:
+A Pointer to another Model that has been persisted
+in the database.
+
+"""  
+class Reference(Property):
+    '''A Pointer to another persisted Model'''
+    def __init__(self, cls=object, default = object, **arguments):
+        assert issubclass(cls, Model), "A Reference must point to a Model"
+        self.cls = cls
+        super(Property, self).__init__(default, **arguments)
     
+    def convert(self, instance):
+        '''References are stored as Keys in the datastore'''
+        value = getattr(instance, self.name)
+        self.validate(value)
+        return repr(value.key())
+        
+    def deconvert(self, instance, value):
+        '''Pulls the referenced model from the datastore, and sets it'''
+        key = eval(value) #Change the key back to a key.
+        model = Simpson.read(key)
+        setattr(instance, self.name, model)
+      
+    def validate(self, value):
+        '''Make sure that instance you set on a Reference has a complete key, and do type checking'''
+        assert value.key().complete() , "Your Model's key must be complete"
+        value = super(Property, self).validate(value)
+        if value is None:
+            return None
+        if not isinstance(value, self.cls):
+            try: value = self.cls(value)
+            except:
+                raise BadValueError("This property has to be set, got a : %s" % type(value))
+        return value
+        
+        
+        
+          
 ###
 # Model and Its Friends
 ###
-from copy import copy, deepcopy
-from homer.backend import Simpson
 """
 Model: 
 The Universal Unit of Persistence, a model is always 

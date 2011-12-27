@@ -434,7 +434,25 @@ class Simpson(object):
                 coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
                 results.append(MetaModel.fromColumns(key, coscs))
         return results
-            
+    
+    @classmethod
+    def delete(cls, *keys):
+        '''Deletes objects with these keys from the datastore'''
+        for key in keys:
+            assert key.complete(), "Your Key has to be complete to a delete"
+            path = ColumnPath(column_family = key.kind)
+            clock = int(time.time())
+            pool = None
+            if key.namespace not in cls.keyspaces:  
+                found = namespaces.get(key.namespace)  #=> Returns an options.Namespace object                        
+                pool = RoundRobinPool(found.cassandra)
+                cls.pools[key.namespace] = pool
+            else:
+                pool = cls.pools[key.namespace]
+            with using(pool) as conn:
+                conn.client.set_keyspace(key.namespace)
+                conn.client.remove(key.id, path, clock, cls.consistency)
+              
     @classmethod
     def clear(cls):
         '''Clears internal state of @this'''
@@ -443,10 +461,7 @@ class Simpson(object):
         cls.columnfamilies.clear()
         cls.pools.clear()
             
-    @classmethod
-    def delete(cls, *Models):
-        '''Deletes @objects from the datastore'''
-        pass  
+    
 
 ##
 # MetaModel:
@@ -464,7 +479,6 @@ class MetaModel(object):
         self.kind = info[1]
         self.key = info[2]
         self.comment = self.kind.__doc__
-        self.super = False; # No super column support for now
         self.fields = model.fields()
     
     def id(self):
@@ -489,7 +503,7 @@ class MetaModel(object):
             connection.client.system_add_column_family(self.asColumnFamily())
             self.wait(connection)
         except InvalidRequestException as e:
-            raise e #Do nothing about invalid requests; They mean that there is a duplicate
+            pass #raise DuplicateError("Another Keyspace with this name seems to exist")
     
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
@@ -535,8 +549,6 @@ class MetaModel(object):
         CF.keyspace = namespace
         CF.name = self.kind
         CF.comment = self.model.__doc__
-        if self.super:
-            CF.column_type = "Super"
         # Helper method for expanding db class names.
         def expand(value):
             '''An inline function used to expand db package names'''

@@ -38,7 +38,7 @@ class Profile(Model):
     link = URL("http://twitter.com", indexed = True)
     
 
-with Level.Quorum:
+with Level.All:
     person = Profile(name = 'Yoda', link = 'http://faceboook.com/yoda')
     person.save() # Put in memcache and Cassandra
 

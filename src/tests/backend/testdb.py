@@ -136,12 +136,12 @@ class TestSimpson(TestCase):
         '''Create the Simpson instance, we all know and love'''
         self.db = Simpson()
         self.connection = cql.connect("localhost", 9160).cursor()
-       
+        # Do Datastore configuration, setup stuff like namespaces and etcetera
         c = DataStoreOptions(servers=["localhost:9160",], username="", password="")
         namespace = Namespace(name= "Test", cassandra= c)
         namespaces.add(namespace)
         namespaces.default = "Test"
-        
+        # Configure a second namespace, theoretically this should be in a different datacentre
         b = DataStoreOptions(servers=["localhost:9160",], username="", password="")
         namespace = Namespace(name= "Host", cassandra= c)
         namespaces.add(namespace)
@@ -171,7 +171,7 @@ class TestSimpson(TestCase):
             name = String("Homer Simpson", indexed = True)
             twitter = URL("http://twitter.com/homer", indexed = True)
         
-        self.db.create(Person()); #=> Quantum Leap.
+        self.db.create(Person()); #=> Quantum Leap; This was the first time I tested my assumptions on Homer
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
@@ -195,7 +195,7 @@ class TestSimpson(TestCase):
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
         self.assertTrue(row[1] == "1234" and row[2] == "Iroiso Ikpokonte")
-        assert profile.key().complete() == True #Make sure the object has a complete Key
+        assert profile.key().complete() == True # Make sure the object has a complete Key
         assert profile.key().saved
     
     def testOtherCommonTypeKeyWork(self):
@@ -233,6 +233,7 @@ class TestSimpson(TestCase):
         
     def testRead(self):
         '''Tests if Simpson.read() behaves as usual'''
+        
         @key("name", namespace = "Host")
         class Book(Model):
             name = String(required = True, indexed = True)
@@ -257,3 +258,26 @@ class TestSimpson(TestCase):
         self.assertTrue(b.author == "J.R.R Tolkein")
         self.assertTrue(b.isbn == "12345")
         self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
+
+    def testDelete(self):
+        '''Tests if Simpson.delete() works well'''
+        @key("name", namespace = "Host")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = String(indexed = True)
+        
+        book = Book(name = "Pride", author="Anne Rice")
+        self.db.put(book)
+        cursor = self.connection
+        cursor.execute("USE Host")
+        cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
+        row = cursor.fetchone()
+        self.assertTrue(row[1] == "Pride")
+        k = Key('Host', 'Book', 'Pride')
+        self.db.delete(k)
+        cursor.execute("SELECT name FROM Book WHERE KEY=Pride")
+        row = cursor.fetchone()
+        print "Deleted row: %s" % row
+        self.assertTrue(row[1] == None)
+        
+        
