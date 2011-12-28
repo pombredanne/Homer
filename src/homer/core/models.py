@@ -31,7 +31,6 @@ from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
 from homer.core.builtins import object, fields
-from homer.util import Validation
 from homer.core.differ import Differ, DiffError
 
 

@@ -20,7 +20,7 @@ __all__ = [
             "Integer","String","Blob","Set","Boolean","List","URL", "Time", "DateTime",
             "Date","Float", "Map",
 ]
-
+maxsize = 1024 * 1024 * 512 #Redis cannot deal with more than 512M values.
             
 """
 Float:
@@ -102,7 +102,7 @@ avatar = Blob.fromFile(filelike)
 """   
 class Blob(UnIndexedType):
     """Store Blobs"""
-    def __init__(self, default= "", size = -1, path = None, **arguments):
+    def __init__(self, default= "", size = maxsize, path = None, **arguments):
         """
         Creates a Blob
         @size: Represents the maximum size in bytes this Blob can store, -1 
