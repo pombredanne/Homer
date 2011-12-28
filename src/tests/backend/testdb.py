@@ -247,7 +247,7 @@ class TestSimpson(TestCase):
         self.db.put(book)
         
         k = Key("Host", "Book", "Lord of the Rings")
-        k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
+        #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
         b = self.db.read(k)[0]
         assert isinstance(b, Book)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"

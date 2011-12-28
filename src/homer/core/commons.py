@@ -192,8 +192,8 @@ class Set(UnIndexable):
         coerced = set()
         # Coercion is all or nothing. if any fails the entire operation fails
         name = self.cls.__name__
-        if name in __defaults__: # Check if cls is a common descriptor.
-            validate = __defaults__[name] # Retrieve a singleton to deal with this.
+        if name in defaults: # Check if cls is a common descriptor.
+            validate = defaults[name] # Retrieve a singleton to deal with this.
             for i in value:  # Normally Common descriptors take care of 'Nones'
                 coerced.add(validate(i))
             return coerced        
@@ -242,8 +242,8 @@ class List(UnIndexable):
         coerced = []
         # Coercion is all or nothing. if any fails the entire operation fails
         name = self.cls.__name__
-        if name in __defaults__: # Check if cls is a common descriptor.
-            validate = __defaults__[name] # Retrieve a singleton to deal with this.
+        if name in defaults: # Check if cls is a common descriptor.
+            validate = defaults[name] # Retrieve a singleton to deal with this.
             for i in value:  # Normally Common descriptors take care of 'Nones'
                 coerced.append(validate(i))
             return coerced        
@@ -287,10 +287,10 @@ class Map(UnIndexable):
        
         if isinstance(self.key, type):
             name = self.key.__name__
-            keyVal = __defaults__[name] if name in __defaults__ else self.key
+            keyVal = defaults[name] if name in defaults else self.key
         if isinstance(self.value, type):
             val = self.value.__name__
-            valueVal = __defaults__[val] if val in __defaults__ else self.value
+            valueVal = defaults[val] if val in defaults else self.value
             
         for k,v in value.items(): 
             key = keyVal(k) 
@@ -406,13 +406,13 @@ class Date(DateTime):
     def now(self):
         return datetime.datetime.now().date()
         
-# __names__ are useful for getting supported common types
-__names__ = {
-               "Integer": Integer, "String": String, "Blob": Blob,
-               "Set": Set, "Boolean": Boolean, "List": List, "URL": URL,
-               "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, "Map": Map
+# names are useful for getting supported common types
+names = {
+          "Integer": Integer, "String": String, "Blob": Blob,
+          "Set": Set, "Boolean": Boolean, "List": List, "URL": URL,
+          "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, "Map": Map
 }             
 
 ## Common Singletons
-__defaults__ = { name : value() for name, value in __names__.items() }  
+defaults = { name : value() for name, value in names.items() }  
 
