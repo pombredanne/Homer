@@ -193,21 +193,23 @@ class RoundRobinPool(Pool):
             try:
                 return self.queue.get(False)
             except Empty:
-                if self.count < self.maxConnections:  #If we are under quota just create a new connection
+                #IF WE ARE UNDER QUOTA JUST CREATE A NEW CONNECTION
+                if self.count < self.maxConnections:  
                     addr = self.__address().next()
                     print "Creating a new connection to address: %s" % addr
                     connection = Connection(self, addr, \
                         self.keyspace, self.username, self.password)
                     self.count += 1
                     return connection
-                else:  # If we are over quota force the request to wait for @self.timeout
+                # IF WE ARE OVER QUOTA FORCE THE REQUEST TO WAIT FOR @self.timeout
+                else:  
                     try:
                         return self.queue.get(True, self.timeout)
                     except Empty: raise TimedOutException("Sorry, your request has Timed Out")
           
     def __address(self):
         '''Returns an address from this servers pool in a round robin fashion'''
-        #This call is not threadsafe, it is for internal use only.
+        # THIS CALL IS NOT THREADSAFE, IT IS FOR INTERNAL USE ONLY.
         if not self.cycle:
             self.cycle = itertools.cycle(self.servers)
         for addr in self.cycle:
@@ -650,9 +652,8 @@ class MetaModel(object):
             cosc.column = column
             mutation = Mutation()
             mutation.column_or_supercolumn = cosc
-            print mutation
             mutations[self.kind].append(mutation)
-        # Marshalling modifications
+        print 'Marshalling modifications'
         for name in differ.modified():
             column = self.getColumn(name) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()

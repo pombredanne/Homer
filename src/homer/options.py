@@ -87,23 +87,25 @@ class Namespaces(object):
     def __init__(self):
         self.namespaces = {}
         self.lock = RLock()
-        self.__default__= Namespace()
+        self.__default = Namespace()
     
     def __setdefault__(self, namespace):
         '''a setter for setting the default namespace'''
         if isinstance(namespace, Namespace):
-            self.__default__ = namespace
+            self.__default = namespace
         elif isinstance(namespace, str):
             if namespace in self.namespaces:
-                self.__default__ = self.namespaces[namespace]
+                self.__default = self.namespaces[namespace]
             else:
-                raise ValueError("Could not find any Namespace with name: %s" % namespace)
+                raise ValueError("Could not find any \
+                    Namespace with name: %s" % namespace)
         else:
-            raise ValueError("An Instance of Namespace or str is required")
+            raise ValueError("An Instance of Namespace\
+            or str is required")
     
     def __getdefault__(self):
         ''' A getter for return the default namespace '''
-        return self.__default__
+        return self.__default
     
     def add(self, namespace):
         """Adds this namespace to the list of known namespaces"""
@@ -111,7 +113,7 @@ class Namespaces(object):
             self.namespaces[namespace.name] = namespace
     
     def get(self, name):
-        """Returns a Namespace with this name,if no name is given it will return the default namespace"""
+        """Returns configuration for a particular namespace"""
         if not name:
             return self.default
         else:
