@@ -6,14 +6,15 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-The absolute minimum you need to know to create a model; 
+The absolute minimum you need to know to use Cassandra
+and Redis 
 
 #...
 
 @key("name")
-class Shinobi(Record):
-    name = String()
-    rank = String(choices = ["Genin","Chounin","Jonin", "Sanin", "Kage"])
+class Shinobi(Model):
+    name = String(indexed = True)
+    rank = String(choices = ["Genin","Chounin","Jonin",])
     
 """
 version = "0.5.0"

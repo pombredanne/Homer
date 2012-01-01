@@ -19,11 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from numbers import Number
-from datetime import datetime, date, time
-from collections import Sequence, Set, Mapping
 
-   
 """
 Size:
 Size provide utilities for checking size of objects in Kb, Mb and Gb.

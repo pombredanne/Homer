@@ -46,12 +46,7 @@ class TestRoundRobinPool(TestCase):
         self.assertTrue(connection is not None)
         self.assertTrue(connection.client is not None)
         self.assertTrue(connection.open)
-      
-    def testAddress(self):
-        '''Returns an address from this servers pool in a round robin fashion'''
-        for i in range(5):
-            assert self.pool.address().next() == "localhost:9160"
-          
+           
     def testPut(self):
         """Returns a Connection to the pool"""
         connection = self.pool.get()
@@ -152,8 +147,8 @@ class TestSimpson(TestCase):
         try:
             self.db.clear()
             Schema.clear()
-            self.connection.execute("DROP KEYSPACE Host;")
             self.connection.execute("DROP KEYSPACE Test;")
+            self.connection.execute("DROP KEYSPACE Host;")
             self.connection.close()
         except:
             pass
@@ -218,6 +213,7 @@ class TestSimpson(TestCase):
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
         import time
+        
         @key("id")
         class House(Model):
             id = String(required = True, indexed = True)
@@ -292,6 +288,7 @@ class TestReference(TestCase):
         b = DataStoreOptions(servers=["localhost:9160",], username="", password="")
         namespace = Namespace(name= "Host", cassandra= b)
         namespaces.add(namespace)
+        namespaces.default = "Host"
         
     def tearDown(self):
         '''Release resources that have been allocated'''
@@ -308,6 +305,7 @@ class TestReference(TestCase):
         from homer.core.commons import String
         
         print "Creating Models"
+        
         @key("name", namespace = "Host")    
         class Person(Model):
             name = String(required = True)

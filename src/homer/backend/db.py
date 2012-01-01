@@ -28,7 +28,7 @@ import atexit
 import itertools
 import cPickle as pickle
 from contextlib import contextmanager as Context
-from threading import Thread, local
+from threading import Thread, local, RLock
 from Queue import Queue, Empty, Full
 
 from thrift import Thrift
@@ -68,33 +68,23 @@ __all__ = ["CqlQuery", "Simpson", "Level", ]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
 
-####
-# CQL Query Support
-####
-"""
-CqlQuery:
-A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
-provides a very distinguishing feature, it automatically
-returns query results as Model instances or python types
-"""
-class CqlQuery(object):
-    """ A very nice wrapper around the CQL Query Interface """
-    def __init__(self, query, *args, **kwds):
-        '''Basic stub'''
-        pass
+###
+# Utilities and Helper Functions
+###
+def redo(function):
+    '''Retries a particular operation for a fixed number of times until it fails'''
+    def do(*arguments, **keywords):
+        attempts = 1
+        while True:
+            try:
+                print 'Calling: %s; count: %s' % (function.__name__, attempts)
+                return function(*arguments, **keywords)
+            except Exception, e:
+                if not attempts < RETRY:
+                    raise e
+                attempts += 1
+    return do
     
-    def run(self):
-        '''Executes this query, normally this is called automatically'''
-        pass
-    
-    def fetchone(self):
-        '''Returns one result from the query'''
-        pass
-        
-    def __iter__(self):
-        '''Yields objects from the query results'''
-        pass
-
 ####
 # Controlling Consistency
 ####     
@@ -193,65 +183,73 @@ class RoundRobinPool(Pool):
         self.username = options.username
         self.password = options.password
         self.evictionThread = EvictionThread(self, self.maxIdle, self.evictionDelay)
+        self.cycle = None
+        self.lock = RLock()
         atexit.register(self.disposeAll)
         
     def get(self):
-        '''Yields a valid connection to this Keyspace'''
-        try:
-            return self.queue.get(False)
-        except Empty:
-            if self.count < self.maxConnections:  #If we are under quota just create a new connection
-                addr = self.address().next()
-                print "Creating a new connection to address: %s" % addr
-                connection = Connection(self, addr, self.keyspace, self.username, self.password)
-                self.count += 1
-                return connection
-            else:  # If we are over quota force the request to wait for @self.timeout
-                try:
-                    return self.queue.get(True, self.timeout)
-                except Empty: raise TimedOutException("Sorry, your request has Timed Out")
-      
-    def address(self):
+        '''Yields a valid connection to this Keyspace, in a Thread safe way'''
+        with self.lock:
+            try:
+                return self.queue.get(False)
+            except Empty:
+                if self.count < self.maxConnections:  #If we are under quota just create a new connection
+                    addr = self.__address().next()
+                    print "Creating a new connection to address: %s" % addr
+                    connection = Connection(self, addr, \
+                        self.keyspace, self.username, self.password)
+                    self.count += 1
+                    return connection
+                else:  # If we are over quota force the request to wait for @self.timeout
+                    try:
+                        return self.queue.get(True, self.timeout)
+                    except Empty: raise TimedOutException("Sorry, your request has Timed Out")
+          
+    def __address(self):
         '''Returns an address from this servers pool in a round robin fashion'''
-        for addr in itertools.cycle(self.servers):
+        #This call is not threadsafe, it is for internal use only.
+        if not self.cycle:
+            self.cycle = itertools.cycle(self.servers)
+        for addr in self.cycle:
             yield addr
           
     def put(self, connection):
-        """Returns a Connection to the pool"""
-        try:
-            if connection.state == CHECKEDOUT:
-                self.queue.put(connection)
-                connection.state == POOLED       
-        except Full:
-            connection.dispose()
+        """Returns a Connection to the pool in a threadsafe way"""
+        with self.lock:
+            try:
+                if connection.state == CHECKEDOUT:
+                    self.queue.put(connection)
+                    connection.state == POOLED       
+            except Full:
+                connection.dispose()
     
     def disposeAll(self):
         '''Disposes all the Connections in the Pool, typically called at System Exit'''
-        print "Pool Shutdown: Disposing off all the remaining Connections"
-        while True:
-            try:
-                connection = self.queue.get(False)
-                connection.dispose()
-            except Empty:
-                break
+        with self.lock:
+            print "Pool Shutdown: Disposing off all the remaining Connections"
+            while True:
+                try:
+                    connection = self.queue.get(False)
+                    connection.dispose()
+                except Empty:
+                    break
     
 ###
 # Connection:
 # A ThreadSafe wrapper around Cassandra.Client which supports connection pooling.
 ###
-class Connection(object):
+class Connection(local):
     """A convenient wrapper around the thrift client interface"""
     def __init__(self, pool, address, keyspace = None, username = None, password = None):
         '''Creates a Cassandra Client internally and initializes it'''
         from homer.options import options
-        self.local = local()
         host, port = address.split(":")
         socket = TSocket.TSocket(host, int(port))
         socket.setTimeout(pool.timeout * 1000.0)
         # Local Variables
         self.transport = TTransport.TFramedTransport(socket)
         protocol = TBinaryProtocol.TBinaryProtocolAccelerated(self.transport)
-        self.local.pipe = Cassandra.Client(protocol)
+        self.pipe = Cassandra.Client(protocol)
         self.address = address
         self.state = CHECKEDOUT
         self.pool = pool
@@ -267,7 +265,7 @@ class Connection(object):
     def client(self):
         '''Returns the Cassandra.Client Connection that I have'''
         if self.state == CHECKEDOUT and self.open:
-            return self.local.pipe
+            return self.pipe
         raise ConnectionDisposedError("This Connection has already been Disposed")
     
     def cursor(self):
@@ -316,22 +314,40 @@ class EvictionThread(Thread):
                 connection.dispose()
                 time.sleep(self.delay/1000)
 
-###
-# Utilities
-###
-def redo(function):
-    '''Retries a particular operation for a fixed number of times until it fails'''
-    def do(*arguments, **keywords):
-        attempts = 1
-        while True:
-            try:
-                print 'Calling: %s; count: %s' % (function.__name__, attempts)
-                return function(*arguments, **keywords)
-            except Exception, e:
-                if not attempts < RETRY:
-                    raise e
-                attempts += 1
-    return do
+####
+# CQL Query Support
+####
+"""
+CqlQuery:
+A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
+provides a very distinguishing feature, it automatically
+returns query results as Model instances or python types
+"""
+class CqlQuery(object):
+    """ A very nice wrapper around the CQL Query Interface """
+    def __init__(self, keyspace, query, *args, **kwds):
+        '''Initialize constructor parameters '''
+        self.keyspace = keyspace
+        self.query = query
+        self.arguments = args
+        self.keywords = kwds
+    
+    def run(self):
+        '''Executes @self.query in self.keyspace and returns a cursor'''
+        from homer.options import namespaces
+        pool = Simpson.pool(self.keyspace)
+        with using(pool) as conn:
+            cursor = conn.client.cursor()
+        
+        
+    def fetchone(self):
+        '''Returns one result from the query'''
+        pass
+        
+    def __iter__(self):
+        '''Yields objects from the query results'''
+        pass
+
 
 ###
 # Cassandra Mapping Section;
@@ -342,7 +358,7 @@ Provides a **very** simple way to use cassandra from python; It provides
 load balancing, auto failover, connection pooling and its clever enough to 
 batch calls so it has very low latency. 
 """
-class Simpson(object):
+class Simpson(local):
     '''An 'Model' Oriented Interface to Cassandra;'''
     consistency = ConsistencyLevel.ONE
     keyspaces, columnfamilies, pools = set(), set(), dict()
@@ -353,7 +369,7 @@ class Simpson(object):
         from homer.options import namespaces
         from homer.core.models import key, Model
         # OUR GOAL HERE IS TO CREATE CASSANDRA DATA MODELS FROM
-        # METADATA GLEANED FROM THESE THE INSTANCE PASSED IN TO
+        # METADATA GLEANED FROM THE INSTANCE PASSED IN TO
         # THIS METHOD
         assert issubclass(model.__class__, Model),"parameter model: %s must inherit from model" % model
         info = Schema.Get(model) 

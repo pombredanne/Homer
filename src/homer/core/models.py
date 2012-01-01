@@ -69,7 +69,7 @@ that is not a Model a TypeError is raised.
 @key("link")
 class Profile(Model):
     link = URL("http://twitter.com")
-    
+        
 """
 def key(name, namespace = None):
     """The @key decorator""" 
@@ -506,7 +506,7 @@ class Model(object):
     @classmethod
     def all(cls, limit = Limit):
         """Yields all the instances of this model in the datastore"""
-        return CqlQuery('SELECT * FROM %s LIMIT=%s'% (cls.kind(), limit))
+        pass
         
     def fields(self):
         """Returns all the Descriptors for @this by searching the class heirachy"""

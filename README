@@ -37,11 +37,11 @@ namespaces.default = "June" # or you could use namespaces.default = namespace
 class Profile(Model): 
     name = String("", indexed = True)
     link = URL("http://june.com", indexed = True)
-    
+   
 with Level.Quorum:
     person = Profile(name = 'Yoda', link = 'http://faceboook.com/yoda')
     person.save() # Put in memcache and Cassandra
-
+ 
 # Doing Reads
 found = Profile.read('Yoda') 
 assert person == found
@@ -58,7 +58,7 @@ Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
 Installation:
 =============
 To install you can use pip or download the latest build from 
-[github](http://github.com/junery/homer)
+[github](http://github.com/june/homer)
 
 pip:
 ====
