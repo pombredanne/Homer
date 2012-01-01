@@ -498,10 +498,10 @@ class Model(object):
         Simpson.delete(*keys)
        
     @classmethod
-    def query(cls, query, *args, **kwds):
+    def query(cls, query, **kwds):
         """Interface to Cql from your model, which yields models"""
-        return CqlQuery('SELECT * FROM %s %s' % (cls.kind()
-            , query), *args, **kwds)
+        return CqlQuery(cls, 'SELECT * FROM %s %s' % \
+            (cls.kind(), query), **kwds)
     
     @classmethod
     def all(cls, limit = Limit):

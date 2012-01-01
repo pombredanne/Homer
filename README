@@ -8,6 +8,7 @@ Description:
 ============
 This is the backend for June. I built it for these reasons:
 [Put all the reasons why you built homer here]
++ It is difficult to build prototypes on Cassandra
 
 
 Example Usage:

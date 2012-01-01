@@ -13,7 +13,7 @@ import os
 import sys
 import logging
 import time
-from threading import RLock
+from threading import RLock, local
 from homer.core.models import READONLY, Type
 from homer.core.commons import *
 from homer.core.builtins import object  
@@ -114,10 +114,12 @@ class Namespaces(object):
     
     def get(self, name):
         """Returns configuration for a particular namespace"""
-        if not name:
-            return self.default
-        else:
-            return self.namespaces[name]
+        with self.lock:
+            if not name:
+                return self.default
+            else:
+                return self.namespaces[name]
+                
     default = property(__getdefault__, __setdefault__)
             
 """Create a Singleton for Project Wide Configuration"""   

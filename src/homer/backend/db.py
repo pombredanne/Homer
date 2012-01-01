@@ -321,34 +321,46 @@ class EvictionThread(Thread):
 ####
 """
 CqlQuery:
-A CqlQuery wraps CQL queries in Cassandra 0.8.+, However it
+A CqlQuery wraps CQL queries in Cassandra 1.0.+, However it
 provides a very distinguishing feature, it automatically
 returns query results as Model instances or python types
 """
 class CqlQuery(object):
     """ A very nice wrapper around the CQL Query Interface """
-    def __init__(self, keyspace, query, *args, **kwds):
+    def __init__(self, kind, query, **keywords):
         '''Initialize constructor parameters '''
-        self.keyspace = keyspace
+        assert issubclass(Model, kind), "%s must be a subclass of Model" % kind
+        self.kind = kind
+        self.keyspace = None
         self.query = query
-        self.arguments = args
-        self.keywords = kwds
+        self.keywords = keywords
+        self.cursor = None
     
-    def run(self):
+    def execute(self):
         '''Executes @self.query in self.keyspace and returns a cursor'''
         from homer.options import namespaces
+        if not self.keyspace:
+            found = Schema.Get(self)[0]
+            keyspace = found if found else namespaces.default
+            self.keyspace = keyspace
         pool = Simpson.pool(self.keyspace)
         with using(pool) as conn:
+            print "Executing %s" % s
+            conn.set_keyspace(self.keyspace)
             cursor = conn.client.cursor()
-        
-        
-    def fetchone(self):
-        '''Returns one result from the query'''
-        pass
-        
+            cursor.execute(query, **self.keywords)
+            self.cursor = cursor
+          
     def __iter__(self):
-        '''Yields objects from the query results'''
-        pass
+        '''Execute your queries and converts data to python data models'''
+        if not self.cursor:
+            print "Executing %s" % self
+            self.execute() 
+        data = self.cursor.fetchone()
+        
+        
+    def __str__(self):
+        return "CQL: %s" % self.query
 
 
 ###
@@ -626,7 +638,7 @@ class MetaModel(object):
     
     @classmethod
     def fromColumns(self, key, coscs):
-        '''Creates a Model from a lists of ColumnOrSuperColumns'''
+        '''Creates a Model from an iterable of ColumnOrSuperColumns'''
         cls = Schema.ClassForModel(key.namespace, key.kind)
         model = cls()
         for cosc in coscs:
