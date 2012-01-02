@@ -25,9 +25,9 @@ Provides a very nice abstraction around the storage layer of
 the June infrastructure.
 
 """
-from db import Simpson, RoundRobinPool, Connection, ConnectionDisposedError, Level
+from db import Simpson, RoundRobinPool, Connection, ConnectionDisposedError, Level, CqlQuery
 
-__all__ = ["Simpson",  ]
+__all__ = ["Simpson", "CqlQuery", "Level",  ]
 
 
     

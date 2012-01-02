@@ -298,6 +298,12 @@ class TestString(TestCase):
             blog = String("http://facebook.com/iroiso/notes")
             mail = String("iroiso@live.com", mode = READONLY)
         self.test = TestObject()
+    
+    def testSanity(self):
+        '''Sanity tests for String'''
+        self.test.name = 0
+        self.assertTrue(self.test.name == "0")
+        self.assertTrue(getattr(self.test, "name") == "0")
         
     def testLength(self):
         """The length property for String should work"""

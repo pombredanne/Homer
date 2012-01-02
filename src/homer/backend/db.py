@@ -329,8 +329,9 @@ class CqlQuery(object):
     """ A very nice wrapper around the CQL Query Interface """
     def __init__(self, kind, query, **keywords):
         '''Initialize constructor parameters '''
+        from homer.core.models import key, Model
         assert isinstance(kind, type), "%s must be a class" % kind
-        assert issubclass(Model, kind), "%s must be a subclass of Model" % kind
+        assert issubclass(kind, Model), "%s must be a subclass of Model" % kind
         self.kind = kind
         self.keyspace = None
         self.query = query
@@ -343,25 +344,26 @@ class CqlQuery(object):
         if not self.keyspace:
             found = Schema.Get(self.kind)[0]
             self.keyspace = found
+            
         pool = Simpson.pool(self.keyspace)
         with using(pool) as conn:
-            print "Executing %s" % s
-            conn.set_keyspace(self.keyspace)
-            cursor = conn.client.cursor()
-            cursor.execute(query, **self.keywords)
+            print "Executing %s" % self
+            conn.client.set_keyspace(self.keyspace)
+            cursor = conn.cursor()
+            cursor.execute(self.query, dict(self.keywords))
             self.cursor = cursor
           
     def __iter__(self):
         '''Execute your queries and converts data to python data models'''
         # EXECUTE THE QUERY IF IT HASN'T BEEN EXECUTED
-        if not self.cursor:
-            print "Executing %s" % self
-            self.execute() 
+        if self.cursor is None: self.execute() 
         # IF WE ARE EXPECTING AN INTEGER JUST YIELD IT.
         if self.cursor.type == CqlResultType.INT:
+            print "Its an int yay !"
             yield self.cursor.fetchone()[0]
         # IF WE ARE EXPECTING ROWS CONVERT IT TO A MODEL AND YIELD IT
         elif self.cursor.type == CqlResultType.ROWS:
+            print "Its a row yay !"
             cursor = self.cursor
             description = self.cursor.description
             names = [tuple[0] for tuple in description]
@@ -369,7 +371,9 @@ class CqlQuery(object):
             while row:
                 model = self.kind()
                 fields = model.fields()
+                #print "Unmarshalling ROW: %s" % row
                 for name, value in zip(names, row):
+                    if name == "KEY": continue #Ignore the KEY attribute
                     prop = fields.get(name, None)
                     if prop:
                         prop.deconvert(model, value)
@@ -377,7 +381,7 @@ class CqlQuery(object):
                         model[name] = pickle.loads(value)
                 yield model
                 row = cursor.fetchone()
-                              
+                          
     def __str__(self):
         '''String representation of a CQLQuery.'''
         return "CqlQuery: %s" % self.query
@@ -427,7 +431,7 @@ class Simpson(local):
         def commit(namespace, mutations):
             '''Stores all the mutations in one batch operation'''
             pool = cls.pool(namespace)
-            print 'Committing a single model batch to Cassandra'
+            # print 'Committing a single model batch to Cassandra'
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
                 conn.client.batch_mutate(mutations, cls.consistency)    
@@ -676,7 +680,7 @@ class MetaModel(object):
         mutations = { self.kind : [] }
         differ = self.model.differ
         # Marshalling additions
-        print 'Marshalling additions'
+        # print 'Marshalling additions'
         for name in differ.added():
             column = self.getColumn(name) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()
@@ -684,7 +688,7 @@ class MetaModel(object):
             mutation = Mutation()
             mutation.column_or_supercolumn = cosc
             mutations[self.kind].append(mutation)
-        print 'Marshalling modifications'
+        # print 'Marshalling modifications'
         for name in differ.modified():
             column = self.getColumn(name) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()
@@ -693,7 +697,7 @@ class MetaModel(object):
             mutation.column_or_supercolumn = cosc
             mutations[self.kind].append(mutation)  
         # Remove all the deleted columns
-        print 'Marshalling deletions'
+        # print 'Marshalling deletions'
         deletion = Deletion()
         deletion.timestamp = int(time.time())
         predicate = SlicePredicate()

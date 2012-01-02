@@ -33,8 +33,6 @@ class TestKeyAndModel(TestCase):
         assert person.key() is not None, "Key Must not be None when its attribute is non null"
         self.assertTrue(person.name == "JohnBull")
         print "'" + str(person.key()) + "'"
-        person.name = None
-        self.assertRaises(BadKeyError, lambda : person.key())
         
     def testkeyAcceptsOnlyModels(self):
         """Asserts that @key only works on subclasses of Model"""

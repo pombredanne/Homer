@@ -72,9 +72,10 @@ class String(Type):
             raise ValueError("Length must be greater than zero")
         super(String,self).__init__(default = default, type = str,**arguments)
         self.length = length
-    
+   
     def validate(self,value):
         """Validate length here"""
+        assert value is not None, "Value must not be None"
         value = super(String,self).validate(value)
         assert len(value) <= self.length,"String longer than expected,\
             required : %s , got : %s" % (self.length, len(value))

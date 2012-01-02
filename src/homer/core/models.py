@@ -282,7 +282,7 @@ class Property(object):
         
     def empty(self, value):
         """What does empty mean to this descriptor?"""
-        return not value
+        return value is None
                         
     def validate(self, value):
         """Asserts that the value provided is compatible with this property"""
@@ -453,19 +453,18 @@ class Model(object):
             prop.configure(name, type(self))
             if prop.required and not prop.default:
                 value = kwds.get(name, None)
-                if value:
+                if value is not None:
                     setattr(self, name, value)
             else:
                 setattr(self, name, kwds.get(name, prop.default))
        
     def key(self):
         """Unique key for identifying this instance"""
-        def validate(key):
-            found = getattr(self,key)
+        def validate(name):
+            found = getattr(self,name)
             value = found() if callable(found) else found
-            if not value:
-                raise BadKeyError("Incomplete key")
             return value  
+            
         if self.__key is None:
             namespace, kind, key = Schema.Get(self)
             self.__id = key
