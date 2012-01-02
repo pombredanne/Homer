@@ -28,7 +28,6 @@ from homer.options import options, DataStoreOptions
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level
 from unittest import TestCase, skip
 
-@skip('')
 class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
     
@@ -79,7 +78,6 @@ class TestRoundRobinPool(TestCase):
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
 
-@skip('')
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
@@ -138,8 +136,7 @@ class TestSimpson(TestCase):
         namespace = Namespace(name= "Test", cassandra= c)
         namespaces.add(namespace)
         namespaces.default = "Test"
-        
-        
+          
     def tearDown(self):
         '''Release resources that have been allocated'''
         try:
@@ -227,7 +224,6 @@ class TestSimpson(TestCase):
        
     def testRead(self):
         '''Tests if Simpson.read() behaves as usual'''
-        
         @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
@@ -266,7 +262,7 @@ class TestSimpson(TestCase):
         cursor = self.connection
         cursor.execute("USE Test")
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
-        print cursor.description
+        #print cursor.description
         row = cursor.fetchone()
         self.assertTrue(row[0] == "Pride")
         k = Key('Test', 'Book', 'Pride')
@@ -325,10 +321,38 @@ class TestReference(TestCase):
         with self.assertRaises(Exception):
             book.author = "Hello"
         
+        with self.assertRaises(Exception):
+            author = Person(name = "iroiso")
+            book.author = author #Allows only saved keys
+        
         print "Checking Automatic Reference Read"
         id = Key("Host","Book","Pride")
         id.columns = ["name", "author"]
         found = self.db.read(id)[0]
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
+
+class TestCqlQuery(TestCase):
+    '''Unittests for CQL Queries'''
+    def setUp(self):
+        '''Create the Simpson instance, we all know and love'''
+        self.db = Simpson()
+        self.connection = cql.connect("localhost", 9160).cursor()
+        # Do Datastore configuration, setup stuff like namespaces and etcetera
+        c = DataStoreOptions(servers=["localhost:9160",], username="", password="")
+        namespace = Namespace(name= "Test", cassandra= c)
+        namespaces.add(namespace)
+        namespaces.default = "Test"
+             
+    def tearDown(self):
+        '''Release resources that have been allocated'''
+        try:
+            self.db.clear()
+            Schema.clear()
+            self.connection.execute("DROP KEYSPACE Test;")
+            self.connection.close()
+        except Exception as e:
+            print e
+
+    
             

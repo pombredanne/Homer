@@ -419,7 +419,8 @@ class Reference(Property):
         if value is None:
             return None
         assert isinstance(value, Model), "You must use a subclass of Model"
-        assert value.key().complete() , "Your Model's key must be complete"
+        assert value.key().complete() , "Your %s's key must be complete" % value
+        assert value.key().saved == True, "Your %s must have been previously persisted in the DataStore"
         return value
                  
 ###

@@ -9,7 +9,7 @@ Cassandra Support
 6.  Write Simpson.read(), add support for Key.columns, and individual column access => Done
 7.  Write Reference => Done
 8.  Write Simpson.delete() => Done
-9.  Write CQLQuery and Model.query() 
+9.  Write CQLQuery and Model.query() => WIP.
 10. Wire Model => WIP[Model already seems to part wired]
 11. Create a Rating, BlowFishHash and Md5Hash Property => Suspended
 

@@ -329,6 +329,7 @@ class CqlQuery(object):
     """ A very nice wrapper around the CQL Query Interface """
     def __init__(self, kind, query, **keywords):
         '''Initialize constructor parameters '''
+        assert isinstance(kind, type), "%s must be a class" % kind
         assert issubclass(Model, kind), "%s must be a subclass of Model" % kind
         self.kind = kind
         self.keyspace = None
@@ -338,11 +339,10 @@ class CqlQuery(object):
     
     def execute(self):
         '''Executes @self.query in self.keyspace and returns a cursor'''
-        from homer.options import namespaces
+        # FIGURE OUT WHICH KEYSPACE THE MODEL BELONGS TO
         if not self.keyspace:
-            found = Schema.Get(self)[0]
-            keyspace = found if found else namespaces.default
-            self.keyspace = keyspace
+            found = Schema.Get(self.kind)[0]
+            self.keyspace = found
         pool = Simpson.pool(self.keyspace)
         with using(pool) as conn:
             print "Executing %s" % s
@@ -353,15 +353,34 @@ class CqlQuery(object):
           
     def __iter__(self):
         '''Execute your queries and converts data to python data models'''
+        # EXECUTE THE QUERY IF IT HASN'T BEEN EXECUTED
         if not self.cursor:
             print "Executing %s" % self
             self.execute() 
-        data = self.cursor.fetchone()
-        
-        
+        # IF WE ARE EXPECTING AN INTEGER JUST YIELD IT.
+        if self.cursor.type == CqlResultType.INT:
+            yield self.cursor.fetchone()[0]
+        # IF WE ARE EXPECTING ROWS CONVERT IT TO A MODEL AND YIELD IT
+        elif self.cursor.type == CqlResultType.ROWS:
+            cursor = self.cursor
+            description = self.cursor.description
+            names = [tuple[0] for tuple in description]
+            row = cursor.fetchone()
+            while row:
+                model = self.kind()
+                fields = model.fields()
+                for name, value in zip(names, row):
+                    prop = fields.get(name, None)
+                    if prop:
+                        prop.deconvert(model, value)
+                    else:
+                        model[name] = pickle.loads(value)
+                yield model
+                row = cursor.fetchone()
+                              
     def __str__(self):
-        return "CQL: %s" % self.query
-
+        '''String representation of a CQLQuery.'''
+        return "CqlQuery: %s" % self.query
 
 ###
 # Cassandra Mapping Section;
@@ -648,6 +667,7 @@ class MetaModel(object):
             else:
                 value = pickle.loads(cosc.column.value)
                 model[name] = value
+        model.key().saved = True
         return model
          
     def mutations(self):
