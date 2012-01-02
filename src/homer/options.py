@@ -115,7 +115,7 @@ class Namespaces(object):
     def get(self, name):
         """Returns configuration for a particular namespace"""
         with self.lock:
-            if not name:
+            if not name or name == self.default.name:
                 return self.default
             else:
                 return self.namespaces[name]

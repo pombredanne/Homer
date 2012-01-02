@@ -94,6 +94,9 @@ class Schema(object):
     @classmethod
     def Put(cls, namespace, model, key):
         """Stores Meta Information for a particular class"""
+        from homer.options import namespaces 
+        if not namespace:
+            namespace = namespaces.default.name 
         kind = model.__name__    
         if not namespace in cls.schema:
             cls.schema[namespace] = WeakValueDictionary()    

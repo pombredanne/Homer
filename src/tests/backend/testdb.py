@@ -28,6 +28,7 @@ from homer.options import options, DataStoreOptions
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level
 from unittest import TestCase, skip
 
+@skip('')
 class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
     
@@ -78,7 +79,7 @@ class TestRoundRobinPool(TestCase):
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
 
-
+@skip('')
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
@@ -137,10 +138,7 @@ class TestSimpson(TestCase):
         namespace = Namespace(name= "Test", cassandra= c)
         namespaces.add(namespace)
         namespaces.default = "Test"
-        # Configure a second namespace, theoretically this should be in a different datacentre
-        b = DataStoreOptions(servers=["localhost:9160",], username="", password="")
-        namespace = Namespace(name= "Host", cassandra= c)
-        namespaces.add(namespace)
+        
         
     def tearDown(self):
         '''Release resources that have been allocated'''
@@ -148,10 +146,9 @@ class TestSimpson(TestCase):
             self.db.clear()
             Schema.clear()
             self.connection.execute("DROP KEYSPACE Test;")
-            self.connection.execute("DROP KEYSPACE Host;")
             self.connection.close()
-        except:
-            pass
+        except Exception as e:
+            print e
     
     def testSimpsonOnlyAcceptsModel(self):
         '''Checks if Simpson accepts non models'''
@@ -190,26 +187,26 @@ class TestSimpson(TestCase):
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
-        self.assertTrue(row[1] == "1234" and row[2] == "Iroiso Ikpokonte")
+        self.assertTrue(row[0] == "1234" and row[1] == "Iroiso Ikpokonte")
         assert profile.key().complete() == True # Make sure the object has a complete Key
         assert profile.key().saved
     
     def testOtherCommonTypeKeyWork(self):
         '''Shows that keys of other common types work'''
-        @key("id", namespace = "Host")
+        @key("id")
         class Message(Model):
             id = Integer(indexed = True)
             message = String(indexed = True)
         
         cursor = self.connection
         self.db.put(Message(id=1, message="Something broke damn"))
-        cursor.execute("USE Host;")
+        cursor.execute("USE Test;")
         cursor.execute("SELECT id, message FROM Message WHERE KEY='1'")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
         print(row)
-        self.assertTrue(row[1] == '1' and row[2] == "Something broke damn")
-     
+        self.assertTrue(row[0] == '1' and row[1] == "Something broke damn")
+    
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
         import time
@@ -226,12 +223,12 @@ class TestSimpson(TestCase):
         cursor.execute("USE Test;")
         cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
         row = cursor.fetchone()
-        self.assertTrue(row[1] == None)
-        
+        self.assertTrue(row[0] == None)
+       
     def testRead(self):
         '''Tests if Simpson.read() behaves as usual'''
         
-        @key("name", namespace = "Host")
+        @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
@@ -242,7 +239,7 @@ class TestSimpson(TestCase):
         book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
         self.db.put(book)
         
-        k = Key("Host", "Book", "Lord of the Rings")
+        k = Key("Test", "Book", "Lord of the Rings")
         #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
         b = self.db.read(k)[0]
         assert isinstance(b, Book)
@@ -255,10 +252,11 @@ class TestSimpson(TestCase):
         self.assertTrue(b.author == "J.R.R Tolkein")
         self.assertTrue(b.isbn == "12345")
         self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
     def testDelete(self):
         '''Tests if Simpson.delete() works well'''
-        @key("name", namespace = "Host")
+        @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
@@ -266,16 +264,17 @@ class TestSimpson(TestCase):
         book = Book(name = "Pride", author="Anne Rice")
         self.db.put(book)
         cursor = self.connection
-        cursor.execute("USE Host")
+        cursor.execute("USE Test")
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
+        print cursor.description
         row = cursor.fetchone()
-        self.assertTrue(row[1] == "Pride")
-        k = Key('Host', 'Book', 'Pride')
+        self.assertTrue(row[0] == "Pride")
+        k = Key('Test', 'Book', 'Pride')
         self.db.delete(k)
         cursor.execute("SELECT name FROM Book WHERE KEY=Pride")
         row = cursor.fetchone()
         print "Deleted row: %s" % row
-        self.assertTrue(row[1] == None)
+        self.assertTrue(row[0] == None)
 
 class TestReference(TestCase):
     '''Tests for the Reference Property'''
@@ -303,9 +302,7 @@ class TestReference(TestCase):
     def testSanity(self):
         '''Tests the sanity of Reference Property'''
         from homer.core.commons import String
-        
-        print "Creating Models"
-        
+        print "######## Creating Models ################"
         @key("name", namespace = "Host")    
         class Person(Model):
             name = String(required = True)

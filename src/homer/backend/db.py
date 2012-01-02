@@ -36,8 +36,8 @@ from thrift.transport import TTransport, TSocket
 from thrift.protocol import TBinaryProtocol
 
 from cql.cursor import Cursor
-from cassandra import Cassandra
-from cassandra.ttypes import *
+from cql.cassandra import Cassandra
+from cql.cassandra.ttypes import *
 
 from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
@@ -380,7 +380,6 @@ class Simpson(local):
     @classmethod
     def create(cls, model):
         """Creates a new ColumnFamily from this Model"""
-        from homer.options import namespaces
         from homer.core.models import key, Model
         # OUR GOAL HERE IS TO CREATE CASSANDRA DATA MODELS FROM
         # METADATA GLEANED FROM THE INSTANCE PASSED IN TO
@@ -418,7 +417,7 @@ class Simpson(local):
             assert issubclass(model.__class__, Model), "parameter model:\
                 %s must inherit from Model" % model
             info = Schema.Get(model)
-            namespace = namespaces.get(info[0]).name
+            namespace = info[0]
             kind = info[1]
             if kind not in cls.columnfamilies:
                 cls.create(model)
