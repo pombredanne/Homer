@@ -23,7 +23,7 @@ c = DatastoreOptions(servers=instances, username="test", password="test")
 c.strategy = NetworkTopologyStrategy(factor = 3, options={"DC1": 1, "DC2": 2})
 
 # Tie them together into a Namespace object; 
-namespace = Namespace(name= "June", memcache = m, cassandra= c)
+namespace = Namespace(name= "June", cassandra= c)
 
 # And tell the API about them.
 namespaces.add(namespace)

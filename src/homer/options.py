@@ -73,8 +73,7 @@ class Settings(object):
 # Storage Grouping
 ##     
 class Namespace(object):
-    '''Used for grouping a CacheOption and DataStoreOption into one namespace'''
-    memcache = None
+    '''Used for grouping Configurations for a Namespace'''
     name = String("Test")
     cassandra = Type(type=DataStoreOptions, default= DataStoreOptions())
     
