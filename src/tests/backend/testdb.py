@@ -28,6 +28,7 @@ from homer.options import options, DataStoreOptions
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level, CqlQuery
 from unittest import TestCase, skip
 
+
 class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
     
@@ -77,6 +78,7 @@ class TestRoundRobinPool(TestCase):
         time.sleep(45)
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
+
 
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''
@@ -145,7 +147,7 @@ class BaseTestCase(TestCase):
             self.connection.close()
         except Exception as e:
             print e
-    
+  
 class TestSimpson(BaseTestCase):
     '''Behavioural contract for Simpson'''
     
@@ -357,7 +359,6 @@ class TestCqlQuery(BaseTestCase):
  
         query = CqlQuery(Book, "SELECT COUNT(*) FROM Book;")
         result = query.fetchone()
-        
         self.connection.execute("USE Test;")
         self.connection.execute("SELECT COUNT(*) FROM Book;")
         correct = self.connection.fetchone()[0]
@@ -366,29 +367,99 @@ class TestCqlQuery(BaseTestCase):
 class TestModelPersistence(BaseTestCase):
     '''Tests if the persistence properties of a Model works'''
     
-    def testSanity(self):
-        '''Checks normal behaviour of Models'''
-        pass
-        
     def testSave(self):
         '''Shows that save works'''
-        pass
+        @key("id")
+        class Profile(Model):
+            id = String(required = True, indexed = True)
+            fullname = String(indexed = True)
+            bookmarks = Map(String, URL)
+            
+        cursor = self.connection
+        profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
+        profile.bookmarks["google"] = "http://google.com"
+        profile.bookmarks["twitter"] = "http://twitter.com"
+        profile.save() # Save to the datastore
+        cursor.execute("USE Test;")
+        cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
+        self.assertTrue(cursor.rowcount == 1)
+        row = cursor.fetchone()
+        self.assertTrue(row[0] == "1234" and row[1] == "Iroiso Ikpokonte")
+        assert profile.key().complete() == True # Make sure the object has a complete Key
+        assert profile.key().saved == True
         
-    def testDelKeyWord(self):
-        '''Shows that the del keyword works on Models'''
-        pass
-
     def testDelete(self):
         '''Shows that deletes work as expected'''
-        pass
+        @key("name")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = String(indexed = True)
+        
+        book = Book(name = "Pride", author="Anne Rice")
+        book.save()
+        cursor = self.connection
+        cursor.execute("USE Test")
+        cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
+        #print cursor.description
+        row = cursor.fetchone()
+        self.assertTrue(row[0] == "Pride")
+        Book.delete('Pride')
+        cursor.execute("SELECT name FROM Book WHERE KEY=Pride")
+        row = cursor.fetchone()
+        print "Deleted row: %s" % row
+        self.assertTrue(row[0] == None)
 
     def testRead(self):
         '''Shows that reads work'''
-        pass
+        @key("name")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = String(indexed = True)
+            isbn = String(indexed = True)
+            titles = Map(String, Integer)
+        
+        book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
+        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
+        book.save()
+       
+        b = Book.read('Lord of the Rings')[0]
+        assert isinstance(b, Book)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        print b.name
+        print b.author
+        print b.isbn
+        self.assertTrue(b == book)
+        self.assertTrue(b.name == "Lord of the Rings")
+        self.assertTrue(b.author == "J.R.R Tolkein")
+        self.assertTrue(b.isbn == "12345")
+        self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     
     def testQuery(self):
         '''Shows that CQL Queries work'''
-        pass
+        @key("name")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = String(indexed = True)
+            isbn = String(indexed = True)
+            titles = Map(String, Integer)
+        
+        book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
+        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
+        book.save()
+       
+        b = Book.query('WHERE author=:author', author='J.R.R Tolkein').fetchone()
+        assert isinstance(b, Book)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        print b.name
+        print b.author
+        print b.isbn
+        self.assertTrue(b == book)
+        self.assertTrue(b.name == "Lord of the Rings")
+        self.assertTrue(b.author == "J.R.R Tolkein")
+        self.assertTrue(b.isbn == "12345")
+        self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
                  
         
           

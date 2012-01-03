@@ -385,7 +385,7 @@ class UnIndexedType(UnIndexable, Type):
     pass
 
 from copy import copy, deepcopy
-from homer.backend import Simpson
+from homer.backend import Simpson, CqlQuery
 
 """
 Reference:
@@ -479,15 +479,19 @@ class Model(object):
     
     def save(self):
         """Stores this object in the datastore and in the cache"""
-        # TODO: Check that all required properties are set before every save.
         print 'Putting %s at the backend' % self
         Simpson.put(self)
         self.differ.commit()
                
     @classmethod
-    def read(cls, keys):
-        """Retreives objects from the datastore, if @cache check the cache"""
-        return Simpson.read(*keys)
+    def read(cls, *keys):
+        """Retreives objects from the datastore """
+        tofetch = []
+        namespace, kind, member = Schema.Get(cls)
+        for key in keys:
+            assert isinstance(key, str)
+            tofetch.append(Key(namespace, kind, key)) 
+        return Simpson.read(*tofetch)
     
     @classmethod
     def kind(cls):
@@ -495,16 +499,21 @@ class Model(object):
         return cls.__name__
         
     @classmethod
-    def delete(cls, keys):
+    def delete(cls, *keys):
         """Deletes this Model from the datastore and cache"""
-        Simpson.delete(*keys)
+        todelete = []
+        namespace, kind, member = Schema.Get(cls)
+        for key in keys:
+            assert isinstance(key, str)
+            todelete.append(Key(namespace, kind, key)) 
+        Simpson.delete(*todelete)
        
     @classmethod
     def query(cls, query, **kwds):
         """Interface to Cql from your model, which yields models"""
-        names = "".join(self.keys(), ",")
-        q = 'SELECT %s FROM %s %s' % (names, cls.kind())
-        return CqlQuery(cls, q % query, **kwds)
+        names = ", ".join(fields(cls, Property).keys())
+        q = 'SELECT %s FROM %s %s' % (names, cls.kind(), query)
+        return CqlQuery(cls, q, **kwds)
          
     def fields(self):
         """Returns all the Descriptors for @this by searching the class heirachy"""
@@ -581,11 +590,6 @@ class Model(object):
         '''A String representation of this Model'''
         format = "Model: %s" % (self.kind(), )
         return format
-    
-    def __del__(self):
-        '''Delete this model form the DataStore'''
-        Simpson.delete(self.key())
-        super(Model, self).__del__()
         
     def __unicode__(self):
         """Unicode representation of this model"""

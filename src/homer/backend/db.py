@@ -380,9 +380,9 @@ class CqlQuery(object):
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = fields.get(name, None)
                     if prop:
-                        prop.deconvert(model, value)
+                        prop.deconvert(model, str(value))
                     else:
-                        model[name] = pickle.loads(value)
+                        model[name] = pickle.loads(str(value))
                 yield model
                 row = cursor.fetchone()
     
