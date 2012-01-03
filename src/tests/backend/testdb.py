@@ -124,9 +124,8 @@ from homer.core.models import key, Model, Schema, Key, Reference
 from homer.core.commons import *
 from homer.options import *
 
-class TestSimpson(TestCase):
-    '''Behavioural contract for Simpson'''
-    
+class BaseTestCase(TestCase):
+    '''Base Class for all tests'''
     def setUp(self):
         '''Create the Simpson instance, we all know and love'''
         self.db = Simpson()
@@ -146,6 +145,9 @@ class TestSimpson(TestCase):
             self.connection.close()
         except Exception as e:
             print e
+    
+class TestSimpson(BaseTestCase):
+    '''Behavioural contract for Simpson'''
     
     def testSimpsonOnlyAcceptsModel(self):
         '''Checks if Simpson accepts non models'''
@@ -272,38 +274,17 @@ class TestSimpson(TestCase):
         print "Deleted row: %s" % row
         self.assertTrue(row[0] == None)
 
-class TestReference(TestCase):
-    '''Tests for the Reference Property'''
-    
-    def setUp(self):
-        '''Create the Simpson instance, we all know and love'''
-        self.db = Simpson()
-        self.connection = cql.connect("localhost", 9160).cursor()
-        # Do Datastore configuration, setup stuff like namespaces and etcetera
-        b = DataStoreOptions(servers=["localhost:9160",], username="", password="")
-        namespace = Namespace(name= "Host", cassandra= b)
-        namespaces.add(namespace)
-        namespaces.default = "Host"
-        
-    def tearDown(self):
-        '''Release resources that have been allocated'''
-        try:
-            self.db.clear()
-            Schema.clear()
-            self.connection.execute("DROP KEYSPACE Host;")
-            self.connection.close()
-        except:
-            pass
-            
+class TestReference(BaseTestCase):
+    '''Tests for the Reference Property'''      
     def testSanity(self):
         '''Tests the sanity of Reference Property'''
         from homer.core.commons import String
         print "######## Creating Models ################"
-        @key("name", namespace = "Host")    
+        @key("name")    
         class Person(Model):
             name = String(required = True)
             
-        @key("name", namespace = "Host")
+        @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
             author = Reference(Person)
@@ -317,7 +298,7 @@ class TestReference(TestCase):
         
         print "Checking Conversion Routine"
         k = eval(Book.author.convert(book))
-        self.assertTrue(k == Key("Host","Person","sasuke"))
+        self.assertTrue(k == Key("Test","Person","sasuke"))
         with self.assertRaises(Exception):
             book.author = "Hello"
         
@@ -326,34 +307,15 @@ class TestReference(TestCase):
             book.author = author #Allows only saved keys
         
         print "Checking Automatic Reference Read"
-        id = Key("Host","Book","Pride")
-        id.columns = ["name", "author"]
+        id = Key("Test","Book","Pride")
+        # id.columns = ["name", "author"]
         found = self.db.read(id)[0]
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
 
-class TestCqlQuery(TestCase):
+class TestCqlQuery(BaseTestCase):
     '''Unittests for CQL Queries'''
-    def setUp(self):
-        '''Create the Simpson instance, we all know and love'''
-        self.db = Simpson()
-        self.connection = cql.connect("localhost", 9160).cursor()
-        # Do Datastore configuration, setup stuff like namespaces and etcetera
-        c = DataStoreOptions(servers=["localhost:9160",], username="", password="")
-        namespace = Namespace(name= "Test", cassandra= c)
-        namespaces.add(namespace)
-        namespaces.default = "Test"
-             
-    def tearDown(self):
-        '''Release resources that have been allocated'''
-        try:
-            self.db.clear()
-            Schema.clear()
-            self.connection.execute("DROP KEYSPACE Test;")
-            self.connection.close()
-        except Exception as e:
-            print e
-
+ 
     def testSanity(self):
         '''Checks if the normal usecase for CQL works as planned'''
         @key("name")
@@ -401,8 +363,33 @@ class TestCqlQuery(TestCase):
         correct = self.connection.fetchone()[0]
         self.assertTrue(result == correct) 
         
+class TestModelPersistence(BaseTestCase):
+    '''Tests if the persistence properties of a Model works'''
+    
+    def testSanity(self):
+        '''Checks normal behaviour of Models'''
+        pass
         
+    def testSave(self):
+        '''Shows that save works'''
+        pass
         
+    def testDelKeyWord(self):
+        '''Shows that the del keyword works on Models'''
+        pass
+
+    def testDelete(self):
+        '''Shows that deletes work as expected'''
+        pass
+
+    def testRead(self):
+        '''Shows that reads work'''
+        pass
+    
+    def testQuery(self):
+        '''Shows that CQL Queries work'''
+        pass
+                 
         
           
             

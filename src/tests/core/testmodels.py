@@ -13,10 +13,9 @@ from datetime import datetime, date
 from homer.core.models import key, Model, Property, Type, READONLY, READWRITE, Reference, Key
 from homer.core.models import BadValueError, BadKeyError, UnDeclaredPropertyError,\
     NamespaceCollisionError, Schema, UnIndexable
-      
+    
 class TestKeyAndModel(TestCase):
     """Keys and Model where built to work together; they should be tested together"""
-    
     def tearDown(self):
         '''Clears the internal state of the schema object'''
         print 'Clearing internal state of the Schema object'

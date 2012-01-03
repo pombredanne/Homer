@@ -463,8 +463,7 @@ class Model(object):
         def validate(name):
             found = getattr(self,name)
             value = found() if callable(found) else found
-            return value  
-            
+            return value   
         if self.__key is None:
             namespace, kind, key = Schema.Get(self)
             self.__id = key
@@ -478,15 +477,15 @@ class Model(object):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
     
-    def save(self, cache = True):
+    def save(self):
         """Stores this object in the datastore and in the cache"""
-        #Todo: Check that all required properties are set before every save.
+        # TODO: Check that all required properties are set before every save.
         print 'Putting %s at the backend' % self
         Simpson.put(self)
         self.differ.commit()
                
     @classmethod
-    def read(cls, keys, cache = True):
+    def read(cls, keys):
         """Retreives objects from the datastore, if @cache check the cache"""
         return Simpson.read(*keys)
     
@@ -496,21 +495,17 @@ class Model(object):
         return cls.__name__
         
     @classmethod
-    def delete(cls, keys, cache = True):
+    def delete(cls, keys):
         """Deletes this Model from the datastore and cache"""
         Simpson.delete(*keys)
        
     @classmethod
     def query(cls, query, **kwds):
         """Interface to Cql from your model, which yields models"""
-        return CqlQuery(cls, 'SELECT * FROM %s %s' % \
-            (cls.kind(), query), **kwds)
-    
-    @classmethod
-    def all(cls, limit = Limit):
-        """Yields all the instances of this model in the datastore"""
-        pass
-        
+        names = "".join(self.keys(), ",")
+        q = 'SELECT %s FROM %s %s' % (names, cls.kind())
+        return CqlQuery(cls, q % query, **kwds)
+         
     def fields(self):
         """Returns all the Descriptors for @this by searching the class heirachy"""
         cls = self.__class__;
@@ -586,6 +581,11 @@ class Model(object):
         '''A String representation of this Model'''
         format = "Model: %s" % (self.kind(), )
         return format
+    
+    def __del__(self):
+        '''Delete this model form the DataStore'''
+        Simpson.delete(self.key())
+        super(Model, self).__del__()
         
     def __unicode__(self):
         """Unicode representation of this model"""

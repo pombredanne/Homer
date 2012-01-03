@@ -9,22 +9,13 @@ Cassandra Support
 6.  Write Simpson.read(), add support for Key.columns, and individual column access => Done
 7.  Write Reference => Done
 8.  Write Simpson.delete() => Done
-9.  Write CQLQuery and Model.query() => WIP.
-10. Wire Model => WIP[Model already seems to part wired]
+9.  Write CQLQuery => Done.
+10. Wire Model; (save, read, delete,) => WIP[Model already seems to part wired]
 11. Create a Rating, BlowFishHash and Md5Hash Property => Suspended
+12. Write JSON Serialization and Deserialization
+13. Tag v1.0.0.beta
+14. Debug and Test for Concurrent Use (Probably use tornado and AB todo a flood)
+15. Tag v1.0.0.final
+16. Go out to a nice restaurant on campus for a break :).
 
-Redis Support(Use the Property convert/deconvert mechanism),
-1.  Write Cache.create("Store metadata")
-2.  Cache.put("Batch put") 
-3.  Cache.read("Batch Read"), add support for Key.columns, and individual column access.
-4.  Cache.delete("Delete Entire class or separate instances")
-5.  Wire the appropriate model methods. __getattr__, read, save, delete, update !?
-6.  Write JSON Serialization and Deserialization
-7.  Tag v1.0.0.beta
-8.  Debug and Test for Concurrent Use (Probably use tornado and AB todo a flood)
-9.  Tag v1.0.0.final
-10.  Go out to a nice restaurant on campus for a break :).
 
-Design Decisions:
-Redis is strictly supposed to be a cache for data stored in Cassandra; Any other
-bonuses it provides are welcome.
