@@ -10,11 +10,12 @@ Cassandra Support
 7.  Write Reference => Done
 8.  Write Simpson.delete() => Done
 9.  Write CQLQuery => Done.
-10. Wire Model; (save, read, delete,) => WIP[Model already seems to part wired]
+10. Wire Model; (save, read, delete,) => Done
 11. Create a Rating, BlowFishHash and Md5Hash Property => Suspended
 12. Write JSON Serialization and Deserialization
 13. Tag v1.0.0.beta
-14. Debug and Test for Concurrent Use (Probably use tornado and AB todo a flood)
+14. Debug and Test for Concurrent Use \
+        (Probably use tornado and AB todo a flood) and a Clustered Environment
 15. Tag v1.0.0.final
 16. Go out to a nice restaurant on campus for a break :).
 

@@ -17,10 +17,6 @@ from homer.options import *
 from homer.core import Model, key, Key
 from homer.core.commons import *
 
-# Configure Client Options for Memcached
-caches = ["localhost:1112", "localhost:1113", "localhost:1114",]
-m = CacheOptions(servers=caches, hash="crc32", username="test", password="test")
-
 # Configure Client Options for Cassandra.
 instances = ["localhost:9160", "localhost:9161",]
 c = DatastoreOptions(servers=instances, username="test", password="test")
@@ -52,7 +48,7 @@ key = Key("Home", "Profile", "Yoda")
 found = db.read(key)
 assert "email", "picture" in found.keys()
 
-# Or Using CQL to search the index.
+# Or Using CQL to search the secondary index.
 Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
 
 

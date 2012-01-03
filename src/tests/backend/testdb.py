@@ -460,7 +460,4 @@ class TestModelPersistence(BaseTestCase):
         self.assertTrue(b.isbn == "12345")
         self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-                 
-        
-          
-            
+

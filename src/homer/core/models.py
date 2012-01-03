@@ -34,11 +34,9 @@ from homer.core.builtins import object, fields
 from homer.core.differ import Differ, DiffError
 
 
-__all__ = ["Model", "key", "Key"]
-
+__all__ = [ "Model", "key", "Key", "Reference", "Property",\
+                     "Type", "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
 READWRITE, READONLY = 1, 2
-Limit = 5000
-
 """Exceptions """
 class BadKeyError(Exception):
     """An Exception that shows that something is wrong with your key"""
@@ -52,10 +50,6 @@ class BadModelError(Exception):
     """Signifies that a Model was not decorated with @key"""
     pass
     
-class UnDeclaredPropertyError(Exception):
-    """An exception that is thrown if you try to set an attribute that is not declared in a Model"""
-    pass
-
 class NamespaceCollisionError(Exception):
     """An Exception that is thrown when you declare to classes with the same name in one namespace"""
     pass
@@ -120,7 +114,7 @@ class Schema(object):
             model = model if isinstance(model, type) else model.__class__
             return cls.keys[id(model)]
         except KeyError:
-            raise BadModelError("Class: %s is not a valid Model, are you sure it has an @key; ",(model))
+            raise BadModelError("Class: %s is not a valid Model; ",(model))
     
     @classmethod
     def ClassForModel(cls, namespace, name):
@@ -166,8 +160,6 @@ class Key(object):
         format = "Key('{self.namespace}', '{self.kind}', '{self.id}')"
         return format.format(self = self)
          
-        
-   
 """
 Property:
 Base class for all data descriptors; 
@@ -377,7 +369,7 @@ class Type(Property):
         return value
 
 """
-UnIndexableType:
+UnIndexedType:
 A Type that cannot be indexed
 """
 class UnIndexedType(UnIndexable, Type):
@@ -461,8 +453,11 @@ class Model(object):
     def key(self):
         """Unique key for identifying this instance"""
         def validate(name):
+            '''Compute the key if necessary and validate'''
             found = getattr(self,name)
             value = found() if callable(found) else found
+            if value is None:
+                raise BadKeyError("The key for %s cannot be None" % self)
             return value   
         if self.__key is None:
             namespace, kind, key = Schema.Get(self)
