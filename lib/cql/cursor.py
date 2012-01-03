@@ -30,8 +30,8 @@ from cql.cassandra.ttypes import (
     TApplicationException,
     SchemaDisagreementException)
 
-_COUNT_DESCRIPTION = (None, None, None, None, None, None, None)
-_VOID_DESCRIPTION = (None)
+COUNT_DESCRIPTION = (None, None, None, None, None, None, None)
+VOID_DESCRIPTION = (None)
 
 class Cursor:
     _keyspace_re = re.compile("USE (\w+);?",
@@ -54,7 +54,6 @@ class Cursor:
         self.rowcount = -1      # Populate on execute()
         self.compression = 'GZIP'
         self.decoder = None
-        self.type = None
 
     ###
     # Cursor API
@@ -99,7 +98,6 @@ class Cursor:
             raise cql.InternalError("Internal application error")
 
         if response.type == CqlResultType.ROWS:
-            self.type = CqlResultType.ROWS
             self.decoder = (decoder or SchemaDecoder)(response.schema)
             self.result = response.rows
             self.rs_idx = 0
@@ -107,18 +105,17 @@ class Cursor:
             if self.result:
                 self.description = self.decoder.decode_description(self.result[0])
         elif response.type == CqlResultType.INT:
-            self.type = CqlResultType.INT
             self.result = [(response.num,)]
             self.rs_idx = 0
             self.rowcount = 1
             # TODO: name could be the COUNT expression
-            self.description = _COUNT_DESCRIPTION
+            self.description = COUNT_DESCRIPTION
         elif response.type == CqlResultType.VOID:
             self.type = CqlResultType.VOID
             self.result = []
             self.rs_idx = 0
             self.rowcount = 0
-            self.description = _VOID_DESCRIPTION
+            self.description = VOID_DESCRIPTION
         else:
             raise Exception('unknown result type ' + response.type)
 
@@ -145,7 +142,7 @@ class Cursor:
 
         row = self.result[self.rs_idx]
         self.rs_idx += 1
-        if self.description == _COUNT_DESCRIPTION:
+        if self.description == COUNT_DESCRIPTION:
             return row
         else:
             self.description = self.decoder.decode_description(row)

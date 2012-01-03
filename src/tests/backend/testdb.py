@@ -28,7 +28,6 @@ from homer.options import options, DataStoreOptions
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level, CqlQuery
 from unittest import TestCase, skip
 
-@skip('')
 class TestRoundRobinPool(TestCase):
     '''Tests a RoundRobin Pool...'''
     
@@ -79,7 +78,6 @@ class TestRoundRobinPool(TestCase):
         print self.pool.queue.qsize()
         assert self.pool.queue.qsize() == self.pool.maxIdle
 
-@skip('')
 class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
@@ -126,7 +124,6 @@ from homer.core.models import key, Model, Schema, Key, Reference
 from homer.core.commons import *
 from homer.options import *
 
-@skip('')
 class TestSimpson(TestCase):
     '''Behavioural contract for Simpson'''
     
@@ -275,7 +272,6 @@ class TestSimpson(TestCase):
         print "Deleted row: %s" % row
         self.assertTrue(row[0] == None)
 
-@skip('')
 class TestReference(TestCase):
     '''Tests for the Reference Property'''
     
@@ -358,7 +354,6 @@ class TestCqlQuery(TestCase):
         except Exception as e:
             print e
 
-    @skip('')
     def testSanity(self):
         '''Checks if the normal usecase for CQL works as planned'''
         @key("name")
@@ -387,7 +382,6 @@ class TestCqlQuery(TestCase):
         results = list(query)
         self.assertTrue(len(results) == 500)
  
-    @skip('')
     def testCount(self):
         '''Shows that count based queries work'''
         @key("name")
@@ -400,7 +394,13 @@ class TestCqlQuery(TestCase):
             self.db.put(book)
  
         query = CqlQuery(Book, "SELECT COUNT(*) FROM Book;")
-        print query.fetchone()
+        result = query.fetchone()
+        
+        self.connection.execute("USE Test;")
+        self.connection.execute("SELECT COUNT(*) FROM Book;")
+        correct = self.connection.fetchone()[0]
+        self.assertTrue(result == correct) 
+        
         
         
         

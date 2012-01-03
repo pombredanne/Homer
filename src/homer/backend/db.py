@@ -23,6 +23,7 @@ Copyright 2011, June inc.
 Description:
 Provides a very nice abstraction around Cassandra; 
 """
+import re
 import time
 import atexit
 import itertools
@@ -327,6 +328,7 @@ returns query results as Model instances or python types
 """
 class CqlQuery(object):
     """ A very nice wrapper around the CQL Query Interface """
+    pattern = re.compile(r'COUNT\(.+\)', re.IGNORECASE | re.DOTALL) #
     def __init__(self, kind, query, **keywords):
         '''Initialize constructor parameters '''
         from homer.core.models import key, Model
@@ -337,6 +339,7 @@ class CqlQuery(object):
         self.query = query
         self.keywords = keywords
         self.cursor = None
+        self.count = False
     
     def execute(self):
         '''Executes @self.query in self.keyspace and returns a cursor'''
@@ -355,15 +358,16 @@ class CqlQuery(object):
           
     def __iter__(self):
         '''Execute your queries and converts data to python data models'''
+        from cql.cursor import VOID_DESCRIPTION, COUNT_DESCRIPTION
         # EXECUTE THE QUERY IF IT HASN'T BEEN EXECUTED
         if self.cursor is None: self.execute() 
-        # IF WE ARE EXPECTING AN INTEGER JUST YIELD IT.
-        if self.cursor.type == CqlResultType.INT:
-            print "Its an int yay !"
+        # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURN CqlResultType.ROWS, 
+        # SO TO FIGURE OUT COUNTS I MANUALLY SEARCH THE QUERY WITH A REGEX
+        if re.search(self.pattern, self.query):
+            print "Count expression found;"
             yield self.cursor.fetchone()[0]
-        # IF WE ARE EXPECTING ROWS CONVERT IT TO A MODEL AND YIELD IT
-        elif self.cursor.type == CqlResultType.ROWS:
-            print "Its a row yay !"
+        else:
+            print "Deciphering rows as usual"
             cursor = self.cursor
             description = self.cursor.description
             names = [tuple[0] for tuple in description]
@@ -371,7 +375,7 @@ class CqlQuery(object):
             while row:
                 model = self.kind()
                 fields = model.fields()
-                #print "Unmarshalling ROW: %s" % row
+                # print "Unmarshalling ROW: %s" % row
                 for name, value in zip(names, row):
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = fields.get(name, None)
@@ -381,7 +385,11 @@ class CqlQuery(object):
                         model[name] = pickle.loads(value)
                 yield model
                 row = cursor.fetchone()
-                          
+    
+    def fetchone(self):
+        '''Returns just one result'''
+        return self.__iter__().next()
+                             
     def __str__(self):
         '''String representation of a CQLQuery.'''
         return "CqlQuery: %s" % self.query
