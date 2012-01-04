@@ -337,10 +337,13 @@ class Person(object):
 class URL(String):
     """Makes sure that a string you are creating is a valid URL"""
     
+    def empty(self, value):
+        '''What does it mean for a URL to be empty'''
+        return value is None or bool(value.strip())
+        
     def validate(self,value):
-        """Uses urlsplit to validate urls"""
-        value = super(URL,self).validate(value)
-        if value is not None:
+        """Uses urlsplit to validate urls"""    
+        if value is not None and value.strip():
             parsed = urlparse.urlparse(value)
             if not parsed.scheme or not parsed.netloc:
                 raise BadValueError('Property %s must be a full URL (\'%s\')' %

@@ -78,7 +78,7 @@ def redo(function):
         attempts = 1
         while True:
             try:
-                print 'Calling: %s; count: %s' % (function.__name__, attempts)
+                #print 'Calling: %s; count: %s' % (function.__name__, attempts)
                 return function(*arguments, **keywords)
             except Exception, e:
                 if not attempts < RETRY:
@@ -197,7 +197,7 @@ class RoundRobinPool(Pool):
                 #IF WE ARE UNDER QUOTA JUST CREATE A NEW CONNECTION
                 if self.count < self.maxConnections:  
                     addr = self.__address().next()
-                    print "Creating a new connection to address: %s" % addr
+                    #print "Creating a new connection to address: %s" % addr
                     connection = Connection(self, addr, \
                         self.keyspace, self.username, self.password)
                     self.count += 1
@@ -350,7 +350,7 @@ class CqlQuery(object):
             
         pool = Simpson.pool(self.keyspace)
         with using(pool) as conn:
-            print "Executing %s" % self
+            #print "Executing %s" % self
             conn.client.set_keyspace(self.keyspace)
             cursor = conn.cursor()
             cursor.execute(self.query, dict(self.keywords))
@@ -363,12 +363,14 @@ class CqlQuery(object):
         # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURN CqlResultType.ROWS, 
         # SO TO FIGURE OUT COUNTS I MANUALLY SEARCH THE QUERY WITH A REGEX
         if re.search(self.pattern, self.query):
-            print "Count expression found;"
+            #print "Count expression found;"
             yield self.cursor.fetchone()[0]
         else:
-            print "Deciphering rows as usual"
+            #print "Deciphering rows as usual"
             cursor = self.cursor
             description = self.cursor.description
+            if not description:
+                raise StopIteration
             names = [tuple[0] for tuple in description]
             row = cursor.fetchone()
             while row:
@@ -387,7 +389,7 @@ class CqlQuery(object):
     
     def fetchone(self):
         '''Returns just one result'''
-        return self.__iter__().next()
+        return iter(self).next()
                              
     def __str__(self):
         '''String representation of a CQLQuery.'''
@@ -467,7 +469,7 @@ class Simpson(local):
         # READ HAPPENS KEY BY KEY HERE.
         for key in keys:
             assert key.complete(), "Your key has to be complete"
-            print "Reading %s from Cassandra" % key
+            #print "Reading %s from Cassandra" % key
             id = key.id
             parent = ColumnParent(column_family = key.kind)
             # THE GOAL HERE IS TOO AVOID PULLING ALL THE CONTENTS OF WIDE ROWS
@@ -496,7 +498,7 @@ class Simpson(local):
         from homer.options import namespaces
         from homer.core.models import key, Model
         pool = None
-        if namespace not in cls.keyspaces:  
+        if namespace not in cls.pools:  
             found = namespaces.get(namespace)                    
             pool = RoundRobinPool(found.cassandra)
             cls.pools[namespace] = pool
@@ -514,14 +516,14 @@ class Simpson(local):
             clock = int(time.time())
             pool = cls.pool(key.namespace)
             with using(pool) as conn:
-                print "DELETING %s FROM CASSANDRA" % key 
+                #print "DELETING %s FROM CASSANDRA" % key 
                 conn.client.set_keyspace(key.namespace)
                 conn.client.remove(key.id, path, clock, cls.consistency)
               
     @classmethod
     def clear(cls):
         '''Clears internal state of @this'''
-        print 'Clearing internal state of the Datastore Mapper'
+        #print 'Clearing internal state of the Datastore Mapper'
         cls.keyspaces.clear()
         cls.columnfamilies.clear()
         cls.pools.clear()
@@ -571,20 +573,24 @@ class MetaModel(object):
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
         from homer.options import namespaces
-        options = namespaces.get(self.namespace)
-        query = 'CREATE INDEX ON {kind}({name});'
-        for name, property in self.fields.items():
-            if property.indexed():
-                print "Creating index on: %s" % property
-                cursor = connection.cursor()
-                formatted = query.format(kind = self.kind, name= property.name)
-                print formatted
-                cursor.execute("USE %s;" % options.name)
-                cursor.execute(formatted)
-            else:
-                print "Cannot index: %s" % property
-        self.wait(connection)
-                
+        try:
+            options = namespaces.get(self.namespace)
+            query = 'CREATE INDEX ON {kind}({name});'
+            for name, property in self.fields.items():
+                if property.indexed():
+                    #print "Creating index on: %s" % property
+                    cursor = connection.cursor()
+                    formatted = query.format(kind = self.kind, name= property.name)
+                    #print formatted
+                    cursor.execute("USE %s;" % options.name)
+                    cursor.execute(formatted)
+                else:
+                    #print "Cannot index: %s" % property
+                    pass
+            self.wait(connection)
+        except Exception:
+            pass #Index already seems to exists'
+                    
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
         from homer.options import namespaces, NetworkTopologyStrategy
@@ -595,10 +601,10 @@ class MetaModel(object):
         package = 'org.apache.cassandra.locator.%s' % strategy
         replication = strategy.factor
         if isinstance(strategy, NetworkTopologyStrategy):
-            print "Creating keyspace with %s, %s, %s" % (name, package, strategy.options)
+            #print "Creating keyspace with %s, %s, %s" % (name, package, strategy.options)
             return KsDef(name, package, strategy.options, replication, [])
         else:
-            print "Creating keyspace with %s, %s, " % (name, package)
+            #print "Creating keyspace with %s, %s, " % (name, package)
             return KsDef(name, package, None, replication, [])
       
     def asColumnFamily(self):

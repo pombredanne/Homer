@@ -98,8 +98,8 @@ class Schema(object):
             cls.schema[namespace][kind] = model
             cls.keys[id(model)] = (namespace, kind, key, )
         else:
-            raise NamespaceCollisionError("Model: %s already exists\
-                in the Namespace: %s" % (model, namespace))
+            raise NamespaceCollisionError("Model: %s already exists in the Namespace: %s" 
+                % (model, namespace))
     
     @classmethod
     def clear(cls):
@@ -474,7 +474,7 @@ class Model(object):
     
     def save(self):
         """Stores this object in the datastore and in the cache"""
-        print 'Putting %s at the backend' % self
+        #print 'Putting %s at the backend' % self
         Simpson.put(self)
         self.differ.commit()
                
