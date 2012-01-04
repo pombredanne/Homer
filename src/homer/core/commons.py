@@ -334,7 +334,7 @@ class Person(object):
     website = URL("http://harem.tumblr.com")
        
 """        
-class URL(String):
+class URL(Property):
     """Makes sure that a string you are creating is a valid URL"""
     
     def empty(self, value):
@@ -342,7 +342,8 @@ class URL(String):
         return value is None or bool(value.strip())
         
     def validate(self,value):
-        """Uses urlsplit to validate urls"""    
+        """Uses urlsplit to validate urls"""
+        value = super(URL,self).validate(value)
         if value is not None and value.strip():
             parsed = urlparse.urlparse(value)
             if not parsed.scheme or not parsed.netloc:
