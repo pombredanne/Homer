@@ -400,7 +400,7 @@ class TestModelPersistence(BaseTestCase):
         cursor = self.connection
         cursor.execute("USE Test")
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
-        #print cursor.description
+        # print cursor.description
         row = cursor.fetchone()
         self.assertTrue(row[0] == "Pride")
         Book.delete('Pride')

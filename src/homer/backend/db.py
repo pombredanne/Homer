@@ -358,7 +358,6 @@ class CqlQuery(object):
           
     def __iter__(self):
         '''Execute your queries and converts data to python data models'''
-        from cql.cursor import VOID_DESCRIPTION, COUNT_DESCRIPTION
         # EXECUTE THE QUERY IF IT HASN'T BEEN EXECUTED
         if self.cursor is None: self.execute() 
         # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURN CqlResultType.ROWS, 
