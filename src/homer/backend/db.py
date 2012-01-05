@@ -374,17 +374,18 @@ class CqlQuery(object):
             names = [tuple[0] for tuple in description]
             row = cursor.fetchone()
             while row:
-                model = self.kind()
-                fields = model.fields()
+                model = self.kind
+                descs = fields(model, Property)
+                values = {}
                 # print "Unmarshalling ROW: %s" % row
                 for name, value in zip(names, row):
                     if name == "KEY": continue #Ignore the KEY attribute
-                    prop = fields.get(name, None)
+                    prop = descs.get(name, None)
                     if prop:
-                        prop.deconvert(model, str(value))
+                        values[name] = prop.deconvert(str(value))
                     else:
-                        model[name] = pickle.loads(str(value))
-                yield model
+                        values[name] = pickle.loads(str(value))
+                yield model(**values)
                 row = cursor.fetchone()
     
     def fetchone(self):
@@ -456,9 +457,8 @@ class Simpson(local):
             meta = MetaModel(model)
             changes = { meta.id() : meta.mutations() }
             commit(namespace, changes)
-            model.key().namespace = namespace
-            model.key().saved = True
-            assert model.key().complete()
+            key = model.key()
+            key.saved = True
            
     @classmethod
     def read(cls, *keys):
@@ -677,15 +677,17 @@ class MetaModel(object):
         '''Creates a Model from an iterable of ColumnOrSuperColumns'''
         if not coscs: return None
         cls = Schema.ClassForModel(key.namespace, key.kind)
-        model = cls()
+        values = {}
+        descriptors = fields(cls, Property)
         for cosc in coscs:
             name = cosc.column.name
-            if name in model.fields():
-                prop = model.fields()[name]
-                prop.deconvert(model, cosc.column.value)
+            if name in descriptors:
+                prop = descriptors[name]
+                values[name] = prop.deconvert(cosc.column.value)
             else:
                 value = pickle.loads(cosc.column.value)
-                model[name] = value
+                values[name] = value
+        model = cls(**values)
         model.key().saved = True
         return model
          

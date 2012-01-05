@@ -19,6 +19,11 @@ Cassandra Support
 15. Tag v1.0.0.final
 16. Go out to a nice restaurant on campus for a break :).
 17. Add support for default descriptors in Model.
+18. Add support for automatic read on property access if the property is non existent
+
+
+Notes:
+Reading and Writing is assymetric right now. 
 
 
 

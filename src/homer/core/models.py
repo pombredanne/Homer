@@ -282,8 +282,8 @@ class Property(object):
             raise BadValueError("This property is required, it cannot be empty") 
         if self.choices:
             if value not in self.choices:
-                raise BadValueError("The property %s is %r; it must\
-                    be on of %r"% (self.name, value, self.choices))
+                raise BadValueError("The property %s is %r; it must be one of %r"%
+                     (self.name, value, self.choices))
         if self.validator is not None:
             value = self.validator(value)
         return value
@@ -292,9 +292,9 @@ class Property(object):
         '''Yields the datastore representation of its value'''
         return str(getattr(instance, self.name))
     
-    def deconvert(self, instance, value):
+    def deconvert(self, value):
         '''Converts a value from the datastore to a native python object'''
-        return setattr(instance, self.name, value)
+        return str(value)
            
     def configure(self, name, owner):
         """Allow this property to know its name, and owner"""
@@ -318,9 +318,9 @@ class UnIndexable(Property):
         self.validate(value)
         return pickle.dumps(value)
     
-    def deconvert(self, instance, value):
+    def deconvert(self, value):
         '''Converts a raw datastore back to a native python object'''
-        setattr(instance, self.name, pickle.loads(value))
+        return pickle.loads(value)
         
     def indexed(self):
         '''Blobs cannot be indexed'''
@@ -331,7 +331,7 @@ Type:
 A Property that does type coercion, checking and validation. This is base
 class for all the common descriptors.
 #..
-class Story(Record):
+class Story(Model):
     source = Type(Blog)
     
 #..
@@ -399,20 +399,20 @@ class Reference(Property):
         self.validate(value)
         return repr(value.key())
         
-    def deconvert(self, instance, value):
+    def deconvert(self, value):
         '''Pulls the referenced model from the datastore, and sets it'''
         key = eval(value) #Change the key back to a key.
         assert key.complete()
-        model = Simpson.read(key)[0]
-        setattr(instance, self.name, model)
+        return Simpson.read(key)[0]
       
     def validate(self, value):
         '''Make sure that instance you set on a Reference has a complete key, and do type checking'''
         if value is None:
             return None
+        key = value.key()
+        assert key.complete(), "Your key must be complete"
         assert isinstance(value, Model), "You must use a subclass of Model"
-        assert value.key().complete() , "Your %s's key must be complete" % value
-        assert value.key().saved == True, "Your %s must have been previously persisted in the DataStore"
+        assert value.saved() or key.saved , "Your %s must have been previously persisted in the DataStore"
         return value
                  
 ###
@@ -438,6 +438,7 @@ class Model(object):
         self.differ = Differ(self, exclude = ['differ', 'properties'])
         self.properties = set()
         self.__key = None
+        self.__saved = False
         required = set()
         # For the Differs sake we have to find all the properties and set their default values
         for name, prop in self.fields().items():
@@ -467,7 +468,10 @@ class Model(object):
         else:
             self.__key.id = validate(self.__id)
         return self.__key
-                  
+    
+    def saved(self):
+        return self.__saved
+                      
     def rollback(self):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
@@ -476,6 +480,7 @@ class Model(object):
         """Stores this object in the datastore and in the cache"""
         #print 'Putting %s at the backend' % self
         Simpson.put(self)
+        self.__saved = True
         self.differ.commit()
                
     @classmethod
@@ -545,7 +550,7 @@ class Model(object):
         ''' Allows us to delete a deletable Property on this object'''
         delattr(self, key)
         self.properties.remove(key)
-    
+   
     def items(self):
         '''Returns a copy of key value pair of every property in the Model'''
         results = []
