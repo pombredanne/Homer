@@ -18,5 +18,7 @@ Cassandra Support
         (Probably use tornado and AB todo a flood) and Test Use in a Clustered Environment
 15. Tag v1.0.0.final
 16. Go out to a nice restaurant on campus for a break :).
+17. Add support for default descriptors in Model.
+
 
 

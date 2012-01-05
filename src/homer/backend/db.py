@@ -462,7 +462,7 @@ class Simpson(local):
            
     @classmethod
     def read(cls, *keys):
-        '''Reads @keys from the Datastore;'''
+        '''Reads @keys from the Datastore and returns instances of Models'''
         from homer.options import namespaces
         from homer.core.models import key, Model
         results = []
@@ -489,7 +489,8 @@ class Simpson(local):
             with using(pool) as conn:
                 conn.client.set_keyspace(key.namespace)
                 coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
-                results.append(MetaModel.fromColumns(key, coscs))
+                found = MetaModel.fromColumns(key, coscs)
+                if found: results.append(found)
         return results
     
     @classmethod
@@ -674,6 +675,7 @@ class MetaModel(object):
     @classmethod
     def fromColumns(self, key, coscs):
         '''Creates a Model from an iterable of ColumnOrSuperColumns'''
+        if not coscs: return None
         cls = Schema.ClassForModel(key.namespace, key.kind)
         model = cls()
         for cosc in coscs:

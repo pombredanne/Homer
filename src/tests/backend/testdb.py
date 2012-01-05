@@ -151,12 +151,14 @@ class BaseTestCase(TestCase):
 class TestSimpson(BaseTestCase):
     '''Behavioural contract for Simpson'''
     
+    
     def testSimpsonOnlyAcceptsModel(self):
         '''Checks if Simpson accepts non models'''
         class Person(object):
             '''An ordinary new-style class'''
             pass
         self.assertRaises(AssertionError, lambda: self.db.create(Person()))   
+    
       
     def testCreate(self):
         '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
@@ -170,7 +172,8 @@ class TestSimpson(BaseTestCase):
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
-     
+    
+    
     def testPut(self):
         '''Tests if Simpson.put() actually stores the model to Cassandra'''
         @key("id")
@@ -192,6 +195,7 @@ class TestSimpson(BaseTestCase):
         assert profile.key().complete() == True # Make sure the object has a complete Key
         assert profile.key().saved
     
+    
     def testOtherCommonTypeKeyWork(self):
         '''Shows that keys of other common types work'''
         @key("id")
@@ -207,6 +211,7 @@ class TestSimpson(BaseTestCase):
         row = cursor.fetchone()
         print(row)
         self.assertTrue(row[0] == '1' and row[1] == "Something broke damn")
+    
     
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
@@ -225,6 +230,7 @@ class TestSimpson(BaseTestCase):
         cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
         row = cursor.fetchone()
         self.assertTrue(row[0] == None)
+    
        
     def testRead(self):
         '''Tests if Simpson.read() behaves as usual'''
@@ -275,6 +281,9 @@ class TestSimpson(BaseTestCase):
         row = cursor.fetchone()
         print "Deleted row: %s" % row
         self.assertTrue(row[0] == None)
+        # Make sure that Reads for Simpson return null too.
+        results = self.db.read(k)
+        self.assertFalse(results)
 
 class TestReference(BaseTestCase):
     '''Tests for the Reference Property'''      
@@ -314,6 +323,7 @@ class TestReference(BaseTestCase):
         found = self.db.read(id)[0]
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
+
 
 class TestCqlQuery(BaseTestCase):
     '''Unittests for CQL Queries'''
@@ -363,6 +373,7 @@ class TestCqlQuery(BaseTestCase):
         self.connection.execute("SELECT COUNT(*) FROM Book;")
         correct = self.connection.fetchone()[0]
         self.assertTrue(result == correct) 
+
         
 class TestModelPersistence(BaseTestCase):
     '''Tests if the persistence properties of a Model works'''
