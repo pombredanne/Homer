@@ -282,8 +282,8 @@ class Property(object):
             raise BadValueError("This property is required, it cannot be empty") 
         if self.choices:
             if value not in self.choices:
-                raise BadValueError("The property %s is %r; it must be one of %r"%
-                     (self.name, value, self.choices))
+                raise BadValueError("The property %s is %r; it must\
+                    be on of %r"% (self.name, value, self.choices))
         if self.validator is not None:
             value = self.validator(value)
         return value
@@ -331,7 +331,7 @@ Type:
 A Property that does type coercion, checking and validation. This is base
 class for all the common descriptors.
 #..
-class Story(Model):
+class Story(Record):
     source = Type(Blog)
     
 #..
@@ -377,7 +377,7 @@ class UnIndexedType(UnIndexable, Type):
     pass
 
 from copy import copy, deepcopy
-from homer.backend import Simpson, CqlQuery
+from homer.backend import Simpson, CqlQuery, FetchMode
 
 """
 Reference:
@@ -401,18 +401,17 @@ class Reference(Property):
         
     def deconvert(self, value):
         '''Pulls the referenced model from the datastore, and sets it'''
-        key = eval(value) #Change the key back to a key.
-        assert key.complete()
-        return Simpson.read(key)[0]
-      
+        key = eval(value) #Change the @value back to a key.
+        return Simpson.read((key, FetchMode.All))[0]
+         
     def validate(self, value):
         '''Make sure that instance you set on a Reference has a complete key, and do type checking'''
         if value is None:
             return None
-        key = value.key()
-        assert key.complete(), "Your key must be complete"
         assert isinstance(value, Model), "You must use a subclass of Model"
-        assert value.saved() or key.saved , "Your %s must have been previously persisted in the DataStore"
+        key = value.key()
+        assert key.complete(), "Your %s's key must be complete" % value
+        assert key.saved or value.saved(), "Your %s must have been previously persisted in the DataStore"
         return value
                  
 ###
@@ -436,12 +435,11 @@ class Model(object):
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ', 'properties'])
-        self.properties = set()
         self.__key = None
-        self.__saved = False
-        required = set()
+        self.properties = set()
+        self.__initialized = True
         # For the Differs sake we have to find all the properties and set their default values
-        for name, prop in self.fields().items():
+        for name, prop in fields(self, Property).items():
             self.properties.add(name)
             prop.configure(name, type(self))
             if prop.required and not prop.default:
@@ -468,10 +466,7 @@ class Model(object):
         else:
             self.__key.id = validate(self.__id)
         return self.__key
-    
-    def saved(self):
-        return self.__saved
-                      
+                  
     def rollback(self):
         '''Undoes the current state of the object to the last committed state'''
         self.differ.revert();
@@ -480,18 +475,18 @@ class Model(object):
         """Stores this object in the datastore and in the cache"""
         #print 'Putting %s at the backend' % self
         Simpson.put(self)
-        self.__saved = True
         self.differ.commit()
                
     @classmethod
-    def read(cls, *keys):
+    def read(cls, key, mode = FetchMode.Property):
         """Retreives objects from the datastore """
-        tofetch = []
+        assert isinstance(key, (str, Key))
         namespace, kind, member = Schema.Get(cls)
-        for key in keys:
-            assert isinstance(key, str)
-            tofetch.append(Key(namespace, kind, key)) 
-        return Simpson.read(*tofetch)
+        if isinstance(key, Key):
+            return Simpson.read((key, mode))[0]
+        else: 
+            key = Key(namespace, kind, key)
+            return Simpson.read((key, mode))
     
     @classmethod
     def kind(cls):
@@ -515,16 +510,6 @@ class Model(object):
         q = 'SELECT %s FROM %s %s' % (names, cls.kind(), query)
         return CqlQuery(cls, q, **kwds)
          
-    def fields(self):
-        """Returns all the Descriptors for @this by searching the class heirachy"""
-        cls = self.__class__;
-        fields = {}
-        for root in reversed(cls.__mro__):
-            for name, prop in root.__dict__.items():
-                if isinstance(prop, Property):
-                    fields[name] = prop
-        return fields
-    
     def keys(self):
         '''Returns a copy of all the keys in this model excluding the key property'''
         return copy(self.properties)
@@ -550,7 +535,16 @@ class Model(object):
         ''' Allows us to delete a deletable Property on this object'''
         delattr(self, key)
         self.properties.remove(key)
-   
+        
+    def __setattr__(self, name, value):
+        '''Customized attribute set'''
+        if hasattr(self, "__initialized"):
+            object.__setattr__(self, name, value)
+            self.properties.add(name)
+        else:
+            object.__setattr__(self, name, value)
+        
+    
     def items(self):
         '''Returns a copy of key value pair of every property in the Model'''
         results = []
@@ -593,7 +587,7 @@ class Model(object):
         
     def __unicode__(self):
         """Unicode representation of this model"""
-        return u'%s' % self.__str__()
+        return u'%s' % str(self)
        
               
 

@@ -25,7 +25,7 @@ Tests for the the db module.
 """
 import time
 from homer.options import options, DataStoreOptions
-from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level, CqlQuery
+from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level, CqlQuery, FetchMode
 from unittest import TestCase, skip
 
 
@@ -247,7 +247,7 @@ class TestSimpson(BaseTestCase):
         
         k = Key("Test", "Book", "Lord of the Rings")
         #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
-        b = self.db.read(k)[0]
+        b = self.db.read((k, FetchMode.Property))[0]
         assert isinstance(b, Book)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         print b.name
@@ -260,6 +260,30 @@ class TestSimpson(BaseTestCase):
         self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
+    def testReadMode(self):
+        '''Tests if FetchMode works in Reads'''
+        @key("name")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            author = String(indexed = True)
+            isbn = String(indexed = True)
+            titles = Map(String, Integer)
+        
+        book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
+        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
+        for n in xrange(500):
+            book[str(n)] = n
+        book.save()
+        print "Book len:" , len(book)
+        
+        k = Key("Test", "Book", "Lord of the Rings")
+        #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
+        b = self.db.read((k, FetchMode.All))[0]
+        assert isinstance(b, Book)
+        print "Book len:" , len(b)
+        assert len(b) == len(book)
+        assert b == book
+        
     def testDelete(self):
         '''Tests if Simpson.delete() works well'''
         @key("name")
@@ -282,7 +306,7 @@ class TestSimpson(BaseTestCase):
         print "Deleted row: %s" % row
         self.assertTrue(row[0] == None)
         # Make sure that Reads for Simpson return null too.
-        results = self.db.read(k)
+        results = self.db.read((k, FetchMode.Property))
         self.assertFalse(results)
 
 class TestReference(BaseTestCase):
@@ -320,7 +344,7 @@ class TestReference(BaseTestCase):
         print "Checking Automatic Reference Read"
         id = Key("Test","Book","Pride")
         # id.columns = ["name", "author"]
-        found = self.db.read(id)[0]
+        found = self.db.read((id, FetchMode.Property))[0]
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
 

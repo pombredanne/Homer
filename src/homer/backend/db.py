@@ -65,9 +65,11 @@ class AllServersUnAvailableError(Exception):
 ####
 # Constants
 ####
-__all__ = ["CqlQuery", "Simpson", "Level", ]
+__all__ = ["CqlQuery", "Simpson", "Level", "FetchMode", "RoundRobinPool",\
+                "Connection", "ConnectionDisposedError",]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
+FETCHSIZE = 1000000 #ONE MILLION COLUMNS
 
 ###
 # Utilities and Helper Functions
@@ -399,6 +401,14 @@ class CqlQuery(object):
 ###
 # Cassandra Mapping Section;
 ###
+
+"""
+FetchMode:
+Specifies how you want read behavior to be
+"""
+class FetchMode(object):
+    Property, All = 0, 1
+    
 """
 Simpson:
 Provides a **very** simple way to use cassandra from python; It provides 
@@ -417,7 +427,8 @@ class Simpson(local):
         # OUR GOAL HERE IS TO CREATE CASSANDRA DATA MODELS FROM
         # METADATA GLEANED FROM THE INSTANCE PASSED IN TO
         # THIS METHOD
-        assert issubclass(model.__class__, Model),"parameter model: %s must inherit from model" % model
+        assert issubclass(model.__class__, Model),\
+            "parameter model: %s must inherit from model" % model
         info = Schema.Get(model) 
         namespace = info[0]
         kind = info[1]
@@ -461,13 +472,14 @@ class Simpson(local):
             key.saved = True
            
     @classmethod
-    def read(cls, *keys):
+    def read(cls, *tuples): # Format is [(key, fetchmode)]
         '''Reads @keys from the Datastore and returns instances of Models'''
         from homer.options import namespaces
         from homer.core.models import key, Model
         results = []
         # READ HAPPENS KEY BY KEY HERE.
-        for key in keys:
+        for tuple in tuples:
+            key, mode = tuple[0], tuple[1]
             assert key.complete(), "Your key has to be complete"
             #print "Reading %s from Cassandra" % key
             id = key.id
@@ -478,18 +490,25 @@ class Simpson(local):
             # SETS IT FOR HIM BY READING ONLY THE DESCRIPTORS THAT THE MODEL
             # CONTAINS BY DEFAULT.
             predicate = None
-            if key.columns:
-                predicate = SlicePredicate(column_names = key.columns)
-            else:
-                type = Schema.ClassForModel(key.namespace, key.kind)
-                names = fields(type, Property).keys() 
-                columns = list(names)
-                predicate = SlicePredicate(column_names = columns)
+            if mode == FetchMode.Property:
+                # print "FETCHING PROPERTIES"
+                if key.columns:
+                    predicate = SlicePredicate(column_names = key.columns)
+                else:
+                    type = Schema.ClassForModel(key.namespace, key.kind)
+                    names = fields(type, Property).keys() 
+                    columns = list(names)
+                    predicate = SlicePredicate(column_names = columns)
+            elif mode == FetchMode.All:
+                # print "FETCHING ALL"
+                range = SliceRange(start='', finish='', count = FETCHSIZE )
+                predicate = SlicePredicate(slice_range=range)
+                
             pool = cls.pool(key.namespace)
             with using(pool) as conn:
                 conn.client.set_keyspace(key.namespace)
                 coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
-                found = MetaModel.fromColumns(key, coscs)
+                found = MetaModel.load(key, coscs)
                 if found: results.append(found)
         return results
     
@@ -545,7 +564,7 @@ class MetaModel(object):
         self.kind = info[1]
         self.key = info[2]
         self.comment = self.kind.__doc__
-        self.fields = model.fields()
+        self.fields = fields(model, Property)
     
     def id(self):
         '''Returns the appropriate representation of the key of self.model'''
@@ -673,22 +692,21 @@ class MetaModel(object):
         return column
     
     @classmethod
-    def fromColumns(self, key, coscs):
+    def load(self, key, coscs):
         '''Creates a Model from an iterable of ColumnOrSuperColumns'''
         if not coscs: return None
         cls = Schema.ClassForModel(key.namespace, key.kind)
-        values = {}
+        model = cls()
         descriptors = fields(cls, Property)
         for cosc in coscs:
             name = cosc.column.name
             if name in descriptors:
                 prop = descriptors[name]
-                values[name] = prop.deconvert(cosc.column.value)
+                model[name] = prop.deconvert(cosc.column.value)
             else:
-                value = pickle.loads(cosc.column.value)
-                values[name] = value
-        model = cls(**values)
-        model.key().saved = True
+                model[name] = pickle.loads(cosc.column.value)
+        key = model.key()
+        key.saved = True
         return model
          
     def mutations(self):
