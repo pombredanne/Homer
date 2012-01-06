@@ -282,8 +282,7 @@ class Property(object):
             raise BadValueError("This property is required, it cannot be empty") 
         if self.choices:
             if value not in self.choices:
-                raise BadValueError("The property %s is %r; it must\
-                    be on of %r"% (self.name, value, self.choices))
+                raise BadValueError("The property %s is %r; it must be on of %r"% (self.name, value, self.choices))
         if self.validator is not None:
             value = self.validator(value)
         return value
@@ -439,16 +438,11 @@ class Model(object):
         self.properties = set()
         self.__initialized = True
         # For the Differs sake we have to find all the properties and set their default values
-        for name, prop in fields(self, Property).items():
+        [prop.configure(name, self.__class__) for name, prop in fields(self, Property).items()] # 
+        for name, value in kwds.items():
+            setattr(self, name, value)
             self.properties.add(name)
-            prop.configure(name, type(self))
-            if prop.required and not prop.default:
-                value = kwds.get(name, None)
-                if value is not None:
-                    setattr(self, name, value)
-            else:
-                setattr(self, name, kwds.get(name, prop.default))
-       
+            
     def key(self):
         """Unique key for identifying this instance"""
         def validate(name):
@@ -486,7 +480,7 @@ class Model(object):
             return Simpson.read((key, mode))[0]
         else: 
             key = Key(namespace, kind, key)
-            return Simpson.read((key, mode))
+            return Simpson.read((key, mode))[0]
     
     @classmethod
     def kind(cls):

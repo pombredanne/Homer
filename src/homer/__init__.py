@@ -17,5 +17,5 @@ class Shinobi(Model):
     rank = String(choices = ["Genin","Chounin","Jonin",])
     
 """
-version = "1.0.1"
+version = "1.0.2"
 

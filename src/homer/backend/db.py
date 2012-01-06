@@ -381,6 +381,7 @@ class CqlQuery(object):
                 values = {}
                 # print "Unmarshalling ROW: %s" % row
                 for name, value in zip(names, row):
+                    if not value: continue
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = descs.get(name, None)
                     if prop:
