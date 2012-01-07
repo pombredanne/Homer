@@ -447,7 +447,7 @@ class Model(object):
         """Unique key for identifying this instance"""
         def validate(name):
             '''Compute the key if necessary and validate'''
-            found = getattr(self,name)
+            found = getattr(self, name)
             value = found() if callable(found) else found
             if value is None:
                 raise BadKeyError("The key for %s cannot be None" % self)

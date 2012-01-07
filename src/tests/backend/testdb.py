@@ -457,7 +457,7 @@ class TestModelPersistence(BaseTestCase):
         book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
         book.save()
        
-        b = Book.read('Lord of the Rings')[0]
+        b = Book.read('Lord of the Rings')
         assert isinstance(b, Book)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         print b.name
