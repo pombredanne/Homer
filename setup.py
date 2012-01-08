@@ -23,7 +23,7 @@ from os.path import abspath, join, dirname
 
 setup(
     name="homer",
-    version="1.0.2.beta",
+    version="1.0.3.beta",
     description="Python Object Non-Relational Mapper for Cassandra",
     long_description=open(abspath(join(dirname(__file__), 'README'))).read(),
     maintainer='Iroiso Ikpokonte',
