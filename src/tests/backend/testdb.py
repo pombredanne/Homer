@@ -194,8 +194,7 @@ class TestSimpson(BaseTestCase):
         self.assertTrue(row[0] == "1234" and row[1] == "Iroiso Ikpokonte")
         assert profile.key().complete() == True # Make sure the object has a complete Key
         assert profile.key().saved
-    
-    
+        
     def testOtherCommonTypeKeyWork(self):
         '''Shows that keys of other common types work'''
         @key("id")

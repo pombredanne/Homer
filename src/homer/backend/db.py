@@ -471,6 +471,37 @@ class Simpson(local):
             commit(namespace, changes)
             key = model.key()
             key.saved = True
+            
+    @classmethod
+    @redo
+    def putbatch(cls, keyspace, *Models):
+        '''Persists all the changes in one batch'''
+        from homer.options import namespaces
+        from homer.core.models import key, Model
+        # PERSISTS ALL CHANGES IN *MODELS IN A SINGLE BATCH
+        def commit(namespace, mutations):
+            '''Stores all the mutations in one batch operation'''
+            pool = cls.pool(namespace)
+            # print 'Committing a single model batch to Cassandra'
+            with using(pool) as conn:
+                conn.client.set_keyspace(namespace)
+                conn.client.batch_mutate(mutations, cls.consistency)    
+        # BATCH ALL THE INDIVIDUAL CHANGES IN ONE TRANSFER
+        mutations = {}
+        for model in Models:
+            assert issubclass(model.__class__, Model), "parameter model:\
+                %s must inherit from Model" % model
+            info = Schema.Get(model)
+            namespace = info[0]
+            assert namespace == keyspace, "All the Models should belong to %s" % keyspace
+            kind = info[1]
+            if kind not in cls.columnfamilies: # HACK!! Find a better way to do this.
+                cls.create(model)
+            meta = MetaModel(model)
+            key = model.key()
+            key.saved = True
+            mutations[meta.id()] = meta.mutations()
+        commit(keyspace,mutations)
            
     @classmethod
     def read(cls, *tuples): # Format is [(key, fetchmode)]
