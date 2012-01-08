@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #
-# A simple benchmark tornado's HTTP stack along with Homer
-# to see how it performs in highly concurrent environments.
+# A simple benchmark tornado's HTTP stack along with Homer to see if they fit.
 
 import cql
 
@@ -27,14 +26,14 @@ define("max_port", type=int, default=9000)
 # Increasing --n without --keepalive will eventually run into problems
 # due to TIME_WAIT sockets
 define("n", type=int, default=5000)
-define("c", type=int, default=1000)
+define("c", type=int, default=100)
 define("keepalive", type=bool, default=True)
 define("quiet", type=bool, default=False)
 
 # Repeat the entire benchmark this many times (on different ports)
 # This gives JITs time to warm up, etc.  Pypy needs 3-5 runs at
 # --n=15000 for its JIT to reach full effectiveness
-define("num_runs", type=int, default=1)
+define("num_runs", type=int, default=5)
 
 # Homer Simpson's data classes here.
 @key("name")
@@ -64,7 +63,6 @@ def main():
 
 def run():
     # Homer Simpson's configuration here
-    connection = cql.connect("localhost", 9160).cursor()
     db = Simpson
     # Do Datastore configuration, setup stuff like namespaces and etcetera
     print "Bringing in Homer Simpson's Baggage..."
@@ -92,13 +90,9 @@ def run():
     IOLoop.instance().close()
     del IOLoop._instance
     assert not IOLoop.initialized()
-    
+   
     print "Clearing Homer Simpson's Baggage..."
     print "Finally Stored: %s Profiles in the Datastore" % (Profile.count(),)
-    db.clear()
-    Schema.clear()
-    connection.execute("DROP KEYSPACE Test;")
-    connection.close()
-
+    
 if __name__ == '__main__':
     main()
