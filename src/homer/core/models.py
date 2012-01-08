@@ -503,6 +503,11 @@ class Model(object):
         names = ", ".join(fields(cls, Property).keys())
         q = 'SELECT %s FROM %s %s' % (names, cls.kind(), query)
         return CqlQuery(cls, q, **kwds)
+    
+    @classmethod
+    def count(cls):
+        '''Counts all the instances of this Model from the datastore'''
+        return CqlQuery(cls, "SELECT COUNT(*) FROM %s;" %(cls.kind(),)).fetchone()
          
     def keys(self):
         '''Returns a copy of all the keys in this model excluding the key property'''
