@@ -211,7 +211,6 @@ class TestSimpson(BaseTestCase):
         print(row)
         self.assertTrue(row[0] == '1' and row[1] == "Something broke damn")
     
-    
     def testTTL(self):
         '''Tests if put() supports ttl in columns'''
         import time
@@ -230,7 +229,6 @@ class TestSimpson(BaseTestCase):
         row = cursor.fetchone()
         self.assertTrue(row[0] == None)
     
-       
     def testRead(self):
         '''Tests if Simpson.read() behaves as usual'''
         @key("name")
@@ -346,58 +344,7 @@ class TestReference(BaseTestCase):
         found = self.db.read((id, FetchMode.Property))[0]
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
-
-
-class TestCqlQuery(BaseTestCase):
-    '''Unittests for CQL Queries'''
- 
-    def testSanity(self):
-        '''Checks if the normal usecase for CQL works as planned'''
-        @key("name")
-        class Book(Model):
-            name = String(required = True, indexed = True)
-            author = String(indexed = True)
-        
-        book = Book(name = "Pride", author="Anne Rice")
-        self.db.put(book)
-        query = CqlQuery(Book, "SELECT * FROM Book WHERE KEY= :name; ", name="Pride")
-        found = query.fetchone()
-        self.assertTrue(book == found)
-    
-    def testMulitpleRows(self):
-        '''Checks if CQL repeatedly yields multiple rows'''
-        @key("name")
-        class Book(Model):
-            name = String(required = True, indexed = True)
-            author = String(indexed = True)
-        
-        for i in range(500):
-            book = Book(name = i, author="Anne Rice")
-            self.db.put(book)
- 
-        query = CqlQuery(Book, "SELECT * FROM Book WHERE author= :name; ", name="Anne Rice")
-        results = list(query)
-        self.assertTrue(len(results) == 500)
- 
-    def testCount(self):
-        '''Shows that count based queries work'''
-        @key("name")
-        class Book(Model):
-            name = String(required = True, indexed = True)
-            author = String(indexed = True)
-        
-        for i in range(500):
-            book = Book(name = i, author="Anne Rice")
-            self.db.put(book)
- 
-        query = CqlQuery(Book, "SELECT COUNT(*) FROM Book;")
-        result = query.fetchone()
-        self.connection.execute("USE Test;")
-        self.connection.execute("SELECT COUNT(*) FROM Book;")
-        correct = self.connection.fetchone()[0]
-        self.assertTrue(result == correct) 
-
-        
+     
 class TestModelPersistence(BaseTestCase):
     '''Tests if the persistence properties of a Model works'''
     

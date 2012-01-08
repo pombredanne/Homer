@@ -349,7 +349,10 @@ class CqlQuery(object):
         if not self.keyspace:
             found = Schema.Get(self.kind)[0]
             self.keyspace = found
-            
+        
+        if not self.kind.__name__ in Simpson.columnfamilies:
+            Simpson.create(self.kind())
+               
         pool = Simpson.pool(self.keyspace)
         with using(pool) as conn:
             #print "Executing %s" % self
