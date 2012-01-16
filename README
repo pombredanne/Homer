@@ -44,9 +44,8 @@ found = Profile.read('Yoda')
 assert person == found
 
 # Or
-key = Key("Home", "Profile", "Yoda")
+key = Key("June", "Profile", "Yoda")
 found = db.read(key)
-assert "email", "picture" in found.keys()
 
 # Or Using CQL to search the secondary index.
 Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")

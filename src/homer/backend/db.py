@@ -231,7 +231,7 @@ class RoundRobinPool(Pool):
     def disposeAll(self):
         '''Disposes all the Connections in the Pool, typically called at System Exit'''
         with self.lock:
-            print "Pool Shutdown: Disposing off all the remaining Connections"
+            print "Pool Shutdown: Disposing: the %s remaining Connections" % self.queue.qsize()
             while True:
                 try:
                     connection = self.queue.get(False)
@@ -314,7 +314,7 @@ class EvictionThread(Thread):
         """Evicts Idle Connections periodically from a Connection Pool"""
         while True:
             if not self.pool.queue.qsize() <= self.maxIdle:
-                self.log.info("Evicting Idle Connections")
+                self.log.info("Evicting Idle Connections, Queue Size: %s" % self.pool.queue.qsize())
                 connection = self.pool.queue.get(False)
                 connection.dispose()
                 time.sleep(self.delay/1000)
