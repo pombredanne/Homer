@@ -19,7 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import sys
 """
 Size:
 Size provide utilities for checking size of objects in Kb, Mb and Gb.
@@ -30,6 +30,5 @@ class Size(object):
     @staticmethod
     def inBytes(object):
         """Returns the size of this python object in bytes"""
-        view = memoryview(object)
-        return len(view) * view.itemsize
+        return sys.getsizeof(object)
 

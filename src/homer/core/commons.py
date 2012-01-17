@@ -15,7 +15,7 @@ from collections import Hashable
 from homer.util import Size
 from homer.core.models import Type, BadValueError, Property, UnIndexable, UnIndexedType
 
-# TODO: Add common types; MD5, SHA512, SHA256, Email, Tuple, Rating
+# TODO: Add common types; MD5, UUID, SHA512, SHA256, Email, Tuple, Rating
 __all__ = [
             "Integer","String","Blob","Set","Boolean","List","URL", "Time", "DateTime",
             "Date","Float", "Map",
@@ -38,8 +38,8 @@ class Float(Type):
     
 """
 Integer:
-A data descriptor that is used to create properties that for longs and ints in 
-your models.All integers are represented as longs within. Integers behave
+A data descriptor that is used to create properties for longs and ints in 
+your models. All integers are represented as longs within. Integers behave
 like normal python ints and long and they coerce values.
 
 # .. snippet ...
@@ -55,8 +55,8 @@ class Integer(Type):
    
 """
 String:
-The String data descriptor, is used to create String Properties in your models.
-e.g. The following snippet shows various usecases for String()
+The String descriptor is used to create String Properties in your models.
+The following snippet shows various usecases for String; 
 
 class Story(object):
     '''Models a Story Object'''
@@ -219,7 +219,7 @@ sample.
 
 class Person(object):
     name = String()
-    harem = List(Women)
+    harem = List(String)
 
 person = Person()
 person.harem.extend(["Aisha","Halima","Safia",])
@@ -241,14 +241,14 @@ class List(UnIndexable):
             except:
                 raise BadValueError("This property has to be set, got a : %s" % type(value))
         coerced = []
-        # Coercion is all or nothing. if any fails the entire operation fails
+        # COERCION IS AN ALL OR NOTHING OPERATION. IF ANY FAILS THE ENTIRE OPERATION FAILS
         name = self.cls.__name__
-        if name in defaults: # Check if cls is a common descriptor.
-            validate = defaults[name] # Retrieve a singleton to deal with this.
-            for i in value:  # Normally Common descriptors take care of 'Nones'
+        if name in defaults: # CHECK IF CLS IS A COMMON DESCRIPTOR.
+            validate = defaults[name] # RETRIEVE A SINGLETON TO DEAL WITH THIS.
+            for i in value:  # NORMALLY COMMON DESCRIPTORS TAKE CARE OF 'NONES'
                 coerced.append(validate(i))
             return coerced        
-        else: # Do normal type coercion, third party devs should make sure their Descriptors are callable
+        else: # DO NORMAL TYPE COERCION, THIRD PARTY DEVS SHOULD MAKE SURE THEIR DESCRIPTORS ARE CALLABLE
             for i in value: 
                 if isinstance(i, self.cls):
                     coerced.append(i)

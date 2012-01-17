@@ -542,6 +542,7 @@ class Model(object):
             self.properties.add(name)
         else:
             object.__setattr__(self, name, value)
+        
     
     def items(self):
         '''Returns a copy of key value pair of every property in the Model'''

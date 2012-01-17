@@ -15,7 +15,7 @@ Cassandra Support
 12. Write JSON Serialization and Deserialization # Postponed
 13. Tag v1.0.0.beta => Done
 14. Use in Prototypes, Debug and Test for Concurrent Use \
-        (Probably use tornado and AB todo a flood) and Test Use in a Clustered Environment
+        (Probably use tornado and AB todo a flood) and Test Use in a Clustered Environment => Done
 15. Tag v1.0.0.final
 16. Go out to a nice restaurant on campus for a break :).
 17. Add support for default descriptors in Model.
