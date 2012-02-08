@@ -75,9 +75,6 @@ class TestKeyAndModel(TestCase):
         person = Person(**diction)
         for name in diction:
             self.assertEqual(getattr(person,name), diction[name])
-        print "..........................................."
-        for name, value in fields(person, Property).items():
-            print name, str(value)
 
 class TestModelDictability(TestCase):
     '''Proves that a Model behaves like a dictionary'''
@@ -132,7 +129,6 @@ class TestModelDictability(TestCase):
         item = Model()
         for i in range(50):
             item[str(i)] = i
-        print item.items()
         comparison = []
         for i in range(50):
             tup = (str(i), i)
@@ -146,7 +142,6 @@ class TestModelDictability(TestCase):
         item = Model()
         for i in range(50):
             item[str(i)] = i
-        print item.items()
         comparison = []
         for i in range(50):
             tup = (str(i), i)
@@ -162,7 +157,6 @@ class TestModelDictability(TestCase):
             item[str(i)] = i
             comparison.add(str(i))
         for i in comparison:
-            print "Item length:", len(item)
             self.assertTrue(i in item.keys())
     
     def testIterValues(self):
@@ -180,7 +174,6 @@ class TestModelDictability(TestCase):
         item = Model()
         for i in range(50):
             item[str(i)] = i
-        print "len:", len(item)
         self.assertTrue(len(item) == 50)
                 
 """#.. Tests for homer.core.models.Type"""  

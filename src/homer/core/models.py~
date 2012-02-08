@@ -443,15 +443,6 @@ class Reference(Property):
 """
 # Model and Its Friends
 """
-"""
-__new__: 
-is meta class that makes sure that every models
-has the __store__ attribute
-"""
-def __new__(name, bases, dict):
-    '''Custom initialization for Models...'''
-    dict["__store__"] = {}
-    return type(name, bases, dict)
 
 """    
 Model: 

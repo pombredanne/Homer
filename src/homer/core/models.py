@@ -548,7 +548,6 @@ class Model(object):
     def values(self):
         '''Returns all the values in this Model excluding the value for the key property'''
         result = []
-        print self.keys()
         for name in self.keys():
             result.append(self[name])
         return copy(result)
