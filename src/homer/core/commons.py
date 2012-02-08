@@ -377,14 +377,14 @@ class Person(object):
 """
 class DateTime(Type):
     """Base class of all date time properties"""
-    def __init__(self,default = None,autoNow = False, **arguments):
-        self.autoNow = autoNow
+    def __init__(self,default = None,autonow = False, **arguments):
+        self.autonow = autonow
         super(DateTime,self).__init__(default = default,type = datetime.datetime, 
             **arguments)
     
     def __get__(self,instance,owner):
         """Overrides get to implement autonow"""
-        if self.autoNow:
+        if self.autonow:
             return self.now()
         return super(DateTime,self).__get__(instance,owner)
     

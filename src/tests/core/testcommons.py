@@ -80,7 +80,7 @@ class TestDate(TestCase):
     def setUp(self):
         class Test(object):
             date = Date()
-            currentDate = Date(autoNow = True)
+            currentDate = Date(autonow = True)
         self.test = Test()
         
     def testDateSanity(self):
@@ -102,7 +102,7 @@ class TestTime(TestCase):
     def setUp(self):
         class BirthCert(object):
             birthtime = Time()
-            currentTime = Time(autoNow = True)
+            currentTime = Time(autonow = True)
         self.test = BirthCert()
 
     def testTimeSanity(self):
@@ -123,7 +123,7 @@ class TestDateTime(TestCase):
     def setUp(self):
         class Person(object):
             birthdate = DateTime()
-            modified = DateTime(autoNow = True)
+            modified = DateTime(autonow = True)
         self.test = Person()
         
     def testDateTimeSanity(self):
@@ -133,7 +133,7 @@ class TestDateTime(TestCase):
         self.assertEqual(self.test.birthdate,now)
         before = self.test.modified
         self.assertGreaterEqual(self.test.modified,before)
-        """The next snippet shows that with autoNow turned on setting a datetime is irrelevant"""
+        """The next snippet shows that with autonow turned on setting a datetime is irrelevant"""
         before = self.test.modified = now
         self.assertGreaterEqual(self.test.modified,before)
     
