@@ -60,4 +60,18 @@ class TestDateTypes(BaseTestCase):
         self.assertEquals(person, found)
         self.assertEquals(person.time, found.time)
         
+    def testDate(self):
+        '''Tests for the Date Property'''
+        @key("name")
+        class Person(Model):
+            name = String()
+            date = Date()
+            
+        person = Person(name = "lob", date = datetime.now().date())
+        person.save()
+        
+        found = Person.read('lob')
+        self.assertEquals(person, found)
+        self.assertEquals(person.date, found.date)
+        
     
