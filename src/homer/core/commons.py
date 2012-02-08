@@ -388,6 +388,14 @@ class DateTime(Type):
             return self.now()
         return super(DateTime,self).__get__(instance,owner)
     
+    def convert(self, instance):
+        '''Yields the datastore representation of its value'''
+        return repr(getattr(instance, self.name))
+    
+    def deconvert(self, instance, value):
+        '''Converts a value from the datastore to a native python object'''
+        setattr(instance, self.name, eval(value))
+        
     def empty(value):
         return value is None
         

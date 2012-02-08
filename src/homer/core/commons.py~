@@ -275,7 +275,8 @@ class List(UnIndexable):
                     coerced.append(i)   
                 except: 
                     raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls))        
-            return coerced                
+            return coerced      
+          
 """
 Map:
 A descriptor for dict-like objects;
@@ -306,8 +307,7 @@ class Map(UnIndexable):
             keyVal = defaults[name] if name in defaults else self.key
         if isinstance(self.value, type):
             val = self.value.__name__
-            valueVal = defaults[val] if val in defaults else self.value
-            
+            valueVal = defaults[val] if val in defaults else self.value    
         for k,v in value.items(): 
             key = keyVal(k) 
             value = valueVal(v)
