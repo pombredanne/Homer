@@ -97,14 +97,14 @@ class TestModelDictability(TestCase):
     def testSet(self):
         '''Shows that you can add properties to a Model like a dict, allowing you create wide rows'''
         self.bug["issue_number"] = 1245
-        self.assertEquals(self.bug.issue_number, 1245)
+        self.assertEquals(self.bug["issue_number"], 1245)
         self.assertTrue("issue_number" in self.bug)
         self.assertTrue("name" in self.bug)
         
     def testRemove(self):
         '''Shows that dict-like subtraction of properties work'''
         self.bug["house"] = "blue"
-        self.assertEquals(self.bug.house, "blue")
+        self.assertEquals(self.bug["house"], "blue")
         del self.bug["house"]
         del self.bug["name"]
         self.assertFalse("house" in self.bug)
@@ -151,8 +151,8 @@ class TestModelDictability(TestCase):
         for i in range(50):
             tup = (str(i), i)
             comparison.append(tup)
-        for tup in item.iteritems():
-            self.assertTrue(tup in comparison)
+        for tup in comparison:
+            self.assertTrue(tup in item.iteritems())
 
     def testIterKeys(self):
         '''Tests that Iteration of over keys work'''
@@ -161,9 +161,9 @@ class TestModelDictability(TestCase):
         for i in range(50):
             item[str(i)] = i
             comparison.add(str(i))
-        for i in item.iterkeys():
+        for i in comparison:
             print "Item length:", len(item)
-            self.assertTrue(i in comparison)
+            self.assertTrue(i in item.keys())
     
     def testIterValues(self):
         '''Tests that Iteration over values work'''
@@ -172,14 +172,15 @@ class TestModelDictability(TestCase):
         for i in range(50):
             item[str(i)] = i
             comparison.add(i)
-        for i in item.itervalues():
-            self.assertTrue(i in comparison)
+        for i in comparison:
+            self.assertTrue(i in item.values())
 
     def testLen(self):
         '''Tests for the length of a Model'''
         item = Model()
         for i in range(50):
             item[str(i)] = i
+        print "len:", len(item)
         self.assertTrue(len(item) == 50)
                 
 """#.. Tests for homer.core.models.Type"""  

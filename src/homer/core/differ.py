@@ -31,11 +31,14 @@ class DiffError(Exception):
 
 class Differ(object):
     """A class that knows how to calculate changes in an object"""
-    def __init__(self, model, exclude):
+    def __init__(self, instance, exclude):
         '''Inserts all the objects in @args to this differ'''
+        from homer.core.models import Model
+        assert isinstance(instance, Model), "Differ's only work on Models"
         self.excluded = exclude
-        self.replica = copy.deepcopy(model)
-        self.model = model
+        self.replica = copy.deepcopy(instance.__store__)
+        self.model = instance.__store__
+        self.instance = instance
     
     def forbidden(self, name):
         '''Attributes that start with '_' are automatically avoided'''
@@ -44,25 +47,25 @@ class Differ(object):
     def added(self):
         '''Yields the names of the attributes that were recently added to this model'''
         # I used getattr(), because properties will return their default values or None by default
-        dict = self.model.__dict__
+        dict = self.model
         for name in dict:
-            if not getattr(self.replica, name, None):
+            if not self.replica.get(name, None):
                 if not self.forbidden(name):
                     yield name
             
     def commit(self):
         '''Make the current state the default state for this Differ'''
-        self.replica = copy.deepcopy(self.model)
+        self.replica = copy.deepcopy(self.instance.__store__)
    
     def revert(self):
         '''Reverts @self.model to the previous commit state'''
         # This method will be used to implement a rollback feature for Models
-        clean = self.replica.__dict__
-        dirty = self.model.__dict__
+        clean = self.replica
+        dirty = self.model
         dispose = [v for v in dirty if v not in clean]
         # Revert all known attributes
         for name in clean:
-            setattr(self.model, name, clean[name]) 
+            self.instance[name] = clean[name]
         # Delete all new attributes
         for name in dispose: 
             delattr(self.model, name)
@@ -70,18 +73,18 @@ class Differ(object):
             
     def deleted(self):
         '''Yields the names of the attributes that were deleted from this model'''
-        dict = self.replica.__dict__
+        dict = self.replica
         for name in dict:
-            if not hasattr(self.model, name):
+            if name not in self.model:
                 if not self.forbidden(name):
                     yield name
     
     def modified(self):
         '''Return all the attributes that were modified in any way in this model'''
-        dict = self.replica.__dict__
+        dict = self.replica
         for name in dict:
-            if hasattr(self.model, name):
-                if dict[name] != getattr(self.model, name):
+            if name in self.model:
+                if dict[name] != self.model[name]:
                     if not self.forbidden(name):
                         yield name
         

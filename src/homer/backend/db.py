@@ -404,9 +404,9 @@ class CqlQuery(object):
         '''String representation of a CQLQuery.'''
         return "CqlQuery: %s" % self.query
 
-###
+"""
 # Cassandra Mapping Section;
-###
+"""
 
 """
 FetchMode:

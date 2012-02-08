@@ -744,6 +744,7 @@ class MetaModel(object):
             if name in descriptors:
                 prop = descriptors[name]
                 prop.deconvert(model, cosc.column.value)
+                print "Just Deconverted: %s" % prop
             else:
                 model[name] = pickle.loads(cosc.column.value)
         key = model.key()

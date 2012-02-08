@@ -220,6 +220,8 @@ class Property(object):
         if self.name is None : self.name = Property.search(instance, None,self)
         if self.name is not None:
             instance.__dict__[self.name] = value
+            if hasattr(instance, "__store__"):
+                instance.__store__[self.name] = value
             self.deleted = False
         else:
             raise AttributeError("Cannot find %s in  %s " % (self,instance))
@@ -254,6 +256,8 @@ class Property(object):
         if self.name is not None:
             try:
                 del instance.__dict__[self.name]
+                if hasattr(instance, "__store__"):
+                    del instance.__store__[self.name]
                 self.deleted = True
             except (AttributeError,KeyError) as error: raise error
         else:
@@ -434,11 +438,22 @@ class Reference(Property):
         assert key.complete(), "Your %s's key must be complete" % value
         assert key.saved or value.saved(), "Your %s must have been previously persisted in the DataStore"
         return value
-                 
-###
-# Model and Its Friends
-###
+
+                
 """
+# Model and Its Friends
+"""
+"""
+__new__: 
+is meta class that makes sure that every models
+has the __store__ attribute
+"""
+def __new__(name, bases, dict):
+    '''Custom initialization for Models...'''
+    dict["__store__"] = {}
+    return type(name, bases, dict)
+
+"""    
 Model: 
 The Universal Unit of Persistence, a model is always 
 aware of the changes you make to it; ergo models persist
@@ -453,16 +468,21 @@ class Profile(Model):
 """
 class Model(object):
     '''Unit of persistence'''
+    
+    def __new__(cls, **arguments):
+        '''Customizes all Model instances to include special attributes'''
+        instance = object.__new__(cls, **arguments)
+        instance.__store__ = {}
+        return instance
+        
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ', 'properties'])
         self.__key = None
-        self.properties = set()
         # For the Differs sake we have to find all the properties and set their default values
         [prop.configure(name, self.__class__) for name, prop in fields(self, Property).items()] # 
         for name, value in kwds.items():
-            setattr(self, name, value)
-        Schema.Initialize(self)
+            self[name] = value
             
     def key(self):
         """Unique key for identifying this instance"""
@@ -532,42 +552,41 @@ class Model(object):
          
     def keys(self):
         '''Returns a copy of all the keys in this model excluding the key property'''
-        return copy(self.properties)
+        return copy(self.__store__.keys())
     
     def values(self):
         '''Returns all the values in this Model excluding the value for the key property'''
         result = []
         print self.keys()
         for name in self.keys():
-            result.append(getattr(self, name))
+            result.append(self[name])
         return copy(result)
     
     def __setitem__(self, key, value):
-        '''Equivalent to calling setattr(instance, key, value) on this object'''
-        setattr(self, key, value)
-        
-    def __getitem__(self, key):
-        '''Allows dictionary style access'''
-        return getattr(self, key)
-        
-    def __delitem__(self, key):
-        ''' Allows us to delete a deletable Property on this object'''
-        delattr(self, key)
-        self.properties.remove(key)
-        
-    def __setattr__(self, name, value):
-        '''Customized attribute set'''
-        object.__setattr__(self, name, value)
-        if Schema.Initialized(self) and not name.startswith("__"):
-            if name == "properties":
-                raise ReservedNameError("You cannot use properties as an attribute name") 
-            self.properties.add(name)
+        '''Allows dictionary style item sets to behave properly'''
+        props = fields(self, Property)
+        if key in props:
+            setattr(self, key, value) 
+        else:
+            self.__store__[key] = value
     
+    def __getitem__(self, key):
+        '''Allows dictionary style item access to behave properly'''
+        return self.__store__[key]
+    
+    def __delitem__(self, key):
+        '''Allows dictionary style item deletions to work properly'''
+        props = fields(self, Property)
+        if key in props:
+            delattr(self, key) 
+        else:
+            del self.__store__[key]
+            
     def items(self):
         '''Returns a copy of key value pair of every property in the Model'''
         results = []
         for name in self.keys():
-            results.append((name, getattr(self, name)))
+            results.append((name, self[name]))
         return results
             
     def iterkeys(self):
@@ -584,7 +603,7 @@ class Model(object):
         '''Yields a key, value pair of each object'''
         results = []
         for name in self.keys():
-            yield name, getattr(self, name)
+            yield name, self[name]
     
     def __eq__(self, other):
         '''Two Models are equal if and only if their keys are equal'''
@@ -592,11 +611,11 @@ class Model(object):
             
     def __len__(self):
         '''How many properties are contained in this object'''
-        return len(self.properties)
+        return len(self.__store__)
     
     def __contains__(self, key):
         '''Does this model contain this key'''
-        return key in self.properties
+        return key in self.__store__
         
     def __str__(self):
         '''A String representation of this Model'''

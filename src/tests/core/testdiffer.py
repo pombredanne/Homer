@@ -31,11 +31,11 @@ class TestDiffer(TestCase):
         self.assertTrue("name" in simple.differ.deleted())
         simple.instances = 20
         self.assertTrue("instances" in simple.differ.modified())
-        simple.stuff = ["Some stuff here".split()]
+        simple["stuff"] = ["Some stuff here".split()]
         self.assertTrue("stuff" in simple.differ.added())
         simple.differ.commit()
         simple.name = "Another-name"
-        simple.stuff.append("Some-more")
+        simple["stuff"].append("Some-more")
         self.assertTrue("name" in simple.differ.added())
         self.assertTrue("stuff" in simple.differ.modified())
     
