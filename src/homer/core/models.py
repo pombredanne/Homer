@@ -53,6 +53,10 @@ class BadModelError(Exception):
 class NamespaceCollisionError(Exception):
     """An Exception that is thrown when you declare to classes with the same name in one namespace"""
     pass
+    
+class ReservedNameError(Exception):
+    """Thrown to signify that you've tried to use a reserved name"""
+    pass
         
 """
 @key:
@@ -83,8 +87,20 @@ maps names to classes which is useful during deserialization.
 """
 class Schema(object):
     """Maps classes to attributes which will store their keys"""
-    schema, keys = {}, {}
+    schema, keys, initialized = {}, {}, set()
     
+    @classmethod
+    def Initialize(cls, instance):
+        '''Tracks the Id of every model that has been initialized'''
+        assert isinstance(instance, Model), "You must pass in a model instance"
+        cls.initialized.add(id(instance))
+        #Do Pre-Storage Initialization Here if necessary
+    
+    @classmethod
+    def Initialized(cls, instance):
+        '''Checks if a Model was previously initialized'''
+        return id(instance) in cls.initialized   
+        
     @classmethod
     def Put(cls, namespace, model, key):
         """Stores Meta Information for a particular class"""
@@ -287,13 +303,17 @@ class Property(object):
             value = self.validator(value)
         return value
     
+    def create(self, instance):
+        '''Enables a property to do custom things during creation'''
+        pass # Does nothing by default...
+        
     def convert(self, instance):
         '''Yields the datastore representation of its value'''
         return str(getattr(instance, self.name))
     
-    def deconvert(self, value):
+    def deconvert(self, instance, value):
         '''Converts a value from the datastore to a native python object'''
-        return str(value)
+        setattr(instance, self.name, str(value))
            
     def configure(self, name, owner):
         """Allow this property to know its name, and owner"""
@@ -301,6 +321,7 @@ class Property(object):
         self.owner = owner
     
     def __str__(self):
+        '''String representation of a Property'''
         return "Property: {self.name}".format(self = self)
 
 """
@@ -317,9 +338,9 @@ class UnIndexable(Property):
         self.validate(value)
         return pickle.dumps(value)
     
-    def deconvert(self, value):
+    def deconvert(self, instance, value):
         '''Converts a raw datastore back to a native python object'''
-        return pickle.loads(value)
+        setattr(instance, self.name, pickle.loads(value))
         
     def indexed(self):
         '''Blobs cannot be indexed'''
@@ -398,10 +419,11 @@ class Reference(Property):
         self.validate(value)
         return repr(value.key())
         
-    def deconvert(self, value):
+    def deconvert(self, instance, value):
         '''Pulls the referenced model from the datastore, and sets it'''
         key = eval(value) #Change the @value back to a key.
-        return Simpson.read((key, FetchMode.All))[0]
+        value = Simpson.read((key, FetchMode.All))[0]
+        setattr(instance, self.name, value)
          
     def validate(self, value):
         '''Make sure that instance you set on a Reference has a complete key, and do type checking'''
@@ -436,12 +458,11 @@ class Model(object):
         self.differ = Differ(self, exclude = ['differ', 'properties'])
         self.__key = None
         self.properties = set()
-        self.__initialized = True
+        Schema.Initialize(self)
         # For the Differs sake we have to find all the properties and set their default values
         [prop.configure(name, self.__class__) for name, prop in fields(self, Property).items()] # 
         for name, value in kwds.items():
             setattr(self, name, value)
-            self.properties.add(name)
             
     def key(self):
         """Unique key for identifying this instance"""
@@ -524,7 +545,6 @@ class Model(object):
     def __setitem__(self, key, value):
         '''Equivalent to calling setattr(instance, key, value) on this object'''
         setattr(self, key, value)
-        self.properties.add(key)
         
     def __getitem__(self, key):
         '''Allows dictionary style access'''
@@ -537,11 +557,11 @@ class Model(object):
         
     def __setattr__(self, name, value):
         '''Customized attribute set'''
-        if hasattr(self, "__initialized"):
-            object.__setattr__(self, name, value)
+        object.__setattr__(self, name, value)
+        if Schema.Initialized(self) and not name.startswith("__"):
+            if name == "properties":
+                raise ReservedNameError("You cannot use properties as an attribute name") 
             self.properties.add(name)
-        else:
-            object.__setattr__(self, name, value)
     
     def items(self):
         '''Returns a copy of key value pair of every property in the Model'''

@@ -162,6 +162,7 @@ class TestModelDictability(TestCase):
             item[str(i)] = i
             comparison.add(str(i))
         for i in item.iterkeys():
+            print "Item length:", len(item)
             self.assertTrue(i in comparison)
     
     def testIterValues(self):

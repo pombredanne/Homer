@@ -381,7 +381,7 @@ class CqlQuery(object):
             names = [tuple[0] for tuple in description]
             row = cursor.fetchone()
             while row:
-                model = self.kind
+                model = self.kind()
                 descs = fields(model, Property)
                 values = {}
                 # print "Unmarshalling ROW: %s" % row
@@ -390,10 +390,10 @@ class CqlQuery(object):
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = descs.get(name, None)
                     if prop:
-                        values[name] = prop.deconvert(str(value))
+                        prop.deconvert(model, str(value))
                     else:
-                        values[name] = pickle.loads(str(value))
-                yield model(**values)
+                        model[name] = pickle.loads(str(value))
+                yield model
                 row = cursor.fetchone()
     
     def fetchone(self):
@@ -549,7 +549,7 @@ class Simpson(local):
                 conn.client.set_keyspace(key.namespace)
                 coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
                 found = MetaModel.load(key, coscs)
-                if found: results.append(found)
+                if found is not None: results.append(found)
         return results
     
     @classmethod
@@ -743,7 +743,8 @@ class MetaModel(object):
             name = cosc.column.name
             if name in descriptors:
                 prop = descriptors[name]
-                model[name] = prop.deconvert(cosc.column.value)
+                prop.deconvert(model, cosc.column.value)
+                print "Just Deconverted: %s" % prop
             else:
                 model[name] = pickle.loads(cosc.column.value)
         key = model.key()

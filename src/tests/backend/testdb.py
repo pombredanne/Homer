@@ -151,7 +151,6 @@ class BaseTestCase(TestCase):
 class TestSimpson(BaseTestCase):
     '''Behavioural contract for Simpson'''
     
-    
     def testSimpsonOnlyAcceptsModel(self):
         '''Checks if Simpson accepts non models'''
         class Person(object):
@@ -159,7 +158,6 @@ class TestSimpson(BaseTestCase):
             pass
         self.assertRaises(AssertionError, lambda: self.db.create(Person()))   
     
-      
     def testCreate(self):
         '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
         @key("name")
