@@ -23,6 +23,7 @@ Copyright 2011, June inc.
 Description:
 Common descriptors for day to day usage
 """
+from datetime import datetime
 from homer.core import *
 from homer.backend import *
 from .testdb import BaseTestCase
@@ -33,9 +34,15 @@ class TestDateTypes(BaseTestCase):
     
     def testDateTime(self):
         '''Tests for the DateTime Property'''
-        @key("date")
+        @key("name")
         class Person(Model):
-            date = DateTime(autonow = True)
+            name = String()
+            date = DateTime()
             
-            
+        person = Person(name = "lob", date = datetime.now())
+        person.save()
+        
+        found = Person.read('lob')
+        self.assertEquals(person, found)
+        self.assertEquals(person.date, found.date)
     
