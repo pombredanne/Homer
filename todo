@@ -25,5 +25,10 @@ Cassandra Support
 Notes:
 Reading and Writing is assymetric right now. 
 
+Plans for v1.2;
++ Stronger support for other cassandra types, 
++ Write CollectionReference(), to create eventually consistent collections like Mappings, lists and sets.
+  possibly the easiest way to do this is by making each Property to do its own part in creation and persistence.
+
 
 

@@ -224,7 +224,7 @@ class Property(object):
                     return self.default
                 else:
                     raise AttributeError("Cannot find %s in %s" 
-                        % (self,instance))
+			% (self,instance))
         else:
             raise AttributeError("Cannot find any property named %s in: %s" % 
                 (self.name, owner))

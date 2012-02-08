@@ -426,8 +426,8 @@ class Simpson(local):
     consistency = ConsistencyLevel.ONE
     keyspaces, columnfamilies, pools = set(), set(), dict()
     
-    @classmethod
     @redo
+    @classmethod
     def create(cls, model):
         """Creates a new ColumnFamily from this Model"""
         from homer.core.models import key, Model
