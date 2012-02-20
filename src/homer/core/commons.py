@@ -23,6 +23,7 @@ Copyright 2011, June inc.
 Description:
 Common descriptors for day to day usage
 """
+import re
 import urlparse
 import datetime
 from contextlib import closing
@@ -75,13 +76,12 @@ The following snippet shows various usecases for String;
 
 class Story(object):
     '''Models a Story Object'''
-    channel = String("BBC World News")
+    channel = String("BBC World News", pattern= r'COUNT\(.+\)')
     reporter = String(length = 30)
-    
 """
 class String(Type):
     """A data descriptor that wraps Strings"""
-    def __init__(self,default = "", length = 500, **arguments):
+    def __init__(self,default="", pattern=None, length = 500, **arguments):
         """ Construct property """
         if length <= 0:
             raise ValueError("Length must be greater than zero")
@@ -234,7 +234,7 @@ sample.
 
 class Person(object):
     name = String()
-    harem = List(String)
+    harem = List(String())
 
 person = Person()
 person.harem.extend(["Aisha","Halima","Safia",])
@@ -289,7 +289,15 @@ class Map(UnIndexable):
     def __init__(self, key=object, value=object, default = {}, **arguments):
         self.key, self.value = key, value
         super(Map, self).__init__(default, **arguments)
-      
+    
+    def convert(self, instance):
+        '''Write this Map to the datastore and return a Key'''
+        pass
+    
+    def deconvert(self, instance, value):
+        '''Read a Map back the appropriate Map from the datastore'''
+        pass
+        
     def validate(self, value):
         '''Simply does type checking'''
         value = super(Map, self).validate(value)

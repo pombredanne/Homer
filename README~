@@ -29,7 +29,7 @@ namespace = Namespace(name= "June", cassandra= c)
 namespaces.add(namespace)
 namespaces.default = "June" # or you could use namespaces.default = namespace
 
-# Now, you can create an ordinary class and store it to Cassandra and Memcache easily
+# Now, you can create and ordinary class and store it to Cassandra and Memcache easily
 @key("name")
 class Profile(Model): 
     name = String("", indexed = True)

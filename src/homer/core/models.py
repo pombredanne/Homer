@@ -33,10 +33,10 @@ from contextlib import contextmanager as context
 from homer.core.builtins import object, fields
 from homer.core.differ import Differ, DiffError
 
-
-__all__ = [ "Model", "key", "Key", "Reference", "Property",\
-                     "Type", "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
 READWRITE, READONLY = 1, 2
+__all__ = [ "Model", "key", "Key", "Reference", "Property", "Type", "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
+
+
 """Exceptions """
 class BadKeyError(Exception):
     """An Exception that shows that something is wrong with your key"""
@@ -114,8 +114,8 @@ class Schema(object):
             cls.schema[namespace][kind] = model
             cls.keys[id(model)] = (namespace, kind, key, )
         else:
-            raise NamespaceCollisionError("Model: %s already exists in the Namespace: %s" 
-                % (model, namespace))
+            raise NamespaceCollisionError("Model: %s already \
+                exists in the Namespace: %s" % (model, namespace))
     
     @classmethod
     def clear(cls):
@@ -175,12 +175,35 @@ class Key(object):
     def __repr__(self):
         format = "Key('{self.namespace}', '{self.kind}', '{self.id}')"
         return format.format(self = self)
+
+"""
+Converters and Descriptors:
+A converter is a single class that contains methods for coercion, validation
+and transformation to and from data store entities, A descriptor is a special
+converter that is also a python descriptor, allowing users of descriptors
+to do coercion, and validation on attributes of their class.
+"""
+class Converter(object):
+    '''The contract for all converters'''
+    
+    def validate(self, value):
+        '''Basic Definition just returns the value passed to it'''
+        return value
+        
+    def convert(self, instance):
+        '''Yields the datastore representation of its value'''
+        return str(getattr(instance, self.name))
+    
+    def deconvert(self, instance, value):
+        '''Converts a value from the datastore to a native python object'''
+        setattr(instance, self.name, str(value))
+  
          
 """
 Property:
 Base class for all data descriptors; 
 """
-class Property(object):
+class Property(Converter):
     """A Generic Data Property which can be READONLY or READWRITE"""
     counter = 0
     def __init__(self, default = None, mode = READWRITE, **keywords):
@@ -207,10 +230,6 @@ class Property(object):
         else:
             raise ValueError("keyword: validator must be a callable or None")
         self.counter += 1
-    
-    def indexed(self):
-        '''Checks if this property should be indexed'''
-        return self.__indexed
          
     def __set__(self, instance, value):
         """Put @value in @instance's class dictionary"""
@@ -307,17 +326,17 @@ class Property(object):
             value = self.validator(value)
         return value
     
+    def indexed(self):
+        '''Checks if this property should be indexed'''
+        return self.__indexed
+        
+    def saveable(self):
+        '''All descriptors can be saved by default'''
+        return True
+        
     def create(self, instance):
         '''Enables a property to do custom things during creation'''
-        pass # Does nothing by default...
-        
-    def convert(self, instance):
-        '''Yields the datastore representation of its value'''
-        return str(getattr(instance, self.name))
-    
-    def deconvert(self, instance, value):
-        '''Converts a value from the datastore to a native python object'''
-        setattr(instance, self.name, str(value))
+        pass 
            
     def configure(self, name, owner):
         """Allow this property to know its name, and owner"""
@@ -349,7 +368,43 @@ class UnIndexable(Property):
     def indexed(self):
         '''Blobs cannot be indexed'''
         return False
-        
+
+"""
+UnSaveable:
+The base class of all descriptors that cannot be saved.
+"""
+class UnSaveable(Property):
+    '''A Property that cannot be persisted'''
+    
+    def saveable(self):
+        '''All unsaveable descriptors cannot be saved'''
+        return False
+    
+
+'''
+Default:
+A Descriptor that is a shortcut for creating default types.
+'''
+class Default(UnSaveable):
+    '''Used to create default descriptors for Models'''
+    def __init__(self, key=Converter, value=Converter):
+        '''Simple stash for Descriptors for  Models'''
+        assert issubclass(key, Converter), "%s must be an instance of Property" % key
+        assert issubclass(value, Converter), "%s must be an instance of Property" % value
+        self.key, self.value = key, value
+
+    def __set__(self, instance, value):
+        """Put @value in @instance's class dictionary"""
+        raise AttributeError("A Default Property is Readonly")
+    
+    def __get__(self, instance, owner):
+        """Read the value of this property"""
+        return self.key, self.value
+           
+    def __delete__(self, instance):
+        """ Delete this Property from @instance """
+        raise AttributeError("A Default Property cannot be deleted")
+          
 """
 Type:
 A Property that does type coercion, checking and validation. This is base
@@ -407,7 +462,6 @@ from homer.backend import Simpson, CqlQuery, FetchMode
 Reference:
 A Pointer to another Model that has been persisted
 in the database.
-
 """  
 class Reference(Property):
     '''A Pointer to another persisted Model'''
@@ -459,19 +513,19 @@ class Profile(Model):
 """
 class Model(object):
     '''Unit of persistence'''
-    
     def __new__(cls, **arguments):
         '''Customizes all Model instances to include special attributes'''
+        if not hasattr(cls, "default"):
+            cls.default = Default()
         instance = object.__new__(cls, **arguments)
         instance.__store__ = {}
+        [prop.configure(name, cls) for name, prop in fields(cls, Property).items()] 
         return instance
         
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
         self.differ = Differ(self, exclude = ['differ', 'properties'])
-        self.__key = None
-        # For the Differs sake we have to find all the properties and set their default values
-        [prop.configure(name, self.__class__) for name, prop in fields(self, Property).items()] # 
+        self.__key = None 
         for name, value in kwds.items():
             self[name] = value
             
@@ -558,7 +612,8 @@ class Model(object):
         if key in props:
             setattr(self, key, value) 
         else:
-            self.__store__[key] = value
+            k, v =  self.default.key(key), self.default.value(value)
+            self.__store__[k] = v
     
     def __getitem__(self, key):
         '''Allows dictionary style item access to behave properly'''

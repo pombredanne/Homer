@@ -3,6 +3,7 @@ FEATURE LIST FOR v1.2
 1. Create a UUID, Rating, BlowFishHash and Md5Hash Property
 2. Write JSON Serialization and Deserialization
 3. Add support for proper serialization of DateTime related descriptors : Done
+4. Default Property validators for Map keys.
 
 + Stronger support for other cassandra types, 
 + Write CollectionReference(), to create eventually consistent collections like Mappings, lists and sets.
@@ -10,5 +11,33 @@ FEATURE LIST FOR v1.2
 
 
 
+'''
+DESIGN SCRIPT
+Styles for Default Types:
+An Extensible Wide Row; with inbuilt default validation and serialization
+'''
+
+Basic = String(pattern="{Email Regular Expression Here}", length= 50)
+
+@key("id")
+class Profile(Model):
+    '''Basic Extensible Wide Row'''
+    id = UUID()
+    bookmarks = Map(Basic, URL)
+    default = Default(Basic, Integer)
 
 
+Or:  
+
+@key("id")
+class Profile(Model):
+    '''Basic Extensible Wide Row'''
+    id = UUID()
+    bookmarks = Map(Basic, URL)
+    
+    @property
+    def default(self):
+        '''Converters for Dynamic Properties'''
+        return Basic, Integer
+    
+Depending on how you intend to use this.    
