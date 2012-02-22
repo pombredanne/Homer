@@ -234,7 +234,7 @@ sample.
 
 class Person(object):
     name = String()
-    harem = List(String)
+    harem = List(String())
 
 person = Person()
 person.harem.extend(["Aisha","Halima","Safia",])
@@ -290,11 +290,11 @@ class Map(UnIndexable):
         self.key, self.value = key, value
         super(Map, self).__init__(default, **arguments)
     
-    def convert(self, instance):
+    def convert(self, instance, name, value):
         '''Write this Map to the datastore and return a Key'''
         pass
     
-    def deconvert(self, instance, value):
+    def deconvert(self, instance, name, value):
         '''Read a Map back the appropriate Map from the datastore'''
         pass
         
@@ -396,13 +396,13 @@ class DateTime(Type):
             return self.now()
         return super(DateTime,self).__get__(instance,owner)
     
-    def convert(self, instance):
+    def convert(self, instance, name, value):
         '''Yields the datastore representation of its value'''
         return repr(getattr(instance, self.name))
     
-    def deconvert(self, instance, value):
+    def deconvert(self, instance, name, value):
         '''Converts a value from the datastore to a native python object'''
-        setattr(instance, self.name, eval(value))
+        return eval(value)
         
     def empty(value):
         return value is None

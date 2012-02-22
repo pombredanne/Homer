@@ -200,7 +200,7 @@ class Converter(object):
         the default implementation just returns a str repr of @value after
         validation
         '''
-        self.validate(value)
+        value = self.validate(value)
         return str(value)
     
     def deconvert(self, instance, name, value):
@@ -365,12 +365,12 @@ class UnIndexable(Property):
     
     def convert(self, instance, name, value):
         '''Pickles this object to the datastore'''
-        self.validate(value)
+        value = self.validate(value)
         return pickle.dumps(value)
     
     def deconvert(self, instance, name, value):
         '''Converts a raw datastore back to a native python object'''
-        loaded = pickle.loads(value))
+        loaded = pickle.loads(value)
         return loaded
         
     def indexed(self):
@@ -592,8 +592,9 @@ class Model(object):
     @classmethod
     def query(cls, query, **kwds):
         """Interface to Cql from your model, which yields models"""
-        names = ", ".join(fields(cls, Property).keys())
-        q = 'SELECT %s FROM %s %s' % (names, cls.kind(), query)
+        props = [name for name in fields(cls, Property).keys() if name is not "default"]
+        names = ", ".join(props)
+        q = 'SELECT * FROM %s %s' % (cls.kind(), query)
         return CqlQuery(cls, q, **kwds)
     
     @classmethod
@@ -618,7 +619,10 @@ class Model(object):
         if key in props:
             setattr(self, key, value) 
         else:
+            # TODO: Maybe I should cache the Converter instead of creating it every time.
             k, v = self.default
+            k = k() if isinstance(k, type) else k  #Construct the converter object if necessary
+            v = v() if isinstance(v, type) else v
             self.__store__[k(key)] = v(value)
     
     def __getitem__(self, key):

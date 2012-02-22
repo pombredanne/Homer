@@ -327,7 +327,7 @@ class TestReference(BaseTestCase):
         self.db.put(book)
         
         print "Checking Conversion Routine"
-        k = eval(Book.author.convert(book))
+        k = eval(Book.author.convert(book, "author", person))
         self.assertTrue(k == Key("Test","Person","sasuke"))
         with self.assertRaises(Exception):
             book.author = "Hello"

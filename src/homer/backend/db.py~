@@ -390,9 +390,15 @@ class CqlQuery(object):
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = descs.get(name, None)
                     if prop:
-                        prop.deconvert(model, str(value))
+                        found = prop.deconvert(model, name, str(value))
+                        model[name] = found
                     else:
-                        model[name] = pickle.loads(str(value))
+                        k, v = model.default
+                        k = k() if isinstance(k, type) else k
+                        v = v() if isinstance(v, type) else v
+                        name = k.deconvert(model, name, str(value))
+                        value = v.deconvert(model, name, str(value))
+                        model[name] = value
                 yield model
                 row = cursor.fetchone()
     
@@ -404,9 +410,9 @@ class CqlQuery(object):
         '''String representation of a CQLQuery.'''
         return "CqlQuery: %s" % self.query
 
-###
+"""
 # Cassandra Mapping Section;
-###
+"""
 
 """
 FetchMode:
@@ -638,11 +644,11 @@ class MetaModel(object):
             options = namespaces.get(self.namespace)
             query = 'CREATE INDEX ON {kind}({name});'
             for name, property in self.fields.items():
-                if property.indexed():
-                    #print "Creating index on: %s" % property
+                if property.indexed() and property.saveable():
+                    print "Creating index on: %s" % property
                     cursor = connection.cursor()
                     formatted = query.format(kind = self.kind, name= property.name)
-                    #print formatted
+                    print formatted
                     cursor.execute("USE %s;" % options.name)
                     cursor.execute(formatted)
                 else:
@@ -695,10 +701,11 @@ class MetaModel(object):
             return 'org.apache.cassandra.db.marshal.%s' % value   
         columns = []
         for name,prop in self.fields.items():
-            column = ColumnDef()
-            column.name = name
-            column.validation_class = expand(self.defaultType())
-            columns.append(column)
+            if prop.saveable():
+                column = ColumnDef()
+                column.name = name
+                column.validation_class = expand(self.defaultType())
+                columns.append(column)
         return columns
            
     def keyType(self):
@@ -717,18 +724,23 @@ class MetaModel(object):
                 break
             time.sleep(0.10) 
     
-    def getColumn(self, name):
+    def getColumn(self, name, value):
         '''Returns a Native Column from a property with this name'''
         column = Column()
         column.name = name
         if name in self.fields:
             property = self.fields[name]
-            column.value = property.convert(self.model)  
+            column.value = property.convert(self.model, name, value)  
             ttl = property.ttl
-            if ttl:
-                column.ttl = ttl
-        else: 
-            column.value = pickle.dumps(self.model[name]) # Just pickle it over the wire
+            if ttl: column.ttl = ttl
+        else:
+            k, v = self.model.default
+            k = k() if isinstance(k, type) else k
+            v = v() if isinstance(v, type) else v
+            name = k.convert(self.model, name, value)
+            value = v.convert(self.model, name, value)
+            column.name = name
+            column.value = value # Just pickle it over the wire
         column.timestamp = int(time.time())
         return column
     
@@ -740,13 +752,19 @@ class MetaModel(object):
         model = cls()
         descriptors = fields(cls, Property)
         for cosc in coscs:
-            name = cosc.column.name
-            if name in descriptors:
+            name = cosc.column.name  
+            if name in descriptors:  # Deconvert static properties first.
                 prop = descriptors[name]
-                prop.deconvert(model, cosc.column.value)
+                deconverted = prop.deconvert(model, name, cosc.column.value)
+                model[name] = deconverted 
                 print "Just Deconverted: %s" % prop
-            else:
-                model[name] = pickle.loads(cosc.column.value)
+            else: # Deconvert dynamic properties, this deconverts column names, and column values
+                k, v = model.default
+                k = k() if isinstance(k, type) else k
+                v = v() if isinstance(v, type) else v
+                name = k.deconvert(model, name, cosc.column.value)
+                value = v.deconvert(model, name, cosc.column.value)
+                model[name] = value
         key = model.key()
         key.saved = True
         return model
@@ -759,7 +777,7 @@ class MetaModel(object):
         # Marshalling additions
         # print 'Marshalling additions'
         for name in differ.added():
-            column = self.getColumn(name) #=> Fetch the Column for this name
+            column = self.getColumn(name, self.model[name]) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()
             cosc.column = column
             mutation = Mutation()
@@ -767,7 +785,7 @@ class MetaModel(object):
             mutations[self.kind].append(mutation)
         # print 'Marshalling modifications'
         for name in differ.modified():
-            column = self.getColumn(name) #=> Fetch the Column for this name
+            column = self.getColumn(name, self.model[name]) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()
             cosc.column = column
             mutation = Mutation()
