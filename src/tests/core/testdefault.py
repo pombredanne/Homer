@@ -18,7 +18,6 @@ class TestDefault(TestCase):
         class Sample(object):
             '''The simplest default class'''
             default = Default()
-        self.cls = Sample
         self.sample = Sample()
 
     def testSanity(self):

@@ -186,17 +186,29 @@ to do coercion, and validation on attributes of their class.
 class Converter(object):
     '''The contract for all converters'''
     
+    def __call__(self, value):
+        '''A shortcut to validate'''
+        return self.validate(value)
+        
     def validate(self, value):
         '''Basic Definition just returns the value passed to it'''
         return value
         
-    def convert(self, instance):
-        '''Yields the datastore representation of its value'''
-        return str(getattr(instance, self.name))
+    def convert(self, instance, name, value):
+        '''
+        Returns the datastore suitable repr of @value.
+        the default implementation just returns a str repr of @value after
+        validation
+        '''
+        self.validate(value)
+        return str(value)
     
-    def deconvert(self, instance, value):
-        '''Converts a value from the datastore to a native python object'''
-        setattr(instance, self.name, str(value))
+    def deconvert(self, instance, name, value):
+        '''
+        Converts a @value which is a datastore repr to a native python object.
+        the default implementation just returns a str repr of @value
+        '''
+        return str(value)
   
          
 """
@@ -282,11 +294,7 @@ class Property(Converter):
         else:
             raise AttributeError("Cannot find Property: %s in: %s or its ancestors" 
                 % (self,instance))
-    
-    def __call__(self, value):
-        """A shortcut to self.validate(value)"""
-        return self.validate(value)
-                             
+   
     @staticmethod
     def search(instance, owner, descriptor):
         """Returns the name of this descriptor by searching its class hierachy"""
@@ -355,15 +363,16 @@ properties that cannot be indexed will be pickled into the datastore
 class UnIndexable(Property):
     '''A Property that cannot be indexed'''
     
-    def convert(self, instance):
+    def convert(self, instance, name, value):
         '''Pickles this object to the datastore'''
-        value = getattr(instance, self.name)
         self.validate(value)
         return pickle.dumps(value)
     
-    def deconvert(self, instance, value):
+    def deconvert(self, instance, name, value):
         '''Converts a raw datastore back to a native python object'''
-        setattr(instance, self.name, pickle.loads(value))
+        loaded = pickle.loads(value))
+        self.validate(loaded)
+        return loaded
         
     def indexed(self):
         '''Blobs cannot be indexed'''
@@ -380,7 +389,6 @@ class UnSaveable(Property):
         '''All unsaveable descriptors cannot be saved'''
         return False
     
-
 '''
 Default:
 A Descriptor that is a shortcut for creating default types.
@@ -389,13 +397,13 @@ class Default(UnSaveable):
     '''Used to create default descriptors for Models'''
     def __init__(self, key=Converter, value=Converter):
         '''Simple stash for Descriptors for  Models'''
-        assert isinstance(key, Converter), "%s must be an instance of Property" % key
-        assert isinstance(value, Converter), "%s must be an instance of Property" % value
+        assert issubclass(key, Converter), "%s must be an instance of Converter" % key
+        assert issubclass(value, Converter), "%s must be an instance of Converter" % value
         self.key, self.value = key, value
 
     def __set__(self, instance, value):
         """Put @value in @instance's class dictionary"""
-        raise AttributeError("A Default Property is Readonly")
+        raise AttributeError("A Default Property is read only")
     
     def __get__(self, instance, owner):
         """Read the value of this property"""
@@ -471,20 +479,19 @@ class Reference(Property):
         self.cls = cls
         Property.__init__(self, default, **arguments)
     
-    def convert(self, instance):
+    def convert(self, instance, name, value):
         '''References are stored as Keys in the datastore'''
-        value = getattr(instance, self.name)
         self.validate(value)
         return repr(value.key())
         
-    def deconvert(self, instance, value):
+    def deconvert(self, instance, name, value):
         '''Pulls the referenced model from the datastore, and sets it'''
         key = eval(value) #Change the @value back to a key.
-        value = Simpson.read((key, FetchMode.All))[0]
-        setattr(instance, self.name, value)
+        found = Simpson.read((key, FetchMode.All))[0]
+        return found
          
     def validate(self, value):
-        '''Make sure that instance you set on a Reference has a complete key, and do type checking'''
+        '''Makes sure the instance you set on a Reference has a complete key after type checking'''
         if value is None:
             return None
         assert isinstance(value, Model), "You must use a subclass of Model"
@@ -612,8 +619,8 @@ class Model(object):
         if key in props:
             setattr(self, key, value) 
         else:
-            k, v =  self.default.key(key), self.default.value(value)
-            self.__store__[k] = v
+            k, v = self.default
+            self.__store__[k(key)] = v(value)
     
     def __getitem__(self, key):
         '''Allows dictionary style item access to behave properly'''
