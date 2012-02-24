@@ -29,7 +29,7 @@ import datetime
 from contextlib import closing
 from collections import Hashable
 from homer.util import Size
-from homer.core.models import Type, BadValueError, Property, UnIndexable, UnIndexedType
+from homer.core.models import Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
 
 # TODO: Add common types; MD5, UUID, SHA512, SHA256, Email, Rating, BlowFishHash, 
 __all__ = [
@@ -48,7 +48,7 @@ class Circle(object):
     pi = Float(3.142)
     
 """
-class Float(Type):
+class Float(Basic):
     """ A float descriptor """
     type = float
     
@@ -64,7 +64,7 @@ class Balls(object)
     sold = Integer()
     
 """
-class Integer(Type):
+class Integer(Basic):
     """Data descriptor for an Integer"""
     type = long
 
@@ -79,7 +79,7 @@ class Story(object):
     channel = String("BBC World News", pattern= r'COUNT\(.+\)')
     reporter = String(length = 30)
 """
-class String(Type):
+class String(Basic):
     """A data descriptor that wraps Strings"""
     def __init__(self,default="", pattern=None, length = 500, **arguments):
         """ Construct property """
@@ -116,7 +116,7 @@ avatar = Blob.fromFile(filelike)
 
 ....
 """   
-class Blob(UnIndexedType):
+class Blob(Basic):
     """Store Blobs"""
     def __init__(self, default= "", size = maxsize, path = None, **arguments):
         """
@@ -135,7 +135,11 @@ class Blob(UnIndexedType):
             file = open(path,'rb')
             default = self.read(file)
         super(Blob,self).__init__(type = str, default = default, **arguments)
-          
+    
+    def indexed(self):
+        '''Blobs cannot be indexed'''
+        return False;
+             
     @property
     def size(self):
         """
@@ -290,14 +294,6 @@ class Map(UnIndexable):
         self.key, self.value = key, value
         super(Map, self).__init__(default, **arguments)
     
-    def convert(self, instance, name, value):
-        '''Write this Map to the datastore and return a Key'''
-        pass
-    
-    def deconvert(self, instance, name, value):
-        '''Read a Map back the appropriate Map from the datastore'''
-        pass
-        
     def validate(self, value):
         '''Simply does type checking'''
         value = super(Map, self).validate(value)
@@ -337,7 +333,7 @@ person.married = True
 assert person.married == True
 
 """        
-class Boolean(Type):
+class Boolean(Basic):
     """Stores Boolean values, It coerces values like normal python bools"""
     type = bool
 
@@ -357,7 +353,7 @@ class Person(object):
     website = URL("http://harem.tumblr.com")
        
 """        
-class URL(Property):
+class URL(Basic):
     """Makes sure that a string you are creating is a valid URL"""
     
     def empty(self, value):

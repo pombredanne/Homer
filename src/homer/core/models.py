@@ -201,14 +201,14 @@ class Converter(object):
         validation
         '''
         value = self.validate(value)
-        return str(value)
+        return pickle.dumps(value)
     
     def deconvert(self, instance, name, value):
         '''
         Converts a @value which is a datastore repr to a native python object.
         the default implementation just returns a str repr of @value
         '''
-        return str(value)
+        return pickle.loads(value)
   
          
 """
@@ -384,6 +384,10 @@ The base class of all descriptors that cannot be saved.
 class UnSaveable(Property):
     '''A Property that cannot be persisted'''
     
+    def indexed(self):
+        '''All Unsaveable descriptors cannot be indexed'''
+        return False
+        
     def saveable(self):
         '''All unsaveable descriptors cannot be saved'''
         return False
@@ -499,6 +503,16 @@ class Reference(Property):
         assert key.saved or value.saved(), "Your %s must have been previously persisted in the DataStore"
         return value
 
+
+class Basic(Type):
+    '''A Type that can be converted with str'''
+    def convert(self, instance, name, value):
+        '''Converts the basic type with the str operation'''
+        return str(self.validate(value))
+        
+    def deconvert(self, instance, name, value):
+        '''Since we are expecting a str, we just return the value'''
+        return value
                 
 """
 # Model and Its Friends

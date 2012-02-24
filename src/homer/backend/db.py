@@ -352,7 +352,9 @@ class CqlQuery(object):
             found = Schema.Get(self.kind)[0]
             self.keyspace = found
         
+        print "Executing Query: %s in %s" % (self.query, self.keyspace)
         if not self.kind.__name__ in Simpson.columnfamilies:
+            print "Creating new Column Family: %s " % self.kind.__name__
             Simpson.create(self.kind())
                
         pool = Simpson.pool(self.keyspace)
@@ -360,6 +362,7 @@ class CqlQuery(object):
             #print "Executing %s" % self
             conn.client.set_keyspace(self.keyspace)
             cursor = conn.cursor()
+            print "Transferring query: %s to the server" % self.query
             cursor.execute(self.query, dict(self.keywords))
             self.cursor = cursor
           
@@ -442,18 +445,21 @@ class Simpson(local):
         # THIS METHOD
         assert issubclass(model.__class__, Model),\
             "parameter model: %s must inherit from model" % model
+        print "Creating %s" % model
         info = Schema.Get(model) 
         namespace = info[0]
         kind = info[1]
         meta = MetaModel(model)
         pool = cls.pool(namespace)
         with using(pool) as conn:
+            print "Finished Initializing Connection: %s " % conn
             meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
             meta.makeColumnFamily(conn) 
             meta.makeIndexes(conn)
             cls.columnfamilies.add(kind)
+            print "Finished Trying to Create Successfully"
              
     @classmethod
     @redo
@@ -640,11 +646,12 @@ class MetaModel(object):
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
         from homer.options import namespaces
+        print "Trying to create an index on" % self.model
         try:
             options = namespaces.get(self.namespace)
             query = 'CREATE INDEX ON {kind}({name});'
             for name, property in self.fields.items():
-                if property.indexed():
+                if property.saveable() and property.indexed():
                     print "Creating index on: %s" % property
                     cursor = connection.cursor()
                     formatted = query.format(kind = self.kind, name= property.name)
@@ -652,11 +659,11 @@ class MetaModel(object):
                     cursor.execute("USE %s;" % options.name)
                     cursor.execute(formatted)
                 else:
-                    #print "Cannot index: %s" % property
-                    pass
+                    print "Cannot index: %s" % property
+                    
             self.wait(connection)
-        except Exception:
-            pass #Index already seems to exists'
+        except Exception as e:
+            raise e
                     
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''

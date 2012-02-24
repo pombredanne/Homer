@@ -46,9 +46,10 @@ class TestCqlQuery(BaseTestCase):
             book = Book(name = i, author="Anne Rice")
             self.db.put(book)
  
-        query = CqlQuery(Book, "SELECT * FROM Book WHERE author= :name; ", name="Anne Rice")
+        query = CqlQuery(Book, "SELECT * FROM Book WHERE author= :author; ", author="Anne Rice")
         results = list(query)
-        self.assertTrue(len(results) == 500)
+        assert(len(results) == 500)
+        print "Found Total Results: " , len(results)
  
     def testCount(self):
         '''Shows that count based queries work'''
@@ -66,6 +67,7 @@ class TestCqlQuery(BaseTestCase):
         self.connection.execute("USE Test;")
         self.connection.execute("SELECT COUNT(*) FROM Book;")
         correct = self.connection.fetchone()[0]
+        print "Results: ", (result, correct)
         self.assertTrue(result == correct) 
 
     def testCountForNonExistentModel(self):

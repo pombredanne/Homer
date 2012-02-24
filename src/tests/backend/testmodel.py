@@ -40,7 +40,8 @@ class TestModel(BaseTestCase):
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
-        self.assertTrue(row[0] == "1234" and row[1] == "Iroiso Ikpokonte")
+        print "Row Contents: ", row
+        self.assertTrue(row[0] == u"1234" and row[1] == u"Iroiso Ikpokonte")
         assert profile.key().complete() == True # Make sure the object has a complete Key
         assert profile.key().saved == True
     
@@ -82,8 +83,9 @@ class TestModel(BaseTestCase):
         cursor = self.connection
         cursor.execute("USE Test")
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
-        # print cursor.description
+        print cursor.description
         row = cursor.fetchone()
+        print "Row Contents: ", row[0]
         self.assertTrue(row[0] == "Pride")
         Book.delete('Pride')
         cursor.execute("SELECT name FROM Book WHERE KEY=Pride")
