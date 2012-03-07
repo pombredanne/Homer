@@ -517,9 +517,9 @@ class Basic(Type):
         '''Since we are expecting a str, we just return the value'''
         return value
                 
-"""
-# Model and Its Friends
-"""
+###
+# MODEL AND ITS FRIENDS
+###
 
 """    
 Model: 

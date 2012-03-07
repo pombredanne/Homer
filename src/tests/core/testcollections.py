@@ -17,8 +17,8 @@ class TestList(TestCase):
     """Tests for List() descriptor"""
     def setUp(self):
         class Family(object):
-            birthdays = List(date)
-            nested = List(List(String))
+            birthdays = List(Date)
+            nested = List(Basic)
         self.test = Family()
     
     def testListSanity(self):
