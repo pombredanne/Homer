@@ -1,5 +1,6 @@
 Notes
 *.py[co~]
+todo~
 
 # Packages
 *.egg

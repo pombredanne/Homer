@@ -503,12 +503,15 @@ class Reference(Property):
         assert key.saved or value.saved(), "Your %s must have been previously persisted in the DataStore"
         return value
 
-
+"""
+Basic:
+Represents a type that you can convert and deconvert with str()
+"""
 class Basic(Type):
     '''A Type that can be converted with str'''
     def convert(self, instance, name, value):
         '''Converts the basic type with the str operation'''
-        return str(self.validate(value))
+        return unicode(self.validate(value))
         
     def deconvert(self, instance, name, value):
         '''Since we are expecting a str, we just return the value'''

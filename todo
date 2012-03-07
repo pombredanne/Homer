@@ -2,6 +2,8 @@ FEATURE LIST FOR v1.2
 =====================
 1. Create a UUID, Rating, BlowFishHash and Md5Hash Property
 2. Write JSON Serialization and Deserialization
+3. Write the collections package and move Map, List and Set to that package. Write
+3.1Write the pattern option for String
 4. Default Properties for all Models, 
 
 + Write CollectionReference(), to create eventually consistent collections like Mappings, lists and sets.
@@ -38,6 +40,59 @@ class Profile(Model):
         '''Converters for Dynamic Properties'''
         return Basic, Integer
     
-Depending on how you intend to use this. For this to work I have to remove all the 
+Depending on how you intend to use this. For this to work I have to 
 regularize the method signature for deconvert and convert, effectively making them
-inpersonal to class. All the other functionality would remain unaffected...
+inpersonal to owner descriptor. All the other functionality should remain unaffected...
+
+class MapModel(Model):
+    '''A Model that persists a Map to Cassandra'''
+    pass
+
+class SetModel(Model):
+    '''A Model that persists a Set to Cassandra'''
+    pass
+    
+class ListModel(Model):
+    '''A Model that persists a Homogenous List to Cassandra'''
+    pass
+    
+    
+class Map(UnIndexable):
+    ''' A descriptor for dict-like objects '''
+    def __init__(self, key=object, value=object, default = {}, **arguments):
+        self.key, self.value = key, value
+        super(Map, self).__init__(default, **arguments)
+        self.__clone__ = makeModel(self) '''Create an automatic class for this the Descriptor'''
+        self.__shadows__ = {}
+    
+    def __set__(self, instance, value):
+        '''Persists if this @value is the first one, '''
+        '''Automatically generate a customized class from this descriptor and create an instance of it'''
+        hashed = id(instance)
+        if hashed not in self.__shadows__:
+            model = create(self, value)
+            self.__shadows__[hashed] = model
+        
+    def validate(self, value):
+        '''Simply does type checking'''
+        value = super(Map, self).validate(value)
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            try: value = dict(value)
+            except:
+                raise BadValueError("This property has to be set, got a : %s" % type(value))
+        coerced = {}
+        keyVal, valueVal = None, None
+       
+        if isinstance(self.key, type):
+            name = self.key.__name__
+            keyVal = defaults[name] if name in defaults else self.key
+        if isinstance(self.value, type):
+            val = self.value.__name__
+            valueVal = defaults[val] if val in defaults else self.value    
+        for k,v in value.items(): 
+            key = keyVal(k) 
+            value = valueVal(v)
+            coerced[key] = value
+        return coerced
