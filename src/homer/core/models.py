@@ -23,10 +23,10 @@ Copyright 2011, June inc.
 Description:
 Contains Model, Key and @key
 """
-import copy
-from weakref import WeakValueDictionary
 import datetime
 import cPickle as pickle
+from copy import copy, deepcopy
+from weakref import WeakValueDictionary
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
@@ -466,9 +466,6 @@ class UnIndexedType(UnIndexable, Type):
     '''A Type that cannot be indexed'''
     pass
 
-from copy import copy, deepcopy
-from homer.backend import Simpson, CqlQuery, FetchMode
-
 """
 Reference:
 A Pointer to another Model that has been persisted
@@ -524,7 +521,7 @@ class Basic(Type):
 ###
 # MODEL AND ITS FRIENDS
 ###
-
+from homer.backend import Simpson, CqlQuery, FetchMode
 """    
 Model: 
 The Universal Unit of Persistence, a model is always 

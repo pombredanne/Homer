@@ -1,4 +1,19 @@
 #!/usr/bin/env python
+#
+# Copyright 2011 June Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """
 Author : Iroiso . I (iroiso@live.com)
 Project: Homer SDK
@@ -9,14 +24,14 @@ Description:
 configuration options for Homer; This module was inspired by tornado.options...
 An awesome example of how to use homer.core.commons in day to day development.
 """
-# Standard Library Imports.
+# Standard library imports.
 import os
 import sys
 import logging
 import time
 from threading import RLock, local
 
-# Homer Related Importeds.
+# Homer related imports.
 from homer.core.models import READONLY, Type
 from homer.core.commons import *
 from homer.core.builtins import object  

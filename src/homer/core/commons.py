@@ -24,19 +24,56 @@ Description:
 Common descriptors for day to day usage
 """
 import re
-import urlparse
+import uuid
+import bcrypt
 import datetime
+import urlparse
 from contextlib import closing
 from homer.util import Size
-from homer.core.models import Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
+from homer.core.models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
 
 # TODO: Add common types; MD5, UUID, SHA512, SHA256, Email, Rating, BlowFishHash, 
 __all__ = [
             "Integer","String","Blob","Boolean","URL", "Time", "DateTime",
             "Date","Float", "Map", "Set", "List",
 ]
-maxsize = 1024 * 1024 * 512 #Redis cannot deal with more than 512M values.
-            
+maxsize = 1024 * 1024 * 512
+
+
+"""
+UUID:
+Generates Type 4 UUIDs on the fly when they are requested for; this is
+useful for creating UUID's for Models.
+"""
+class UUID(Basic):
+    '''Generates Type 4 UUIDs on the fly whenever they are requested'''
+    def __init__(self, default = None):
+        '''Simply makes sure that a UUID Property is READWRITE'''
+        super(UUID,self).__init__(default = default, type = str, mode=READWRITE)
+    
+    def validate(self, value):
+        '''Validates UUID objects.'''
+        try:
+            if isinstance(value, uuid.UUID):
+                return value
+            coerced = uuid.UUID(value)
+            return coerced
+        except Exception:
+            raise BadValueError("Could not convert %s to a Type 4 UUID" % (value,))
+           
+    def __get__(self,instance,owner):
+        """Generates a new UUID if this attribute is None."""
+        if self.name is None : self.name = UUID.search(instance, owner,self)
+        if self.name is not None:
+            value = instance.__dict__.get(self.name, None)
+            if value is None:
+                value = uuid.uuid4()
+                self.__set__(instance, value)
+            return value
+        else:
+            raise AttributeError("Cannot find any property named %s in: %s" % 
+                (self.name, owner))
+              
 """
 Float:
 A data descriptor for modeling Floats in your 'things'. It coerces like the normal
@@ -204,9 +241,8 @@ class Boolean(Basic):
 """
 URL:
 A URL descriptor that validates strings to make sure they are valid URLs.
-It inherits String, so you can use it like a string.It uses a Strings default length
-of 500 chars, If you need a longer URL, modify its length property.
-
+It inherits String, so you can use it like a string.It uses a Strings default
+length of 500 chars, If you need a longer URL, modify its length property.
 e.g.
 
 class Person(object):
@@ -216,6 +252,7 @@ class Person(object):
 class URL(Basic):
     """Makes sure that a string you are creating is a valid URL"""
     type = str
+    
     def empty(self, value):
         '''What does it mean for a URL to be empty'''
         return value is None or bool(value.strip())

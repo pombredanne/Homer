@@ -18,7 +18,7 @@ class TestDefault(TestCase):
         '''Creates a sample class with a Default Property installed on it'''
         class Sample(object):
             '''The simplest default class'''
-            default = Default()
+            default = Default(String, Integer)
         self.sample = Sample()
 
     def testSanity(self):

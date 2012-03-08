@@ -1,9 +1,8 @@
 FEATURE LIST FOR v1.2
 =====================
-1.  Create a UUID, Rating, BlowFishHash and Md5Hash Property
-2.  Write JSON Serialization and Deserialization
+1.  Create a UUID, Rating
+2.  Write JSON Serialization and Deserialization; (Be careful to avoid mass assignment exploits)
 3.  Write counter implementation.
-4.  Default Properties for all Models, 
 
 '''
 DESIGN SCRIPT
