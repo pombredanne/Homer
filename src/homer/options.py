@@ -9,11 +9,14 @@ Description:
 configuration options for Homer; This module was inspired by tornado.options...
 An awesome example of how to use homer.core.commons in day to day development.
 """
+# Standard Library Imports.
 import os
 import sys
 import logging
 import time
 from threading import RLock, local
+
+# Homer Related Importeds.
 from homer.core.models import READONLY, Type
 from homer.core.commons import *
 from homer.core.builtins import object  

@@ -2,16 +2,8 @@ FEATURE LIST FOR v1.2
 =====================
 1.  Create a UUID, Rating, BlowFishHash and Md5Hash Property
 2.  Write JSON Serialization and Deserialization
-3.  Write the collections package and move Map, List and Set to that package. Write
-3.1 Write the pattern option for String,
-3.2 Change the type of URL to str : Done
-3.3 Write counter implementation.
+3.  Write counter implementation.
 4.  Default Properties for all Models, 
-
-+ Write CollectionReference(), to create eventually consistent collections like Mappings, lists and sets.
-  possibly the easiest way to do this is by making each Property to do its own part in creation and persistence.
-
-
 
 '''
 DESIGN SCRIPT
@@ -26,7 +18,6 @@ class Profile(Model):
     bookmarks = Map(String, URL)
     default = Default(Basic, Integer)
 
-
 Or:  
 
 @key("id")
@@ -39,3 +30,23 @@ class Profile(Model):
     def default(self):
         '''Converters for Dynamic Properties'''
         return Basic, Integer
+
+##
+# ALTERNATIVE IMPLEMENTATION USING MODELING
+##
+@key("id")
+class Bookmark(Model):
+    '''A Ton of Model Preferences'''
+    id = UUID()
+    default = Default(String, URL)
+
+@key('id')
+class User(Model):
+    '''Model for a User account'''
+    id = UUID()
+    avatar = Blob()
+    email = String()
+    name = String("Gandhi")
+    password = BlowFishHash()
+    bookmark = Reference(Bookmark)
+    

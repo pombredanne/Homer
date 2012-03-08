@@ -406,7 +406,7 @@ class Default(UnSaveable):
 
     def __set__(self, instance, value):
         """Put @value in @instance's class dictionary"""
-        raise AttributeError("A Default Property is read only")
+        raise AttributeError("A Default Property is Read only")
     
     def __get__(self, instance, owner):
         """Read the value of this property"""
@@ -484,14 +484,18 @@ class Reference(Property):
     
     def convert(self, instance, name, value):
         '''References are stored as Keys in the datastore'''
-        self.validate(value)
-        return repr(value.key())
+        model = self.validate(value)
+        if model is not None:
+            return repr(value.key())
+        else: return repr(None)
         
     def deconvert(self, instance, name, value):
         '''Pulls the referenced model from the datastore, and sets it'''
         key = eval(value) #Change the @value back to a key.
-        found = Simpson.read((key, FetchMode.All))[0]
-        return found
+        if key:
+            found = Simpson.read((key, FetchMode.All))[0]
+            return found
+        else: return None
          
     def validate(self, value):
         '''Makes sure the instance you set on a Reference has a complete key after type checking'''
