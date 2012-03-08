@@ -47,9 +47,9 @@ useful for creating UUID's for Models.
 """
 class UUID(Basic):
     '''Generates Type 4 UUIDs on the fly whenever they are requested'''
-    def __init__(self, default = None):
+    def __init__(self, default = uuid.uuid4(), indexed=True, **keywords):
         '''Simply makes sure that a UUID Property is READWRITE'''
-        super(UUID,self).__init__(default = default, type = str, mode=READWRITE)
+        super(UUID,self).__init__(default=default, type=str, indexed=indexed, mode=READWRITE, **keywords)
     
     def validate(self, value):
         '''Validates UUID objects.'''
@@ -449,6 +449,7 @@ class Map(UnIndexable):
       
     def validate(self, value):
         '''Simply does type checking'''
+        print "GOT VALUE: ", value
         value = super(Map, self).validate(value)
         if value is None:
             return None

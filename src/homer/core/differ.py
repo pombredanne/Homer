@@ -53,24 +53,6 @@ class Differ(object):
                 if not self.forbidden(name):
                     yield name
             
-    def commit(self):
-        '''Make the current state the default state for this Differ'''
-        self.replica = copy.deepcopy(self.instance.__store__)
-   
-    def revert(self):
-        '''Reverts @self.model to the previous commit state'''
-        # This method will be used to implement a rollback feature for Models
-        clean = self.replica
-        dirty = self.model
-        dispose = [v for v in dirty if v not in clean]
-        # Revert all known attributes
-        for name in clean:
-            self.instance[name] = clean[name]
-        # Delete all new attributes
-        for name in dispose: 
-            delattr(self.model, name)
-        self.commit()
-            
     def deleted(self):
         '''Yields the names of the attributes that were deleted from this model'''
         dict = self.replica
@@ -88,7 +70,23 @@ class Differ(object):
                     if not self.forbidden(name):
                         yield name
         
-
+    def commit(self):
+        '''Make the current state the default state for this Differ'''
+        self.replica = copy.deepcopy(self.instance.__store__)
+   
+    def revert(self):
+        '''Reverts @self.model to the previous commit state'''
+        # This method will be used to implement a rollback feature for Models
+        clean = self.replica
+        dirty = self.model
+        dispose = [v for v in dirty if v not in clean]
+        # Revert all known attributes
+        for name in clean:
+            self.instance[name] = clean[name]
+        # Delete all new attributes
+        for name in dispose: 
+            delattr(self.model, name)
+        self.commit()
    
     
     

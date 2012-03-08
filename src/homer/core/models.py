@@ -548,7 +548,7 @@ class Model(object):
         
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
-        self.differ = Differ(self, exclude = ['differ', 'properties'])
+        self.differ = Differ(self, exclude = ['differ',])
         self.__key = None 
         for name, value in kwds.items():
             self[name] = value
@@ -584,7 +584,7 @@ class Model(object):
     @classmethod
     def read(cls, key, mode = FetchMode.Property):
         """Retreives objects from the datastore """
-        assert isinstance(key, (str, Key))
+        assert isinstance(key, (basestring, Key))
         namespace, kind, member = Schema.Get(cls)
         if isinstance(key, Key):
             return Simpson.read((key, mode))[0]

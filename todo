@@ -31,7 +31,7 @@ class Profile(Model):
         return Basic, Integer
 
 ##
-# ALTERNATIVE IMPLEMENTATION USING MODELING
+# ALTERNATIVE IMPLEMENTATION OFF ECC'S USING MODELING
 ##
 @key("id")
 class Bookmark(Model):
@@ -44,8 +44,6 @@ class User(Model):
     '''Model for a User account'''
     id = UUID()
     avatar = Blob()
-    email = String()
     name = String("Gandhi")
-    password = BlowFishHash()
     bookmark = Reference(Bookmark)
     

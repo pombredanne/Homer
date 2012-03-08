@@ -756,6 +756,7 @@ class MetaModel(object):
         '''Creates a Model from an iterable of ColumnOrSuperColumns'''
         if not coscs: return None
         cls = Schema.ClassForModel(key.namespace, key.kind)
+        info = Schema.Get(cls)
         model = cls()
         descriptors = fields(cls, Property)
         for cosc in coscs:
@@ -772,6 +773,8 @@ class MetaModel(object):
                 name = k.deconvert(model, name, cosc.column.value)
                 value = v.deconvert(model, name, cosc.column.value)
                 model[name] = value
+        keyname = info[2]
+        setattr(model, keyname, key.id) #Make sure the newly returned model has the same key
         key = model.key()
         key.saved = True
         return model

@@ -10,7 +10,7 @@ Unittests for the Default Property...
 """
 from unittest import TestCase,expectedFailure,skip
 from homer.core.commons import UUID
-from homer.core.models import BadValueError
+from homer.core.models import BadValueError, key, Model
     
 class TestUUID(TestCase):
     '''Unittests for the UUID Descriptor'''
