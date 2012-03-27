@@ -31,13 +31,15 @@ class Profile(Model):
         return Basic, Integer
 
 ##
-# ALTERNATIVE IMPLEMENTATION OFF ECC'S USING MODELING
+# ALTERNATIVE IMPLEMENTATION OFF ECC'S (Eventually constistent collections)
+# USING MODELING
 ##
 @key("id")
 class Bookmark(Model):
     '''A Ton of Model Preferences'''
     id = UUID()
     default = Default(String, URL)
+
 
 @key('id')
 class User(Model):
