@@ -53,17 +53,17 @@ Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
 Installation:
 =============
 To install you can use pip or download the latest build from 
-[github](http://github.com/iroiso/homer)
+[github](http://github.com/junery/homer)
 
 pip:
 ====
-$ sudo pip install homer
+$ sudo pip install homer (Not Done Yet)
 
 from source:
 ============
 Download the latest build by cloning master repository
 
-$ git clone git://github.com/iroiso/homer.git
+$ git clone git://github.com/junery/homer.git
 $ cd homer
 $ sudo python setup.py install
 
