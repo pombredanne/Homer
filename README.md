@@ -1,35 +1,32 @@
-Author : Iroiso . I (iroiso at live dot com)
-License: Apache License 2.0
-Copyright 2011, June inc.
+License: Apache License 2.0  
+&copy; 2011, June inc.
 
 
 Description:
-============
+------------
 Homer is the pragmatic python based object non-relational 
 mapper for Apache Cassandra that doesn't get in your way.
 
 Installation:
-=============
+-------------
 To install you can use pip or download the latest build from 
-[github](http://github.com/junery/homer)
+[Github](http://github.com/junery/homer)
 
-pip:
-====
+##pip:
 $ sudo pip install homer (Not Done Yet)
 
-from source:
-============
+##from source:
 Download the latest build by cloning master repository
 
-$ git clone git://github.com/junery/homer.git
-$ cd homer
-$ sudo python setup.py install
+$ git clone git://github.com/junery/homer.git  
+$ cd homer  
+$ sudo python setup.py install  
 
 Example Usage:
-==============
+--------------
 This example walks you through creating a simple model and persisting it to cassandra. 
 We assume you've used cassandra before; If you haven't there are plenty of helpful 
-resources on the [Project Site](http://cassandra.apache.org) that'll get you started.
+resources on the [Apache Project Page](http://cassandra.apache.org) that'll get you started.
 
 So here we go:
 
