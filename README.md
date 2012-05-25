@@ -1,5 +1,4 @@
-Author : Iroiso . I (iroiso@live.com), Whiz. A. (waomuya@yahoo.com)
-Project: Homer SDK
+Author : Iroiso . I (iroiso at live dot com)
 License: Apache License 2.0
 Copyright 2011, June inc.
 
@@ -8,8 +7,6 @@ Description:
 ============
 Homer is the pragmatic python based object non-relational 
 mapper for Apache Cassandra that doesn't get in your way.
-We built Homer to power the backend of [June](http://june.ly);
-It's the ideal way to access cassandra from python.
 
 Installation:
 =============
@@ -102,7 +99,7 @@ results = Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
 
 '''
 The *results* object above is an iterable object that yields
-Profile instances when you iterate over it.
+Profile instances when you iterate over it. 
 ''''
 ```
 This is by no means a complete guide. There is still alot of documenting
