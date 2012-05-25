@@ -1,4 +1,4 @@
-Author: I (iroiso at live dot com)
+Author: I (iroiso at live dot com)  
 License: Apache License 2.0  
 &copy; 2011, June inc.
 
