@@ -26,7 +26,7 @@ Example Usage:
 --------------
 This example walks you through creating a simple model and persisting it to cassandra. 
 We assume you've used cassandra before; If you haven't there are plenty of helpful 
-resources on the [Apache Project Page](http://cassandra.apache.org) that'll get you started.
+resources on the [Apache Cassandra Project Page](http://cassandra.apache.org) that'll get you started.
 
 So here we go:
 
