@@ -2,11 +2,10 @@ Author: I (iroiso at live dot com)
 License: Apache License 2.0  
 &copy; 2011, June inc.
 
-
 Description:
 ------------
-Homer is the pragmatic python based object non-relational 
-mapper for Apache Cassandra that doesn't get in your way.
+Homer is an intuitive and pragmatic python based object non-relational 
+mapper for Apache Cassandra with a beautiful API.
 
 Installation:
 -------------
@@ -73,8 +72,13 @@ queries as we'll see later on.
 
 # Specify your consistency level and save your instance.
 with Level.Quorum:
-    person = Profile(name = 'Yoda', link = 'http://faceboook.com/yoda')
+    person = Profile(name='Yoda', link='http://faceboook.com/yoda')
     person.save()
+
+# You can also save with the default consistency level which is One.  
+another = Profile(name='Iroiso', link='http://facebook.com/iroiso')
+another.save()
+
 
 '''
 Homer will automatically create a Column Family named 'Profile' 
@@ -86,23 +90,31 @@ for the first time.
 found = Profile.read('Yoda') 
 assert person == found
 
-# Want stronger consistency? you can use the 'with Level' clause too!
+# Want stronger consistency? you can use the 'with Level.All' clause too!
 with Level.All:
     found = Profile.read('Yoda')
     assert person == found
-
-
-# You can also use CQL to search the secondary index, 
+    
+'''
+Other Consistency Levels are (One, Two, Three, EachQuorum, LocalQuorum and Any), 
+You can also use CQL to search the secondary index, with the idiom below.
+'''
 results = Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
+assert results.next() == another
 
 '''
-The *results* object above is an iterable object that yields
-Profile instances when you iterate over it. 
+The *results* object above is a generator that yields Profile instances when you
+iterate over it. 
 ''''
 ```
 This is by no means a complete guide. There is still alot of documenting
-and explaining to do, need more samples? please dive into the [Tests Directory](src/tests) 
+and explaining to do, need more samples? please dive into the [Tests Directory](http://github.com/junery/homer/src/tests) 
 to quench your thirst. Any suggestions or improvements? Fork away!
 
 Does any of these seem interesting? then, you'd like to join us! or contribute, 
 either ways we'd love to hear from you. Reach out to us iroiso at live dot com.
+
+Notes:
+------
+Another opensource project made with love in the Junery; pragmatic, simple,  
+beautiful and pleasurable to use.
