@@ -25,7 +25,7 @@ setup(
     name="homer",
     version="1.1.1.beta",
     description="Python Object Non-Relational Mapper for Cassandra",
-    long_description=open(abspath(join(dirname(__file__), 'README'))).read(),
+    long_description=open(abspath(join(dirname(__file__), 'README.md'))).read(),
     maintainer='Iroiso Ikpokonte',
     maintainer_email='iroiso@live.com',
     package_dir = {'': 'src',},
