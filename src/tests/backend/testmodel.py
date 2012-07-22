@@ -16,6 +16,7 @@
 #
 import time
 from homer.core import *
+from homer.core.models import BadValueError
 from homer.backend import *
 from .testdb import BaseTestCase
 
@@ -23,6 +24,16 @@ from .testdb import BaseTestCase
 class TestModel(BaseTestCase):
     '''Tests if the persistence properties of a Model works'''
     
+    def testModelValidation(self):
+        '''Shows that every Model does validation before saving data'''
+        @key("name")
+        class House(Model):
+            name = Property("House M.D")
+            girlfriend = Property(required=True)
+        with self.assertRaises(BadValueError):
+            house = House(name="Greg")
+            house.save()  
+        
     def testSave(self):
         '''Shows that save works'''
         @key("id")

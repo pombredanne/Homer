@@ -38,8 +38,8 @@ class TestKeyAndModel(TestCase):
         with self.assertRaises(TypeError):
             @key("name")
             class House(object):
-                name = Property("House M.D")
-    
+                name = Property("House M.D")         
+        
     def testkeyAcceptsCallables(self):
         """Asserts that @key can accept a callable function"""
         @key("name")

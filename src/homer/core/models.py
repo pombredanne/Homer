@@ -577,7 +577,13 @@ class Model(object):
     
     def save(self):
         """Stores this object in the datastore and in the cache"""
-        #print 'Putting %s at the backend' % self
+        # Makes sure that all required properties are available before persistence.
+        for name, prop in fields(self, Property).items():
+            if hasattr(prop, 'required') and prop.required:
+                value = getattr(self, name)
+                if prop.empty(value):
+                    raise BadValueError("Property: %s is required" % name)
+        
         Simpson.put(self)
         self.differ.commit()
                
