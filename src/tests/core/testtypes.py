@@ -8,7 +8,7 @@ Copyright 2011, June inc.
 Description:
 Unittests for homer.core.types
 """
-from homer.core.types import phone
+from homer.core.types import phone, blob
 from unittest import TestCase,expectedFailure,skip
 
 class TestPhone(TestCase):
@@ -29,3 +29,12 @@ class TestPhone(TestCase):
         '''Makes sure that phones are properly stringified'''
         mobile = phone("+234", "(0248) 123-7654")
         self.assertEquals("+2342481237654", str(mobile))
+        
+class TestBlob(TestCase):
+    '''Unittests for the blob type'''
+    
+    def testSanity(self):
+        '''Makes sure that basic usage is sane'''
+        image = blob(content="Some rubbish text from a file" * 1024, mimetype="image/jpeg")
+        self.assertTrue(image.checksum != None)
+        self.assertTrue(repr(image)) 

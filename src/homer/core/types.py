@@ -14,13 +14,13 @@ mobile = phone('+1', '(248) 123-7654')
 assert mobile.country == "+1"
 assert mobile.number == '2481237654'
 """
-
-__all__ = ["phone", "rating",]
+import json
+import hashlib
+__all__ = ["phone", "blob",]
 
 
 class phone(object):
     '''A Phone number in international format'''
-    
     def __init__(self, country, number):
         '''country == 'country code' number == 'local number' '''
         assert isinstance(country, str) and isinstance(number, str), "Type Error, Please use strings instead"
@@ -34,10 +34,6 @@ class phone(object):
         self.number = ''.join(value)
         self.country = country
     
-    def __repr__(self):
-        '''Returns a phone object as a tuple'''
-        return "phone('%s', '%s')" % (self.country, self.number)
-    
     def __eq__(self, other):
         '''Equality tests'''
         assert isinstance(other, phone),"%s must be a phone type" % other
@@ -46,5 +42,43 @@ class phone(object):
     def __str__(self):
         '''String representation of an international phone number'''
         return self.country + self.number
+    
+    def __repr__(self):
+        '''Returns a phone object as a tuple'''
+        return "phone('%s', '%s')" % (self.country, self.number)
 
 
+class blob(object):
+    '''A opaque binary object with a content-type and description'''
+    def __init__(self, content="", mimetype="application/unknown", description="", **keywords):
+        '''Basic constructor for a blob'''
+        self.metadata = {}
+        self.content = content
+        self.mimetype = mimetype
+        self.description = description
+        self.metadata.update(keywords)
+        self.checksum = self.__md5(content)
+    
+    def __md5(self, content):
+        '''Calculates the md5 hash of the content and returns it as a string'''
+        m = hashlib.md5()
+        m.update(content)
+        return m.hexdigest()
+            
+    def __eq__(self, other):
+        '''Compares the md5 hashes of the both of the contents''' 
+        assert isinstance(other, blob), "%s must be a blob object" % other
+        return self.checksum == other.checksum
+    
+    def __repr__(self):
+        '''Returns a JSON representation of the contents of this blob'''
+        dump = {"metadata": self.metadata, "content": self.content,\
+           "mimetype": self.mimetype, "description": self.description, 
+                        "checksum": self.checksum}
+        return json.dumps(dump)
+        
+    def __str__(self): 
+        '''Returns a human readable string representation of the blob'''
+        return "Blob: [mimetype:%s, checksum:%s, description:%s]" % \
+            (self.mimetype, self.checksum, self.description)
+            
