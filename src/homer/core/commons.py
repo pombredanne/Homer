@@ -494,7 +494,7 @@ class Map(UnIndexable):
 # names are useful for getting supported common types
 names = { "Integer": Integer, "String": String, "Blob": Blob, "Boolean": Boolean, 
     "URL": URL, "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, 
-        "Map" : Map, "List": List, "Set": Set,}             
+        "Map" : Map, "List": List, "Set": Set, "Phone": Phone,}             
 
 ## Common Singletons
 defaults = { name : value() for name, value in names.items() }  

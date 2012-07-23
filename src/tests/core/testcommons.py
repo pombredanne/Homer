@@ -10,9 +10,40 @@ Unittests for the records module...
 """
 from unittest import TestCase,expectedFailure,skip
 from homer.core.commons import *
-from homer.core.models import READONLY
+from homer.core.types import phone
+from homer.core.models import READONLY, BadValueError
 from datetime import date,datetime
 
+class TestPhone(TestCase):
+    '''Tests or the Phone descriptor'''
+    def setUp(self):
+        '''set up a test phone'''
+        class Person(object):
+            mobile = Phone(required=True)
+            
+        self.clasz = Person
+        self.person = Person()
+        self.person.mobile = phone("+234", "08094486101")
+
+    def testSanity(self):
+        '''sanity tests or a phone'''
+        with self.assertRaises(BadValueError):
+            self.person.mobile = "+123458790"
+        with self.assertRaises(BadValueError):
+            self.person.mobile = None
+        self.person.mobile = phone("+234", "08094486101")
+    
+    def testConversionAndDeconversion(self):
+        '''Tests conversion and Deconversion'''
+        descriptor = Phone()
+        expected = repr(self.person.mobile)
+        value = descriptor.convert(self.person, "mobile", self.person.mobile)
+        self.assertEquals(expected, value) 
+        
+        deserialized = eval(value)
+        self.assertEquals(self.person.mobile, deserialized)       
+        
+            
 class TestFloat(TestCase):
     """Tests for the Float Descriptor"""
     def setUp(self):
