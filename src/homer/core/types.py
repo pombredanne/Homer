@@ -23,6 +23,7 @@ class phone(object):
     
     def __init__(self, country, number):
         '''country == 'country code' number == 'local number' '''
+        assert isinstance(country, str) and isinstance(number, str), "Type Error, Please use strings instead"
         country, number = country.strip(), number.strip()
         if country[0] != '+':
             raise ValueError("Country code must begin with a '+'")
