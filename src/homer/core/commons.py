@@ -30,32 +30,50 @@ import datetime
 import urlparse
 from contextlib import closing
 from homer.util import Size
-from homer.core.models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
+from .types import phone
+from .models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
 
-# TODO: Add common types; MD5, UUID, SHA512, SHA256, Email, Rating, BlowFishHash, 
-__all__ = [
-            "Integer","String","Blob","Boolean","URL", "Time", "DateTime",
-            "Date","Float", "Map", "Set", "List",
-]
+# TODO: Add common types, Md5Hash, SHA512Hash, SHA256Hash, Email, Rating, BlowFishHash.
 maxsize = 1024 * 1024 * 512
+__all__ = ["Integer","String","Blob","Boolean","URL", "Time","DateTime",
+    "Phone","Date","Float", "Map", "Set", "List",]
 
-
+"""
+Phone:
+A descriptor that stores phone objects,
+"""
+class Phone(Type):
+    '''An descriptor that contains phone objects'''
+    type = phone
+    
+    def convert(self, instance, name, value):
+        '''Yields the datastore representation of its value'''
+        value = self.validate(value)
+        return repr(value)
+    
+    def deconvert(self, instance, name, value):
+        '''Converts a value from the datastore to a native python object'''
+        result = eval(value)
+        assert isinstance(result, phone), "Got unexpected type after serialization"
+        return result
+                
 """
 UUID:
 Generates Type 4 UUIDs on the fly when they are requested for; this is
 useful for creating UUID's for Models.
 """
 class UUID(Basic):
-    '''Generates Type 4 UUIDs on the fly whenever they are requested'''
+    '''A type 4 UUID Property'''
+    
     def __init__(self, default = uuid.uuid4(), indexed=True, **keywords):
         '''Simply makes sure that a UUID Property is READWRITE'''
-        super(UUID,self).__init__(default=default, type=str, indexed=indexed, mode=READWRITE, **keywords)
+        super(UUID,self).__init__(default=default, type=str, indexed=indexed, 
+            mode=READWRITE, **keywords)
     
     def validate(self, value):
         '''Validates UUID objects.'''
         try:
-            if isinstance(value, uuid.UUID):
-                return value
+            if isinstance(value, uuid.UUID): return value
             coerced = uuid.UUID(value)
             return coerced
         except Exception:
@@ -474,11 +492,9 @@ class Map(UnIndexable):
         return coerced
                 
 # names are useful for getting supported common types
-names = {
-          "Integer": Integer, "String": String, "Blob": Blob,
-          "Boolean": Boolean, "URL": URL, "Time": Time, "DateTime": 
-           DateTime, "Date": Date, "Float": Float, "Map" : Map, "List": List, "Set": Set,
-}             
+names = { "Integer": Integer, "String": String, "Blob": Blob, "Boolean": Boolean, 
+    "URL": URL, "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, 
+        "Map" : Map, "List": List, "Set": Set,}             
 
 ## Common Singletons
 defaults = { name : value() for name, value in names.items() }  
