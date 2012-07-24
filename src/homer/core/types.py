@@ -14,8 +14,10 @@ mobile = phone('+1', '(248) 123-7654')
 assert mobile.country == "+1"
 assert mobile.number == '2481237654'
 """
+import sys
 import json
 import hashlib
+
 __all__ = ["phone", "blob",]
 
 
@@ -50,7 +52,7 @@ class phone(object):
 
 class blob(object):
     '''A opaque binary object with a content-type and description'''
-    def __init__(self, content="", mimetype="application/unknown", description="", **keywords):
+    def __init__(self, content="", mimetype="application/text", description="", **keywords):
         '''Basic constructor for a blob'''
         self.metadata = {}
         self.content = content
@@ -66,10 +68,16 @@ class blob(object):
         return m.hexdigest()
             
     def __eq__(self, other):
-        '''Compares the md5 hashes of the both of the contents''' 
-        assert isinstance(other, blob), "%s must be a blob object" % other
-        return self.checksum == other.checksum
+        '''Compares the checksums if @other is a blob, else it compares content directly''' 
+        if isinstance(other, blob):
+            return self.checksum == other.checksum
+        else: 
+            return self.content == other
     
+    def __sizeof__(self):
+        '''Returns the size of this blob, this returns the size of the content string'''
+        return sys.getsizeof(self.content)
+        
     def __repr__(self):
         '''Returns a JSON representation of the contents of this blob'''
         dump = {"metadata": self.metadata, "content": self.content,\

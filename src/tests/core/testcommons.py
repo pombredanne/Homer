@@ -10,7 +10,7 @@ Unittests for the records module...
 """
 from unittest import TestCase,expectedFailure,skip
 from homer.core.commons import *
-from homer.core.types import phone
+from homer.core.types import phone, blob
 from homer.core.models import READONLY, BadValueError
 from datetime import date,datetime
 
@@ -222,25 +222,23 @@ class TestBlob(TestCase):
     """Tests for Blob() data descriptors"""
     def setUp(self):
         class TestObject(object):
-            image = Blob(path = "./misc/blobs/femme.jpeg", size= 1024*84)
-            blob = Blob.fromFile(file = open("./misc/blobs/femme.jpeg"), mode = READONLY)
+            image = Blob(size= 1024*60)
         self.test = TestObject()
-    
     
     def testSizeKeyword(self):
         """Verifies that Blobs Respect the size keyword"""
         with self.assertRaises(Exception):
             self.test.image = open("./misc/blobs/screenshot.png").read() #To Large
     
+    def testBlobAcceptsBlobs(self):
+        '''Verifies that you can use the `blob` builtin with the Blob descriptor'''
+        image = blob("Some stupid content" * 50, mimetype="application/text")
+        self.test.image = image
+        
     def testBlobRejectsChoices(self):
         """Makes sure that Blob() rejects choices"""
         with self.assertRaises(AssertionError):
-            blob = Blob(path = "./misc/blobs/femme.jpeg",choices = ["one","two",])
-            
-    def testPathandDefaultIncompatible(self):
-        """Verifies that you cannot use Blob(path= "to/a/file", default = "23435347")"""
-        with self.assertRaises(ValueError):
-            blob = Blob(path="./misc/blobs/femme.jpeg",default = "Hello I'm a Blob")
+            blob = Blob(choices = ["one","two",])
             
     def testBlobCoercesManyThings(self):
         """Shows that Blobs can coerce any thing that can be coerced with str()"""

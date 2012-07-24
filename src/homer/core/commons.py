@@ -25,12 +25,11 @@ Common descriptors for day to day usage
 """
 import re
 import uuid
-import bcrypt
 import datetime
 import urlparse
 from contextlib import closing
 from homer.util import Size
-from .types import phone
+from .types import phone, blob
 from .models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
 
 # TODO: Add common types, Md5Hash, SHA512Hash, SHA256Hash, Email, Rating, BlowFishHash.
@@ -155,6 +154,7 @@ class String(Basic):
 Blob:
 Blob is Data descriptor for modeling blobs, it provides useful features like size
 monitoring, and static methods for creating Blobs from a path and a filelike object.
+Blob descriptors are not indexable
 e.g.
 
 class Person(object):
@@ -172,34 +172,24 @@ avatar = Blob.fromFile(filelike)
 """   
 class Blob(Basic):
     """Store Blobs"""
-    def __init__(self, default= "", size = maxsize, path = None, **arguments):
+    def __init__(self, default= "", size = maxsize, **arguments):
         """
         Creates a Blob
-        @size: Represents the maximum size in bytes this Blob can store, -1 
+        @size: Represents the maximum size in bytes this Blob can store, -1 or less
                means it can store anysize.
-        @file: This is a convenience method that allows hackers to 
-               create a blob from any stream or file like object.
         """
         assert "choices" not in arguments,"Choices do not mean anything in Blobs"
-        if path and default:
-            raise ValueError("You cannot use keyword arguments 'path'\
-                and 'default' together")
         self.__size = size
-        if path is not None:
-            file = open(path,'rb')
-            default = self.read(file)
         super(Blob,self).__init__(type = str, default = default, **arguments)
     
+
     def indexed(self):
         '''Blobs cannot be indexed'''
         return False;
              
     @property
     def size(self):
-        """
-        Whatever you store in this Blob MUST not be larger than the 
-        size property
-        """
+        """Whatever you store in this Blob MUST not be larger than the size property"""
         return self.__size
     
     def validate(self,value):
@@ -211,31 +201,22 @@ class Blob(Basic):
         if not inBytes <= self.size :
             raise BadValueError("Your blob size must be less than:\
                 %s , got: %s" % self.size, inBytes )
+        if not isinstance(value, blob):
+            value = blob(str(value))
         return value
     
-    def read(self,file):
-        """
-        Internal helper method that allows a blob a read a file, if the 
-        file size if greater than the size of the Blob, the rest of the 
-        contents of the file is ignored. i.e the blob only stores the number
-        of bytes in self.size
-        """
-        with closing(file):
-            data = file.read(self.size)
-            return data
-                     
-    @staticmethod
-    def fromFile(file, size = -1,**arguments):
-        """
-        Creates a Blob from this Stream or Filelike object. 
-        It automatically closes the file after it is done. Be careful. 
-        If you open a very large file, your memory will suffer !.
-        """
-        with closing(file):
-            data = file.read(size)
-            blob = Blob(size = size , default = data,**arguments)
-            return blob
-            
+    def convert(self, instance, name, value):
+        '''Every blob type knows how to convert itself to a JSON representation on repr'''
+        value = self.validate(value)
+        return repr(value)
+    
+    def deconvert(self, instance, name, value):
+        '''Change a JSON repr of a blob stored in the datastore to a python object'''
+        new = blob()
+        loaded = json.loads(value)
+        for name, value in loaded.items():
+            setattr(new, name, value)
+        return new                             
 
 """
 Boolean:
