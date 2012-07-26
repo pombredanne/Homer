@@ -32,6 +32,7 @@ class TestPhone(TestCase):
         with self.assertRaises(BadValueError):
             self.person.mobile = None
         self.person.mobile = phone("+234", "08094486101")
+        self.person.mobile = ("+234", "08094486101")
     
     def testConversionAndDeconversion(self):
         '''Tests conversion and Deconversion'''

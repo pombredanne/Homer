@@ -451,7 +451,7 @@ class Type(Property):
             return value
         if value is not None and not isinstance(value,self.type):
             try:
-                if isinstance(value, list): value = self.type(*value)
+                if isinstance(value, list) or isinstance(value, tuple): value = self.type(*value)
                 elif isinstance(value, dict): value = self.type(**value)
                 else: value = self.type(value)
             except: 
