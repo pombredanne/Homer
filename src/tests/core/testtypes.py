@@ -38,6 +38,4 @@ class TestBlob(TestCase):
         image = blob(content="Some rubbish text from a file" * 1024, mimetype="image/jpeg", gzipped=True)
         self.assertTrue(image.checksum != None)
         self.assertTrue("gzipped" in image.metadata)
-        
-        
         self.assertTrue(repr(image)) 

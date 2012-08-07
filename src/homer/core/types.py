@@ -33,14 +33,24 @@ class phone(object):
         value = [c for c in number if c.isdigit()]
         if value[0] == '0':
             value = value[1:]    
-        self.number = ''.join(value)
-        self.country = country
+        self.__number = ''.join(value)
+        self.__country = country
     
     def __eq__(self, other):
         '''Equality tests'''
         assert isinstance(other, phone),"%s must be a phone type" % other
-        return self.number == other.number and self.country == other.country
-            
+        return self.__number == other.__number and self.__country == other.__country
+    
+    @property
+    def country(self):
+        '''A readonly property that returns the country of this phone number'''
+        return self.__country
+    
+    @property
+    def number(self):
+        '''A readonly property that returns the number part of this phone number'''
+        return self.__number
+               
     def __str__(self):
         '''String representation of an international phone number'''
         return self.country + self.number
