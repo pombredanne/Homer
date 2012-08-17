@@ -1,8 +1,9 @@
 FEATURE LIST FOR v1.2
 =====================
-1.  Create a UUID, Rating
+1.  Write a bootstrap [setup/teardown/clean] script that will automate installs of all dependencies
 2.  Write JSON Serialization and Deserialization; (Be careful to avoid mass assignment exploits)
 3.  Write counter implementation.
+
 
 '''
 DESIGN SCRIPT

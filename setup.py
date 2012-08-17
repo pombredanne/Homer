@@ -18,7 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from distutils.core import setup
+from setuptools import setup
 from os.path import abspath, join, dirname
 
 setup(
@@ -32,6 +32,7 @@ setup(
     url="http://github.com/iroiso/homer",
     packages=["homer", "homer.core", "homer.backend",],
     provides=["homer"],
+    install_requires =["cql==1.0.6", "thrift"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: Apache Software License",
