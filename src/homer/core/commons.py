@@ -34,8 +34,8 @@ from .models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable
 
 # TODO: Add common types, Md5Hash, SHA512Hash, SHA256Hash, Email, Rating, BlowFishHash.
 maxsize = 1024 * 1024 * 512
-__all__ = ["Integer","String","Blob","Boolean","URL", "Time","DateTime",
-    "Phone","Date","Float", "Map", "Set", "List",]
+__all__ = ["Integer","String","Blob","Boolean","URL", "Time","DateTime", \
+    "Phone","Date","Float", "Map", "Set", "List", "UUID",]
 
 """
 Phone:
