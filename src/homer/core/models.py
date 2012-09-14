@@ -374,7 +374,7 @@ class UnIndexable(Property):
         return loaded
         
     def indexed(self):
-        '''Blobs cannot be indexed'''
+        '''An un-indexable property cannot be indexed'''
         return False
 
 """
