@@ -50,7 +50,7 @@ def clean():
                 shutil.rmtree(path)
     header('')
 
-def test():
+def test(arguments):
     '''Runs unittests for the project'''
     header("Launching Apache Cassandra")
     home = os.path.expanduser("~/.pid")
@@ -63,7 +63,10 @@ def test():
     time.sleep(7.0) # Wait for the Cassandra Server to fully launch
     header("Launched Cassandra Successfully")
     header("Running Unit tests")
-    local("./test.py")
+    if not arguments:
+        local("./test.py")
+    else:
+        local("./test.py %s" % arguments)
     pid = open(home).read()
     header("Trying to close Cassandra...")
     result = local("kill %s" % pid)
