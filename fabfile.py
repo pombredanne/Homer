@@ -50,7 +50,7 @@ def clean():
                 shutil.rmtree(path)
     header('')
 
-def test(arguments):
+def test(arguments=""):
     '''Runs unittests for the project'''
     header("Launching Apache Cassandra")
     home = os.path.expanduser("~/.pid")
