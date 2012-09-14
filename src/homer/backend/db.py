@@ -643,6 +643,7 @@ class MetaModel(object):
         except InvalidRequestException as e:
             pass #raise DuplicateError("Another Keyspace with this name seems to exist")
     
+    @redo
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
         from homer.options import namespaces
