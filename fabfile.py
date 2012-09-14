@@ -10,6 +10,10 @@ import shutil
 from datetime import datetime
 from gates.core import Application, run
 
+import time
+from fabric.api import local, run, cd
+
+CASSANDRA_HOME = "~/Hub/apache-cassandra-1.0.6"
 sys.path.extend(["./src", "./lib"])
 
 def header(message, char= "="):
@@ -45,3 +49,26 @@ def clean():
                 print("Removing Directory: %s" % path)
                 shutil.rmtree(path)
     header('')
+
+def test():
+    '''Runs unittests for the project'''
+    header("Launching Apache Cassandra")
+    home = os.path.expanduser("~/.pid")
+    command = CASSANDRA_HOME + "/bin/cassandra -p %s" % home
+    result = local(command)
+    if result.failed:
+        print("Couldn't Launch Cassandra, Quitting...")
+        sys.exit(1)
+    
+    time.sleep(7.0) # Wait for the Cassandra Server to fully launch
+    header("Launched Cassandra Successfully")
+    header("Running Unit tests")
+    local("./test.py")
+    pid = open(home).read()
+    header("Trying to close Cassandra...")
+    result = local("kill %s" % pid)
+    if not result.failed:
+        header("Successfully closed Cassandra.")
+    clean()
+    header("Finished testing the project successfully")
+    

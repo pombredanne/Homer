@@ -36,11 +36,6 @@ class phone(object):
         self.__number = ''.join(value)
         self.__country = country
     
-    def __eq__(self, other):
-        '''Equality tests'''
-        assert isinstance(other, phone),"%s must be a phone type" % other
-        return self.__number == other.__number and self.__country == other.__country
-    
     @property
     def country(self):
         '''A readonly property that returns the country of this phone number'''
@@ -50,7 +45,12 @@ class phone(object):
     def number(self):
         '''A readonly property that returns the number part of this phone number'''
         return self.__number
-               
+    
+    def __eq__(self, other):
+        '''Equality tests'''
+        assert isinstance(other, phone),"%s must be a phone type" % other
+        return self.__number == other.__number and self.__country == other.__country
+         
     def __str__(self):
         '''String representation of an international phone number'''
         return self.country + self.number

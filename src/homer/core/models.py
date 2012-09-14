@@ -498,7 +498,7 @@ class Reference(Property):
         '''Makes sure the instance you set on a Reference has a complete key after type checking'''
         if value is None:
             return None
-        assert isinstance(value, Model), "You must use a subclass of Model"
+        assert isinstance(value, self.cls), "You must use a subclass of: %s" % self.cls.__name__
         key = value.key()
         assert key.complete(), "Your %s's key must be complete" % value
         assert key.saved or value.saved(), "Your %s must have been previously persisted in the DataStore"
