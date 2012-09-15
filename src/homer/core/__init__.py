@@ -9,3 +9,4 @@ Description: Public API of the Core
 from .models import *
 from .builtins import *
 from .commons import *
+from .collections import *

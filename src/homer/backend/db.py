@@ -62,7 +62,11 @@ class TimedOutException(Exception):
 class AllServersUnAvailableError(Exception):
     '''Thrown when all the servers in a particular pool are unavailable'''
     pass
-    
+
+class InvalidNamespaceError(Exception):
+    '''Thrown to show that there is a problem with the current Namespace in use'''
+    pass
+
 ####
 # Constants
 ####
@@ -178,15 +182,15 @@ class RoundRobinPool(Pool):
     def __init__(self, options):
         '''Configures a RoundRobinPool with a PoolOption object'''
         self.count = 0
-        self.maxConnections = options.size
-        self.queue = Queue(options.size)
-        self.keyspace = options.keyspace
-        self.maxIdle = options.idle
-        self.timeout = options.timeout
-        self.evictionDelay = options.recycle
-        self.servers = options.servers
-        self.username = options.username
-        self.password = options.password
+        self.maxConnections = options['size']
+        self.queue = Queue(options['size'])
+        self.keyspace = options['keyspace']
+        self.maxIdle = options['idle']
+        self.timeout = options['timeout']
+        self.evictionDelay = options['recycle']
+        self.servers = options['servers']
+        self.username = options['username']
+        self.password = options['password']
         self.evictionThread = EvictionThread(self, self.maxIdle, self.evictionDelay)
         self.cycle = None
         self.lock = RLock()
@@ -427,8 +431,8 @@ class FetchMode(object):
 """
 Simpson:
 Provides a **very** simple way to use cassandra from python; It provides 
-load balancing, auto failover, connection pooling and its clever enough to 
-batch calls so it has very low latency. 
+load balancing, auto failover, connection pooling and it is clever enough to 
+batch calls so it has very low latency.
 """
 class Simpson(local):
     '''An 'Model' Oriented Interface to Cassandra;'''
@@ -443,29 +447,24 @@ class Simpson(local):
         # OUR GOAL HERE IS TO CREATE CASSANDRA DATA MODELS FROM
         # METADATA GLEANED FROM THE INSTANCE PASSED IN TO
         # THIS METHOD
-        assert issubclass(model.__class__, Model),\
-            "parameter model: %s must inherit from model" % model
-        print "Creating %s" % model
+        assert issubclass(model.__class__, Model),"parameter model: %s must inherit from model" % model
         info = Schema.Get(model) 
         namespace = info[0]
         kind = info[1]
         meta = MetaModel(model)
         pool = cls.pool(namespace)
         with using(pool) as conn:
-            print "Finished Initializing Connection: %s " % conn
             meta.makeKeySpace(conn)
             cls.pools[namespace] = pool
             cls.keyspaces.add(namespace)
             meta.makeColumnFamily(conn) 
             meta.makeIndexes(conn)
             cls.columnfamilies.add(kind)
-            print "Finished Trying to Create Successfully"
              
     @classmethod
     @redo
     def put(cls, *Models):
         '''Persists @Models to the datastore, Puts are idempotent'''
-        from homer.options import namespaces
         from homer.core.models import key, Model
         # PUT PERSISTS ALL CHANGES IN A MODEL IN A SINGLE BATCH
         # THIS ISOLATES THE FAILURES IN ANY WRITE
@@ -495,7 +494,6 @@ class Simpson(local):
     @redo
     def putbatch(cls, keyspace, *Models):
         '''Persists all the changes in one batch'''
-        from homer.options import namespaces
         from homer.core.models import key, Model
         # PERSISTS ALL CHANGES IN *MODELS IN A SINGLE BATCH
         def commit(namespace, mutations):
@@ -526,7 +524,7 @@ class Simpson(local):
     @redo     
     def read(cls, *tuples): # Format is [(key, fetchmode)]
         '''Reads @keys from the Datastore and returns instances of Models'''
-        from homer.options import namespaces
+        from homer.options import NAMESPACES
         from homer.core.models import key, Model
         results = []
         # READ HAPPENS KEY BY KEY HERE.
@@ -567,15 +565,14 @@ class Simpson(local):
     @classmethod
     def pool(cls, namespace):
         '''Returns or creates a pool for this namespace'''
-        from homer.options import namespaces
+        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
         from homer.core.models import key, Model
         pool = None
-        if namespace not in cls.pools:  
-            found = namespaces.get(namespace)                    
-            pool = RoundRobinPool(found.cassandra)
+        if namespace not in cls.pools:
+            found = NAMESPACES.get(namespace, DEFAULT_NAMESPACE)                    
+            pool = RoundRobinPool(found["options"])
             cls.pools[namespace] = pool
-        else:
-            pool = cls.pools[namespace]
+        else: pool = cls.pools[namespace]
         return pool
     
     @classmethod  
@@ -634,10 +631,10 @@ class MetaModel(object):
     @redo       
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this Model'''
-        from homer.options import namespaces, NetworkTopologyStrategy
-        options = namespaces.get(self.namespace)
+        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
+        options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)["options"]
         try:
-            connection.client.set_keyspace(options.name)
+            connection.client.set_keyspace(options["keyspace"])
             connection.client.system_add_column_family(self.asColumnFamily())
             self.wait(connection)
         except InvalidRequestException as e:
@@ -646,10 +643,10 @@ class MetaModel(object):
     @redo
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
-        from homer.options import namespaces
+        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
         print "Trying to create an index on" % self.model
         try:
-            options = namespaces.get(self.namespace)
+            options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
             query = 'CREATE INDEX ON {kind}({name});'
             for name, property in self.fields.items():
                 if property.saveable() and property.indexed():
@@ -657,7 +654,7 @@ class MetaModel(object):
                     cursor = connection.cursor()
                     formatted = query.format(kind = self.kind, name= property.name)
                     print formatted
-                    cursor.execute("USE %s;" % options.name)
+                    cursor.execute("USE %s;" % options['keyspace'])
                     cursor.execute(formatted)
                 else:
                     print "Cannot index: %s" % property
@@ -668,26 +665,25 @@ class MetaModel(object):
                     
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
-        from homer.options import namespaces, NetworkTopologyStrategy
-        options = namespaces.get(self.namespace)
+        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
+        options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
         assert options is not None, "No configuration options for this keyspace"
-        name = options.name
-        strategy = options.cassandra.strategy
+        name = options['keyspace']
+        strategy = options['strategy']['name']
         package = 'org.apache.cassandra.locator.%s' % strategy
-        replication = strategy.factor
-        if isinstance(strategy, NetworkTopologyStrategy):
-            #print "Creating keyspace with %s, %s, %s" % (name, package, strategy.options)
-            return KsDef(name, package, strategy.options, replication, [])
+        replication = options['strategy']['factor']
+        if strategy == 'NetworkTopologyStrategy':
+            strategyOptions = options['strategy']['options']
+            return KsDef(name, package, strategyOptions, replication, [])
         else:
-            #print "Creating keyspace with %s, %s, " % (name, package)
             return KsDef(name, package, None, replication, [])
       
     def asColumnFamily(self):
         '''Returns the native column family definition for this @Model'''
-        from homer.options import namespaces, NetworkTopologyStrategy
-        options = namespaces.get(self.namespace)
+        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
+        options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
         assert options is not None, "No configuration options for this keyspace"
-        namespace = options.name
+        namespace = options['name']
         CF = CfDef()
         CF.keyspace = namespace
         CF.name = self.kind

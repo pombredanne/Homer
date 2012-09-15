@@ -30,8 +30,8 @@ from weakref import WeakValueDictionary
 from functools import update_wrapper as update
 from contextlib import contextmanager as context
 
-from homer.core.builtins import object, fields
-from homer.core.differ import Differ, DiffError
+from .builtins import object, fields
+from .differ import Differ, DiffError
 
 READWRITE, READONLY = 1, 2
 __all__ = [ "Model", "key", "Key", "Reference", "Property", "Type", "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
@@ -104,9 +104,9 @@ class Schema(object):
     @classmethod
     def Put(cls, namespace, model, key):
         """Stores Meta Information for a particular class"""
-        from homer.options import namespaces 
+        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
         if not namespace:
-            namespace = namespaces.default.name 
+            namespace = DEFAULT_NAMESPACE['name']
         kind = model.__name__    
         if not namespace in cls.schema:
             cls.schema[namespace] = WeakValueDictionary()    
