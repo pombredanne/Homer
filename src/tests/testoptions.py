@@ -9,13 +9,13 @@ Description:
 Unittests for the options module...
 """
 from unittest import TestCase
-from homer.options import options
+from homer.options import Settings
 
 class TestOptions(TestCase):
     """Test for the options.options"""
     
     def testLogger(self):
         """Tests options.logger() to make sure its not none"""
-        assert options.logger() is not None, "options.logger() should not return\
+        assert Settings.logger() is not None, "options.logger() should not return\
             None"
 

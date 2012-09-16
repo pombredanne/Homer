@@ -46,7 +46,7 @@ class TestBatching(BaseTestCase):
         print ''
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         with Level.All:
-            self.db.putbatch("Test",*l)
+            self.db.saveMany("Test",*l)
         print "Time Taken to put 500 Profiles: %s secs" % (time.time() - start)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         

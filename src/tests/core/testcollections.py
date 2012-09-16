@@ -16,20 +16,25 @@ class TestMap(TestCase):
     """Tests for the Map() collection"""
     def setUp(self):
         '''Creates a test object'''
-        self.bookmarks = Map()
+        self.bookmarks = Map(String, URL)
         
     def testMapSanity(self):
         '''Makes sure that Maps are sane'''
         m = {"Google": "http://google.com", 234: "http://234next.com", 1.345: "http://base.com"}
         self.bookmarks.update(m)
         for k, v in m.items():
-            self.assertEquals(self.bookmarks[k], v)
+            self.assertEquals(self.bookmarks[str(k)], v)
     
     def testMapDoesValidation(self):
         """Makes sure that Maps do validation"""
         with self.assertRaises(Exception):
             self.test.bookmarks["hello"] = 1
             self.cls.bookmarks.convert(self.test)
+
+    def testThatMapDidSave(self):
+        '''Shows that Maps persist to the database'''
+        pass
+        
 
 @skip("Fails, Not implemented yet")   
 class TestList(TestCase):

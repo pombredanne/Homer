@@ -38,7 +38,7 @@ class TestPhone(TestCase):
         '''Tests conversion and Deconversion'''
         descriptor = Phone()
         expected = repr(self.person.mobile)
-        value = descriptor.convert(self.person, "mobile", self.person.mobile)
+        value = descriptor.convert(self.person.mobile)
         self.assertEquals(expected, value) 
         
         deserialized = eval(value)

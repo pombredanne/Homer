@@ -36,17 +36,16 @@ LOCAL = local()
 
 # OPTIONS THAT ARE USED TO CONNECT TO A CASSANDRA CLUSTER BY DEFAULT,
 # WHEN NO OTHER CONFIGURATION IS AVAILABLE
+LOCAL.DEFAULT_OPTIONS = {
+      "size" : 25, "timeout" : 30.0, "recycle" : 8000,
+      "idle" : 10, "retry" : 5, "servers" : ["localhost:9160",],
+      "username" : "", "password": "", "keyspace": "Test",
+      "strategy" : {
+               "name": "SimpleStrategy", "factor": 1,
+       },
 
-DEFAULT_OPTIONS = LOCAL.DEFAULT_OPTIONS = {
-                        "size" : 25, "timeout" : 30.0, "recycle" : 8000,
-                        "idle" : 10, "retry" : 5, "servers" : ["localhost:9160",],
-                        "username" : "", "password": "", "keyspace": "Test",
-                        "strategy" : {
-                               "name": "SimpleStrategy", "factor": 1,
-                        },
-
-                   }
-
+}
+DEFAULT_OPTIONS = LOCAL.DEFAULT_OPTIONS
 # THE DEFAULT NAMESPACE USED FOR CONNECTING TO CASSANDRA WHEN NO NAMESPACE IS SPECIFIED
 DEFAULT_NAMESPACE = LOCAL.DEFAULT_NAMESPACE = { "name": "Test", "options": DEFAULT_OPTIONS, }
 

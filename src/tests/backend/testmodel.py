@@ -79,7 +79,7 @@ class TestModel(BaseTestCase):
         
         start = time.time()
         with Level.All:
-            self.db.putbatch("Test",*l)
+            self.db.saveMany("Test",*l)
         self.assertTrue(Profile.count() == 501)
                   
     def testDelete(self):
@@ -111,10 +111,8 @@ class TestModel(BaseTestCase):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
             isbn = String(indexed = True)
-            titles = Map(String, Integer)
         
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
-        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
         book.save()
        
         b = Book.read('Lord of the Rings')
@@ -127,7 +125,6 @@ class TestModel(BaseTestCase):
         self.assertTrue(b.name == "Lord of the Rings")
         self.assertTrue(b.author == "J.R.R Tolkein")
         self.assertTrue(b.isbn == "12345")
-        self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     
     def testQuery(self):
@@ -137,10 +134,8 @@ class TestModel(BaseTestCase):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
             isbn = String(indexed = True)
-            titles = Map(String, Integer)
         
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
-        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
         book.save()
        
         b = Book.query('WHERE author=:author', author='J.R.R Tolkein').fetchone()
@@ -153,6 +148,5 @@ class TestModel(BaseTestCase):
         self.assertTrue(b.name == "Lord of the Rings")
         self.assertTrue(b.author == "J.R.R Tolkein")
         self.assertTrue(b.isbn == "12345")
-        self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 

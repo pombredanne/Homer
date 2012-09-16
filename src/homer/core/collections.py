@@ -16,8 +16,9 @@
 #
 import uuid
 from .differ import Differ
-from .models import key, Model, UnIndexable, Reference
 from .commons import String
+from .models import Converter
+from .models import key, Model, UnIndexable, Reference
 
 __all__ = ["Map",]
 
@@ -32,17 +33,21 @@ Differences between Map and Model:
 @key('id')
 class Map(Model):
     '''An Eventually Consistent Hashtable that you can persist to Cassandra'''
-    def __init__(self, key=object, value=object, default=None):
-        assert isinstance(key, type) and isinstance(value, type), "key and value have to be classes"
+
+    def __init__(self, k=Converter, v=Converter):
+        assert isinstance(k, type) and isinstance(v, type), "k and v have to be classes"
         self.differ = Differ(self, exclude = ['differ','key', 'value'])
-        if issubclass(key, Model):
-            key = Reference(key)
-        if issubclass(value, Model):
-            value = Reference(value) 
-        self.key, self.value = key, value
-        if default:
-            self.update(default)
+        if issubclass(k, Model):
+            k = Reference(k)
+        if issubclass(v, Model):
+            v = Reference(v) 
+        self.key, self.value = k, v
         
+    @property
+    def default(self):
+        '''Returns the default type for the Map'''
+        return self.key, self.value
+  
     def save(self):
         '''Overriden to make sure each Map has an id before each save'''
         if not self.id:

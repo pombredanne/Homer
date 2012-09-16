@@ -30,7 +30,7 @@ class TestCqlQuery(BaseTestCase):
             author = String(indexed = True)
         
         book = Book(name = "Pride", author="Anne Rice")
-        self.db.put(book)
+        book.save()
         query = CqlQuery(Book, "SELECT * FROM Book WHERE KEY= :name; ", name="Pride")
         found = query.fetchone()
         self.assertTrue(book == found)
@@ -44,7 +44,7 @@ class TestCqlQuery(BaseTestCase):
         
         for i in range(500):
             book = Book(name = i, author="Anne Rice")
-            self.db.put(book)
+            book.save()
  
         query = CqlQuery(Book, "SELECT * FROM Book WHERE author= :author; ", author="Anne Rice")
         results = list(query)
@@ -60,7 +60,7 @@ class TestCqlQuery(BaseTestCase):
         
         for i in range(500):
             book = Book(name = i, author="Anne Rice")
-            self.db.put(book)
+            book.save()
  
         query = CqlQuery(Book, "SELECT COUNT(*) FROM Book;")
         result = query.fetchone()

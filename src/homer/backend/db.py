@@ -43,10 +43,9 @@ from cql.cassandra.ttypes import *
 
 from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
+from homer.options import NAMESPACES, DEFAULT_NAMESPACE
 
-####
-# Module Exceptions
-####
+# MODULE EXCEPTIONS
 class ConnectionDisposedError(Exception):
     """A Error that is thrown if you try to use a Connection that has been disposed"""
     pass
@@ -67,18 +66,21 @@ class InvalidNamespaceError(Exception):
     '''Thrown to show that there is a problem with the current Namespace in use'''
     pass
 
-####
-# Constants
-####
-__all__ = ["CqlQuery", "Simpson", "Level", "FetchMode", "RoundRobinPool",\
+# THREADSAFE GLOBAL CONFIGURATION.
+GLOBAL = local()
+GLOBAL.POOLS = dict()
+GLOBAL.KEYSPACES = set()
+GLOBAL.COLUMNFAMILIES = set()
+GLOBAL.CONSISTENCY = ConsistencyLevel.ONE
+
+# CONSTANTS
+__all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool",\
                 "Connection", "ConnectionDisposedError",]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
-FETCHSIZE = 1000000 #ONE MILLION COLUMNS
+FETCHSIZE = 2000000000 #AT MOST THE DB MODULE WILL TRY TO READ ALL THE COLUMNS
 
-###
-# Utilities and Helper Functions
-###
+# UTILITIES AND HELPER FUNCTIONS
 def redo(function):
     '''Retries a particular operation for a fixed number of times until it fails'''
     @wraps(function)
@@ -93,10 +95,20 @@ def redo(function):
                     raise e
                 attempts += 1
     return do
-    
-####
-# Controlling Consistency
-####     
+
+
+def poolFor(namespace):
+    '''Returns or creates a new ConnectionPool for this namespace'''
+    pool = None
+    if namespace not in GLOBAL.POOLS:
+        found = NAMESPACES.get(namespace, DEFAULT_NAMESPACE)                    
+        pool = RoundRobinPool(found["options"])
+        GLOBAL.POOLS[namespace] = pool
+    else:
+        pool = GLOBAL.POOLS[namespace]
+    return pool   
+
+# CONTROLLING CONSISTENCY   
 """
 Consistency:
 A Generic Context Manager for dealing with Cassandra's consistency;
@@ -111,12 +123,12 @@ class Consistency(object):
         
     def __enter__(self):
         '''Changes the current consistency to self.level'''
-        self.previous = Simpson.consistency
-        Simpson.consistency = self.level
+        self.previous = GLOBAL.CONSISTENCY
+        GLOBAL.CONSISTENCY = self.level
         
     def __exit__(self, *arguments, **kwds):
         '''Revert the global consistency to the previous setting.'''
-        Simpson.consistency = self.previous
+        GLOBAL.CONSISTENCY = self.previous
 
 '''
 Level:
@@ -141,9 +153,8 @@ class Level(object):
     LocalQuorum = Consistency(ConsistencyLevel.LOCAL_QUORUM)
     EachQuorum = Consistency(ConsistencyLevel.EACH_QUORUM)
 
-#####
-# Connection and Pooling 
-#####    
+
+# CONNECTIONS AND POOLING   
 """
 Pool:
 A pool provides autofailover and loadbalancing automatically
@@ -253,7 +264,7 @@ class Connection(local):
     """A convenient wrapper around the thrift client interface"""
     def __init__(self, pool, address, keyspace = None, username = None, password = None):
         '''Creates a Cassandra Client internally and initializes it'''
-        from homer.options import options
+        from homer.options import Settings as options
         host, port = address.split(":")
         socket = TSocket.TSocket(host, int(port))
         socket.setTimeout(pool.timeout * 1000.0)
@@ -306,7 +317,7 @@ excess Idle connections.
 class EvictionThread(Thread):
     """Periodically evicts idle connections from the connection pool"""
     def __init__(self, pool, maxIdle, delay):
-        from homer.options import options
+        from homer.options import Settings as options
         super(EvictionThread, self).__init__()
         self.pool = pool
         self.maxIdle = maxIdle
@@ -339,9 +350,9 @@ class CqlQuery(object):
     pattern = re.compile(r'COUNT\(.+\)', re.IGNORECASE | re.DOTALL) #
     def __init__(self, kind, query, **keywords):
         '''Initialize constructor parameters '''
-        from homer.core.models import key, Model
+        from homer.core.models import key, BaseModel
         assert isinstance(kind, type), "%s must be a class" % kind
-        assert issubclass(kind, Model), "%s must be a subclass of Model" % kind
+        assert issubclass(kind, BaseModel), "%s must be a subclass of BaseModel" % kind
         self.kind = kind
         self.keyspace = None
         self.query = query
@@ -357,11 +368,11 @@ class CqlQuery(object):
             self.keyspace = found
         
         print "Executing Query: %s in %s" % (self.query, self.keyspace)
-        if not self.kind.__name__ in Simpson.columnfamilies:
+        if not self.kind.__name__ in GLOBAL.COLUMNFAMILIES:
             print "Creating new Column Family: %s " % self.kind.__name__
-            Simpson.create(self.kind())
+            Lisa.create(self.kind())
                
-        pool = Simpson.pool(self.keyspace)
+        pool = poolFor(self.keyspace)
         with using(pool) as conn:
             #print "Executing %s" % self
             conn.client.set_keyspace(self.keyspace)
@@ -397,14 +408,14 @@ class CqlQuery(object):
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = descs.get(name, None)
                     if prop:
-                        found = prop.deconvert(model, name, str(value))
+                        found = prop.deconvert(str(value))
                         model[name] = found
                     else:
                         k, v = model.default
                         k = k() if isinstance(k, type) else k
                         v = v() if isinstance(v, type) else v
-                        name = k.deconvert(model, name, str(value))
-                        value = v.deconvert(model, name, str(value))
+                        name = k.deconvert(str(value))
+                        value = v.deconvert(str(value))
                         model[name] = value
                 yield model
                 row = cursor.fetchone()
@@ -417,197 +428,273 @@ class CqlQuery(object):
         '''String representation of a CQLQuery.'''
         return "CqlQuery: %s" % self.query
 
-"""
+###
 # Cassandra Mapping Section;
-"""
+###
 
 """
 FetchMode:
 Specifies how you want read behavior to be
 """
 class FetchMode(object):
-    Property, All = 0, 1
+    Property, All = 1, 2
     
-"""
-Simpson:
-Provides a **very** simple way to use cassandra from python; It provides 
-load balancing, auto failover, connection pooling and it is clever enough to 
-batch calls so it has very low latency.
-"""
-class Simpson(local):
-    '''An 'Model' Oriented Interface to Cassandra;'''
-    consistency = ConsistencyLevel.ONE
-    keyspaces, columnfamilies, pools = set(), set(), dict()
-    
-    @classmethod
-    @redo
-    def create(cls, model):
+'''
+Lisa:
+A Smarter, Neater and Simpler way to Use Cassandra.
+
+#PROPERTY
+albert = Key("June", "Staff", "albert")
+name = Lisa.readColumn(String, albert, "name")
+print "Just fetched the name property: %s" % name
+
+with Level.One:
+    Lisa.saveColumn(String, key, "surname", "dumbledore")
+    print "Finished Writing Successfully
+
+gbodi = Key("June", "Staff", "gbodi")
+arguments = [(String, albert, "surname"), (Integer, gbodi, "age")]
+results = Lisa.readManyColumns(arguments) # Read albert's surname and gbodi's age
+print "Albert's surname is: %s and Gbodi's age is: %s" % results[0], results[1]
+
+# MODEL OBJECTS.
+'''
+class Lisa(local):
+    '''A Neater and simpler interface to Cassandra'''
+
+    @staticmethod
+    def create(model):
         """Creates a new ColumnFamily from this Model"""
-        from homer.core.models import key, Model
-        # OUR GOAL HERE IS TO CREATE CASSANDRA DATA MODELS FROM
-        # METADATA GLEANED FROM THE INSTANCE PASSED IN TO
-        # THIS METHOD
-        assert issubclass(model.__class__, Model),"parameter model: %s must inherit from model" % model
+        from homer.core.models import key, BaseModel
+        assert isinstance(model, BaseModel),"%s must inherit from BaseModel" % model
         info = Schema.Get(model) 
         namespace = info[0]
         kind = info[1]
         meta = MetaModel(model)
-        pool = cls.pool(namespace)
+        pool = poolFor(namespace)
         with using(pool) as conn:
-            meta.makeKeySpace(conn)
-            cls.pools[namespace] = pool
-            cls.keyspaces.add(namespace)
-            meta.makeColumnFamily(conn) 
-            meta.makeIndexes(conn)
-            cls.columnfamilies.add(kind)
-             
-    @classmethod
-    @redo
-    def put(cls, *Models):
-        '''Persists @Models to the datastore, Puts are idempotent'''
-        from homer.core.models import key, Model
+            if namespace not in GLOBAL.KEYSPACES:
+                meta.makeKeySpace(conn)
+                GLOBAL.KEYSPACES.add(namespace)
+            if kind not in GLOBAL.COLUMNFAMILIES:
+                meta.makeColumnFamily(conn) 
+                meta.makeIndexes(conn)
+                GLOBAL.COLUMNFAMILIES.add(kind)
+
+    @staticmethod
+    def readColumn(converter, key, name):
+        '''Read a particular property to the column specified via @key'''
+        assert key.iscomplete(), "Your key must be complete, before you can do reads"
+        pool = poolFor(key.namespace)
+        path = ColumnPath(column_family=key.kind, column=name)
+        cosc = None
+        with using(pool) as conn:
+            conn.client.set_keyspace(key.namespace)
+            cosc = conn.client.get(key.id, path, GLOBAL.CONSISTENCY)
+        column = cosc.column
+        return converter.deconvert(column.value)
+        
+    
+    @staticmethod
+    def saveColumn(converter, key, name, value, ttl=None):
+        '''Write a particular property to the column specified via @key'''
+        assert key.iscomplete(), "Your key must be complete before you can do writes"
+        pool = poolFor(key.namespace)
+        timestamp = time.time()
+        value = converter.convert(value)
+        parent = ColumnParent(column_family=key.kind)
+        column = Column(name=name, value=value, timestamp=timestamp)
+        if ttl:
+            column.ttl = ttl
+        cosc = None
+        with using(pool) as conn:
+            conn.client.set_keyspace(key.namespace)
+            conn.client.insert(key.id, parent, column, GLOBAL.CONSISTENCY)
+        
+
+    @staticmethod
+    def deleteColumn(key, name):
+        '''Delete the property specified by @key'''
+        assert key.iscomplete(), "Your key must be complete before you can do writes"
+        pool = poolFor(key.namespace)
+        timestamp = time.time()
+        path = ColumnPath(column_family=key.kind, column=name)
+        with using(pool) as conn:
+            conn.client.set_keyspace(key.namespace)
+            cosc = conn.client.remove(key.id, path, timestamp, GLOBAL.CONSISTENCY)
+     
+
+    @staticmethod
+    def readManyColumns(namespace, kind, id, *arguments):
+        '''Read various properties from one Model arguments: [(name, Converter)]'''
+        assert namespace and kind and id, "specify namespace, kind, id"
+        assert namespace and kind, "You must specify; namespace, kind"
+        pool = poolFor(namespace)
+        names = {tup[0]: tup[1] for tup in arguments}
+        predicate = SlicePredicate(column_names=names.keys())
+        parent = ColumnParent(column_family=kind)
+        result = None
+        with using(pool) as conn:
+            conn.client.set_keyspace(namespace)
+            results = conn.client.get_slice(id, parent, predicate, GLOBAL.CONSISTENCY)
+        for cosc in results:
+            column = cosc.column
+            yield column.name, names[column.name].deconvert(column.value)
+      
+
+    @staticmethod
+    def saveManyColumns(namespace, kind, id, *arguments):
+        '''Write a lot of properties in one batch, arguments: [(name, value, Converter)]'''
+        # See Page 151 and Page 78 in the Cassandra Guide.
+        assert namespace and kind and id, 'specify arguments namespace, kind, id'
+        mutations = { kind : [] }
+        for tuple in arguments:
+            converter = tuple[2]
+            column = Column()
+            column.name = tuple[0]
+            column.value = converter.convert(tuple[1])
+            column.timestamp = time.time()
+            cosc = ColumnOrSuperColumn()
+            cosc.column = column
+            mutation = Mutation()
+            mutation.column_or_supercolumn = cosc
+            mutations[kind].append(mutation)
+        changes = {id : mutations}
+        pool = poolFor(namespace)
+        with using(pool) as conn:
+            conn.client.set_keyspace(namespace)
+            conn.client.batch_mutate(changes, GLOBAL.CONSISTENCY)
+        
+
+    @staticmethod
+    def deleteManyColumns(namespace, kind, id, *arguments):
+        '''Delete a lot of properties in one batch, arguments: ["name", "name"]'''
+        assert namespace and kind and id, 'specify arguments namespace, kind, id'
+        mutations = { kind : [] }
+        deletion = Deletion()
+        deletion.timestamp = int(time.time())
+        predicate = SlicePredicate()
+        predicate.column_names = arguments
+        deletion.predicate = predicate
+        deletions = Mutation()
+        deletions.deletion = deletion
+        mutations[kind].append(deletions)
+        changes = {id : mutations}
+        pool = poolFor(namespace)
+        with using(pool) as conn:
+            conn.client.set_keyspace(namespace)
+            conn.client.batch_mutate(changes, GLOBAL.CONSISTENCY)
+
+   
+    @staticmethod
+    def read(key, fetchmode=FetchMode.Property):
+        '''Read a Model from Cassandra'''
+        assert key and fetchmode, "specify key and fetchmode"
+        assert key.complete(), "your key has to be complete"
+        parent = ColumnParent(column_family = key.kind)
+        predicate = None
+        if fetchmode == FetchMode.Property:
+            if key.columns:
+                predicate = SlicePredicate(column_names = key.columns)
+            else:
+                type = Schema.ClassForModel(key.namespace, key.kind)
+                names = fields(type, Property).keys() 
+                columns = list(names)
+                predicate = SlicePredicate(column_names = columns)
+        elif fetchmode == FetchMode.All:
+            range = SliceRange(start='', finish='', count = FETCHSIZE )
+            predicate = SlicePredicate(slice_range=range)       
+        found = None
+        pool = poolFor(key.namespace)
+        with using(pool) as conn:
+            conn.client.set_keyspace(key.namespace)
+            coscs = conn.client.get_slice(key.id, parent, predicate, GLOBAL.CONSISTENCY)
+            found = MetaModel.load(key, coscs)
+        return found    
+
+    
+    @staticmethod
+    def save(model):
+        '''Write one Model to Cassandra'''
+        from homer.core.models import key, BaseModel
         # PUT PERSISTS ALL CHANGES IN A MODEL IN A SINGLE BATCH
-        # THIS ISOLATES THE FAILURES IN ANY WRITE
         def commit(namespace, mutations):
             '''Stores all the mutations in one batch operation'''
-            pool = cls.pool(namespace)
-            # print 'Committing a single model batch to Cassandra'
+            pool = poolFor(namespace)
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
-                conn.client.batch_mutate(mutations, cls.consistency)    
-        # ITERATE THROUGH ALL THE BATCH ALL THE INDIVIDUAL CHANGES.
-        for model in Models:
-            assert issubclass(model.__class__, Model), "parameter model:\
-                %s must inherit from Model" % model
-            info = Schema.Get(model)
-            namespace = info[0]
-            kind = info[1]
-            if kind not in cls.columnfamilies:
-                cls.create(model)
-            meta = MetaModel(model)
-            changes = { meta.id() : meta.mutations() }
-            commit(namespace, changes)
-            key = model.key()
-            key.saved = True
+                conn.client.batch_mutate(mutations, GLOBAL.CONSISTENCY)    
+        assert issubclass(model.__class__, BaseModel), "%s must inherit from BaseModel" % model
+        info = Schema.Get(model)
+        namespace = info[0]
+        kind = info[1]
+        if kind not in GLOBAL.COLUMNFAMILIES:
+            Lisa.create(model)
+        meta = MetaModel(model)
+        changes = { meta.id() : meta.mutations() }
+        commit(namespace, changes)
+        key = model.key()
+        key.saved = True
+            
+    @staticmethod
+    def delete(*keys):
+        '''Deletes a List of keys which represents Models'''
+        for key in keys:
+            assert key.complete(), "Your Key has to be complete to a delete"
+            path = ColumnPath(column_family = key.kind)
+            clock = time.time()
+            pool = poolFor(key.namespace)
+            with using(pool) as conn:
+                #print "DELETING %s FROM CASSANDRA" % key 
+                conn.client.set_keyspace(key.namespace)
+                conn.client.remove(key.id, path, clock, GLOBAL.CONSISTENCY)
+
     
-    @classmethod       
-    @redo
-    def putbatch(cls, keyspace, *Models):
-        '''Persists all the changes in one batch'''
-        from homer.core.models import key, Model
+    @staticmethod
+    def saveMany(namespace, *models):
+        '''Write a Lot of Models in one batch, They must all belong to one keyspace'''
+        from homer.core.models import key, BaseModel
         # PERSISTS ALL CHANGES IN *MODELS IN A SINGLE BATCH
         def commit(namespace, mutations):
             '''Stores all the mutations in one batch operation'''
-            pool = cls.pool(namespace)
-            # print 'Committing a single model batch to Cassandra'
+            pool = poolFor(namespace)
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
-                conn.client.batch_mutate(mutations, cls.consistency)    
+                conn.client.batch_mutate(mutations, GLOBAL.CONSISTENCY)    
         # BATCH ALL THE INDIVIDUAL CHANGES IN ONE TRANSFER
         mutations = {}
-        for model in Models:
-            assert issubclass(model.__class__, Model), "parameter model:\
-                %s must inherit from Model" % model
+        for model in models:
+            assert issubclass(model.__class__, BaseModel), "parameter model:\
+                %s must inherit from BaseModel" % model
             info = Schema.Get(model)
-            namespace = info[0]
-            assert namespace == keyspace, "All the Models should belong to %s" % keyspace
+            keyspace = info[0]
+            assert namespace == keyspace, "All the Models should belong to %s" % namespace
             kind = info[1]
-            if kind not in cls.columnfamilies: # HACK!! Find a better way to do this.
-                cls.create(model)
+            if kind not in GLOBAL.COLUMNFAMILIES:
+                Lisa.create(model)
             meta = MetaModel(model)
             key = model.key()
             key.saved = True
             mutations[meta.id()] = meta.mutations()
-        commit(keyspace,mutations)
-    
-    @classmethod 
-    @redo     
-    def read(cls, *tuples): # Format is [(key, fetchmode)]
-        '''Reads @keys from the Datastore and returns instances of Models'''
-        from homer.options import NAMESPACES
-        from homer.core.models import key, Model
-        results = []
-        # READ HAPPENS KEY BY KEY HERE.
-        for tuple in tuples:
-            key, mode = tuple[0], tuple[1]
-            assert key.complete(), "Your key has to be complete"
-            #print "Reading %s from Cassandra" % key
-            id = key.id
-            parent = ColumnParent(column_family = key.kind)
-            # THE GOAL HERE IS TOO AVOID PULLING ALL THE CONTENTS OF WIDE ROWS
-            # OVER THE WIRE WHEN DOING A READ. IF THE CALLER DOES NOT EXPLICITLY
-            # SPECIFY THE COLUMNS HE WANTS TO RETREIVE VIA KEY.COLUMNS, SIMPSON
-            # SETS IT FOR HIM BY READING ONLY THE DESCRIPTORS THAT THE MODEL
-            # CONTAINS BY DEFAULT.
-            predicate = None
-            if mode == FetchMode.Property:
-                # print "FETCHING PROPERTIES"
-                if key.columns:
-                    predicate = SlicePredicate(column_names = key.columns)
-                else:
-                    type = Schema.ClassForModel(key.namespace, key.kind)
-                    names = fields(type, Property).keys() 
-                    columns = list(names)
-                    predicate = SlicePredicate(column_names = columns)
-            elif mode == FetchMode.All:
-                # print "FETCHING ALL"
-                range = SliceRange(start='', finish='', count = FETCHSIZE )
-                predicate = SlicePredicate(slice_range=range)
-                
-            pool = cls.pool(key.namespace)
-            with using(pool) as conn:
-                conn.client.set_keyspace(key.namespace)
-                coscs = conn.client.get_slice(id, parent, predicate, cls.consistency)
-                found = MetaModel.load(key, coscs)
-                if found is not None: results.append(found)
-        return results
-    
-    @classmethod
-    def pool(cls, namespace):
-        '''Returns or creates a pool for this namespace'''
-        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
-        from homer.core.models import key, Model
-        pool = None
-        if namespace not in cls.pools:
-            found = NAMESPACES.get(namespace, DEFAULT_NAMESPACE)                    
-            pool = RoundRobinPool(found["options"])
-            cls.pools[namespace] = pool
-        else: pool = cls.pools[namespace]
-        return pool
-    
-    @classmethod  
-    @redo
-    def delete(cls, *keys):
-        '''Deletes objects with these keys from the datastore'''
-        # A DELETE IS USED FOR DELETING AN INSTANCE OF A CLASS FROM CASSANDRA
-        for key in keys:
-            assert key.complete(), "Your Key has to be complete to a delete"
-            path = ColumnPath(column_family = key.kind)
-            clock = int(time.time())
-            pool = cls.pool(key.namespace)
-            with using(pool) as conn:
-                #print "DELETING %s FROM CASSANDRA" % key 
-                conn.client.set_keyspace(key.namespace)
-                conn.client.remove(key.id, path, clock, cls.consistency)
-              
-    @classmethod
-    def clear(cls):
+        commit(keyspace,mutations)    
+  
+    @staticmethod
+    def clear():
         '''Clears internal state of @this'''
         #print 'Clearing internal state of the Datastore Mapper'
-        cls.keyspaces.clear()
-        cls.columnfamilies.clear()
-        cls.pools.clear()
+        GLOBAL.KEYSPACES.clear()
+        GLOBAL.COLUMNFAMILIES.clear()
+        GLOBAL.POOLS.clear()
             
 ##
 # MetaModel:
-# Transforms {@link Model} instances to Cassandra's native Data Model.
-# 'A mix of CQL and Thrift as I see fit...', It is a disposable helper
-# class that allows me to mix and match homer's and cassandra datamodel
+# A Helper class that transforms BaseModel's and Properties to Cassandra's
+# data model.
 ##
 class MetaModel(object):
-    '''Changes a Model to Cassandra's DataModel..'''
+    '''Changes a BaseModel to Cassandra's DataModel..'''
     def __init__(self, model):
-        '''Creates a Transform for this Model'''
+        '''Creates a Transform for this BaseModel'''
         info = Schema.Get(model)
         self.model = model
         self.namespace = info[0]
@@ -622,7 +709,7 @@ class MetaModel(object):
     
     @redo   
     def makeKeySpace(self, connection):
-        '''Creates a new keyspace from the namespace property of this Model'''
+        '''Creates a new keyspace from the namespace property of this BaseModel'''
         try:
             connection.client.system_add_keyspace(self.asKeySpace())
         except InvalidRequestException:
@@ -630,7 +717,7 @@ class MetaModel(object):
     
     @redo       
     def makeColumnFamily(self, connection):
-        '''Creates a new column family from the 'kind' property of this Model'''
+        '''Creates a new column family from the 'kind' property of this BaseModel'''
         from homer.options import NAMESPACES, DEFAULT_NAMESPACE
         options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)["options"]
         try:
@@ -679,11 +766,11 @@ class MetaModel(object):
             return KsDef(name, package, None, replication, [])
       
     def asColumnFamily(self):
-        '''Returns the native column family definition for this @Model'''
+        '''Returns the native column family definition for this @BaseModel'''
         from homer.options import NAMESPACES, DEFAULT_NAMESPACE
         options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
         assert options is not None, "No configuration options for this keyspace"
-        namespace = options['name']
+        namespace = options['keyspace']
         CF = CfDef()
         CF.keyspace = namespace
         CF.name = self.kind
@@ -713,11 +800,11 @@ class MetaModel(object):
         return columns
            
     def keyType(self):
-        '''Returns the Comparator type of the Key Descriptor of this Model'''
+        '''Returns the Comparator type of the Key Descriptor of this BaseModel'''
         return "UTF8Type"
     
     def defaultType(self):
-        '''Returns the default validation class for a particular Model'''
+        '''Returns the default validation class for a particular BaseModel'''
         return "UTF8Type"
     
     def wait(self, conn):
@@ -731,18 +818,18 @@ class MetaModel(object):
     def getColumn(self, name, value):
         '''Returns a Native Column from a property with this name'''
         column = Column()
-        column.name = name
         if name in self.fields:
+            column.name = name
             property = self.fields[name]
-            column.value = property.convert(self.model, name, value)  
+            column.value = property.convert(value)  
             ttl = property.ttl
             if ttl: column.ttl = ttl
         else:
             k, v = self.model.default
             k = k() if isinstance(k, type) else k
             v = v() if isinstance(v, type) else v
-            name = k.convert(self.model, name, value)
-            value = v.convert(self.model, name, value)
+            name = k.convert(name)
+            value = v.convert(value)
             column.name = name
             column.value = value # Just pickle it over the wire
         column.timestamp = int(time.time())
@@ -760,15 +847,15 @@ class MetaModel(object):
             name = cosc.column.name  
             if name in descriptors:  # Deconvert static properties first.
                 prop = descriptors[name]
-                deconverted = prop.deconvert(model, name, cosc.column.value)
+                deconverted = prop.deconvert(cosc.column.value)
                 model[name] = deconverted 
                 print "Just Deconverted: %s" % prop
             else: # Deconvert dynamic properties, this deconverts column names, and column values
                 k, v = model.default
                 k = k() if isinstance(k, type) else k
                 v = v() if isinstance(v, type) else v
-                name = k.deconvert(model, name, cosc.column.value)
-                value = v.deconvert(model, name, cosc.column.value)
+                name = k.deconvert(cosc.column.name)
+                value = v.deconvert(cosc.column.value)
                 model[name] = value
         keyname = info[2]
         setattr(model, keyname, key.id) #Make sure the newly returned model has the same key

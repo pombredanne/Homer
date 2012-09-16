@@ -43,12 +43,12 @@ class Phone(Type):
     '''An descriptor that contains phone objects'''
     type = phone
     
-    def convert(self, instance, name, value):
+    def convert(self, value):
         '''Yields the datastore representation of its value'''
         value = self.validate(value)
         return repr(value)
     
-    def deconvert(self, instance, name, value):
+    def deconvert(self, value):
         '''Converts a value from the datastore to a native python object'''
         result = eval(value)
         assert isinstance(result, phone), "Got unexpected type after serialization"
@@ -203,12 +203,12 @@ class Blob(Basic):
             value = blob(str(value))
         return value
     
-    def convert(self, instance, name, value):
+    def convert(self, value):
         '''Every blob type knows how to convert itself to a JSON representation on repr'''
         value = self.validate(value)
         return repr(value)
     
-    def deconvert(self, instance, name, value):
+    def deconvert(self, value):
         '''Change a JSON repr of a blob stored in the datastore to a python object'''
         new = blob()
         loaded = json.loads(value)
@@ -286,12 +286,12 @@ class DateTime(Type):
             return self.now()
         return super(DateTime,self).__get__(instance,owner)
     
-    def convert(self, instance, name, value):
+    def convert(self, value):
         '''Yields the datastore representation of its value'''
         value = self.validate(value)
         return repr(value)
     
-    def deconvert(self, instance, name, value):
+    def deconvert(self, value):
         '''Converts a value from the datastore to a native python object'''
         return eval(value)
         

@@ -24,8 +24,8 @@ Description:
 Tests for the the db module.
 """
 import time
-from homer.options import options, DataStoreOptions
-from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Simpson, Level, CqlQuery, FetchMode
+from homer.options import DEFAULT_OPTIONS
+from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Lisa, Level, CqlQuery, FetchMode
 from unittest import TestCase, skip
 
 
@@ -35,7 +35,7 @@ class TestRoundRobinPool(TestCase):
     def setUp(self):
         '''Create the Pool'''
         print "Creating a Pool with the default connections"
-        self.pool = RoundRobinPool(DataStoreOptions())
+        self.pool = RoundRobinPool(DEFAULT_OPTIONS)
     
     def tearDown(self):
         '''Dispose all alive connections in the Pool'''
@@ -84,7 +84,7 @@ class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
     def setUp(self):
-        self.pool = RoundRobinPool(DataStoreOptions())
+        self.pool = RoundRobinPool(DEFAULT_OPTIONS)
     
     def tearDown(self):
         self.pool.disposeAll()
@@ -129,14 +129,9 @@ from homer.options import *
 class BaseTestCase(TestCase):
     '''Base Class for all tests'''
     def setUp(self):
-        '''Create the Simpson instance, we all know and love'''
-        self.db = Simpson()
+        '''Create the Lisa instance, we all know and love'''
+        self.db = Lisa()
         self.connection = cql.connect("localhost", 9160).cursor()
-        # Do Datastore configuration, setup stuff like namespaces and etcetera
-        c = DataStoreOptions(servers=["localhost:9160",], username="", password="")
-        namespace = Namespace(name= "Test", cassandra= c)
-        namespaces.add(namespace)
-        namespaces.default = "Test"
           
     def tearDown(self):
         '''Release resources that have been allocated'''
@@ -148,21 +143,21 @@ class BaseTestCase(TestCase):
         except Exception as e:
             print e
   
-class TestSimpson(BaseTestCase):
-    '''Behavioural contract for Simpson'''
+class TestLisa(BaseTestCase):
+    '''Behavioural contract for Lisa'''
     
-    def testSimpsonOnlyAcceptsModel(self):
-        '''Checks if Simpson accepts non models'''
+    def testLisaOnlyAcceptsModel(self):
+        '''Checks if Lisa accepts non models'''
         class Person(object):
             '''An ordinary new-style class'''
             pass
-        self.assertRaises(AssertionError, lambda: self.db.create(Person()))   
+        self.assertRaises(AssertionError, lambda: self.db.create(Person))   
     
     def testCreate(self):
-        '''Tests if Simpson.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
+        '''Tests if Lisa.create() actually creates a Keyspace and ColumnFamily in Cassandra'''
         @key("name")
         class Person(Model):
-            name = String("Homer Simpson", indexed = True)
+            name = String("Homer Lisa", indexed = True)
             twitter = URL("http://twitter.com/homer", indexed = True)
         
         self.db.create(Person()); #=> Quantum Leap; This was the first time I tested my assumptions on Homer
@@ -171,20 +166,16 @@ class TestSimpson(BaseTestCase):
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
     
-    
     def testPut(self):
-        '''Tests if Simpson.put() actually stores the model to Cassandra'''
+        '''Tests if Lisa.put() actually stores the model to Cassandra'''
         @key("id")
         class Profile(Model):
             id = String(required = True, indexed = True)
             fullname = String(indexed = True)
-            bookmarks = Map(String, URL)
             
         cursor = self.connection
         profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
-        profile.bookmarks["google"] = "http://google.com"
-        profile.bookmarks["twitter"] = "http://twitter.com"
-        self.db.put(profile)
+        self.db.save(profile)
         cursor.execute("USE Test;")
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
@@ -201,7 +192,7 @@ class TestSimpson(BaseTestCase):
             message = String(indexed = True)
         
         cursor = self.connection
-        self.db.put(Message(id=1, message="Something broke damn"))
+        self.db.save(Message(id=1, message="Something broke damn"))
         cursor.execute("USE Test;")
         cursor.execute("SELECT id, message FROM Message WHERE KEY='1'")
         self.assertTrue(cursor.rowcount == 1)
@@ -220,7 +211,7 @@ class TestSimpson(BaseTestCase):
         
         cursor = self.connection
         profile = House(id = "1234", fullname = "Iroiso Ikpokonte")
-        self.db.put(profile)
+        self.db.save(profile)
         time.sleep(3) #=> Sleep for 3 secs and see if you can still find it in the datastore
         cursor.execute("USE Test;")
         cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
@@ -228,21 +219,19 @@ class TestSimpson(BaseTestCase):
         self.assertTrue(row[0] == None)
     
     def testRead(self):
-        '''Tests if Simpson.read() behaves as usual'''
+        '''Tests if Lisa.read() behaves as usual'''
         @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
             isbn = String(indexed = True)
-            titles = Map(String, Integer)
-        
+            
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
-        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
-        self.db.put(book)
+        self.db.save(book)
         
         k = Key("Test", "Book", "Lord of the Rings")
         #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
-        b = self.db.read((k, FetchMode.Property))[0]
+        b = self.db.read(k, FetchMode.Property)
         assert isinstance(b, Book)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         print b.name
@@ -252,7 +241,6 @@ class TestSimpson(BaseTestCase):
         self.assertTrue(b.name == "Lord of the Rings")
         self.assertTrue(b.author == "J.R.R Tolkein")
         self.assertTrue(b.isbn == "12345")
-        self.assertTrue(b.titles["Fellowship of the Rings"] == 10000000000)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
     def testReadMode(self):
@@ -262,10 +250,8 @@ class TestSimpson(BaseTestCase):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
             isbn = String(indexed = True)
-            titles = Map(String, Integer)
-        
+         
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
-        book.titles["Fellowship of the Rings"] = 10000000000 #Sold a gazillion copies
         for n in xrange(500):
             book[str(n)] = n
         book.save()
@@ -273,21 +259,21 @@ class TestSimpson(BaseTestCase):
         
         k = Key("Test", "Book", "Lord of the Rings")
         #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
-        b = self.db.read((k, FetchMode.All))[0]
+        b = self.db.read(k, FetchMode.All)
         assert isinstance(b, Book)
         print "Book len:" , len(b)
         assert len(b) == len(book)
         assert b == book
         
     def testDelete(self):
-        '''Tests if Simpson.delete() works well'''
+        '''Tests if Lisa.delete() works well'''
         @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
         
         book = Book(name = "Pride", author="Anne Rice")
-        self.db.put(book)
+        self.db.save(book)
         cursor = self.connection
         cursor.execute("USE Test")
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
@@ -300,8 +286,8 @@ class TestSimpson(BaseTestCase):
         row = cursor.fetchone()
         print "Deleted row: %s" % row
         self.assertTrue(row[0] == None)
-        # Make sure that Reads for Simpson return null too.
-        results = self.db.read((k, FetchMode.Property))
+        # Make sure that Reads for Lisa return null too.
+        results = self.db.read(k, FetchMode.Property)
         self.assertFalse(results)
 
 class TestReference(BaseTestCase):
@@ -321,13 +307,13 @@ class TestReference(BaseTestCase):
         
         print "Persisting Person"
         person = Person(name = "sasuke")
-        self.db.put(person)
+        self.db.save(person)
         print "Persisting Book"
         book = Book(name = "Pride", author = person)
-        self.db.put(book)
+        self.db.save(book)
         
         print "Checking Conversion Routine"
-        k = eval(Book.author.convert(book, "author", person))
+        k = eval(Book.author.convert(person))
         self.assertTrue(k == Key("Test","Person","sasuke"))
         with self.assertRaises(Exception):
             book.author = "Hello"
@@ -339,7 +325,7 @@ class TestReference(BaseTestCase):
         print "Checking Automatic Reference Read"
         id = Key("Test","Book","Pride")
         # id.columns = ["name", "author"]
-        found = self.db.read((id, FetchMode.Property))[0]
+        found = self.db.read(id, FetchMode.Property)
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
      

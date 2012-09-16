@@ -34,8 +34,8 @@ from .builtins import object, fields
 from .differ import Differ, DiffError
 
 READWRITE, READONLY = 1, 2
-__all__ = [ "Model", "key", "Key", "Reference", "Property", "Type", "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
-
+__all__ = [ "Model", "key", "Key", "Reference", "Property", "Type",\
+                     "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
 
 """Exceptions """
 class BadKeyError(Exception):
@@ -72,7 +72,7 @@ class Profile(Model):
 def key(name, namespace = None):
     """The @key decorator""" 
     def inner(cls):
-        if issubclass(cls, Model):
+        if issubclass(cls, BaseModel):
             Schema.Put(namespace, cls, name)
             return cls
         else:
@@ -92,7 +92,7 @@ class Schema(object):
     @classmethod
     def Initialize(cls, instance):
         '''Tracks the Id of every model that has been initialized'''
-        assert isinstance(instance, Model), "You must pass in a model instance"
+        assert isinstance(instance, BaseModel), "You must pass in a model instance"
         cls.initialized.add(id(instance))
         #Do Pre-Storage Initialization Here if necessary
     
@@ -194,20 +194,13 @@ class Converter(object):
         '''Basic Definition just returns the value passed to it'''
         return value
         
-    def convert(self, instance, name, value):
-        '''
-        Returns the datastore suitable repr of @value.
-        the default implementation just returns a str repr of @value after
-        validation
-        '''
+    def convert(self, value):
+        '''Returns the datastore suitable repr of @value'''
         value = self.validate(value)
         return pickle.dumps(value)
     
-    def deconvert(self, instance, name, value):
-        '''
-        Converts a @value which is a datastore repr to a native python object.
-        the default implementation just returns a str repr of @value
-        '''
+    def deconvert(self, value):
+        '''Converts a @value which is a datastore repr to a native python object'''
         return pickle.loads(value)
   
          
@@ -363,12 +356,12 @@ properties that cannot be indexed will be pickled into the datastore
 class UnIndexable(Property):
     '''A Property that cannot be indexed'''
     
-    def convert(self, instance, name, value):
+    def convert(self, value):
         '''Pickles this object to the datastore'''
         value = self.validate(value)
         return pickle.dumps(value)
     
-    def deconvert(self, instance, name, value):
+    def deconvert(self, value):
         '''Converts a raw datastore back to a native python object'''
         loaded = pickle.loads(value)
         return loaded
@@ -466,6 +459,7 @@ class UnIndexedType(UnIndexable, Type):
     '''A Type that cannot be indexed'''
     pass
 
+from homer.backend import Lisa, CqlQuery, FetchMode
 """
 Reference:
 A Pointer to another Model that has been persisted
@@ -479,18 +473,18 @@ class Reference(Property):
         self.cls = cls
         Property.__init__(self, default, **arguments)
     
-    def convert(self, instance, name, value):
+    def convert(self, value):
         '''References are stored as Keys in the datastore'''
         model = self.validate(value)
         if model is not None:
             return repr(value.key())
         else: return repr(None)
         
-    def deconvert(self, instance, name, value):
+    def deconvert(self, value):
         '''Pulls the referenced model from the datastore, and sets it'''
         key = eval(value) #Change the @value back to a key.
         if key:
-            found = Simpson.read((key, FetchMode.All))[0]
+            found = Lisa.read(key, FetchMode.All)
             return found
         else: return None
          
@@ -510,18 +504,23 @@ Represents a type that you can convert and deconvert with str()
 """
 class Basic(Type):
     '''A Type that can be converted with str'''
-    def convert(self, instance, name, value):
+    def convert(self,  value):
         '''Converts the basic type with the str operation'''
         return unicode(self.validate(value))
         
-    def deconvert(self, instance, name, value):
+    def deconvert(self, value):
         '''Since we are expecting a str, we just return the value'''
         return value
-                
-###
-# MODEL AND ITS FRIENDS
-###
-from homer.backend import Simpson, CqlQuery, FetchMode
+
+
+class BaseModel(object):
+    '''The objects that all Models inherit'''
+    def __init__(self):
+        self.differ = Differ(self, exclude = ['differ',])
+
+    def key(self):
+        raise NotImplemented("Use a subclass of BaseModel")
+               
 """    
 Model: 
 The Universal Unit of Persistence, a model is always 
@@ -535,20 +534,20 @@ class Profile(Model):
     name = String("John Bull")
 
 """
-class Model(object):
+class Model(BaseModel):
     '''Unit of persistence'''
-    def __new__(cls, **arguments):
+    def __new__(cls, *arguments, **keywords):
         '''Customizes all Model instances to include special attributes'''
         if not hasattr(cls, "default"):
             cls.default = Default()
-        instance = object.__new__(cls, **arguments)
+        instance = object.__new__(cls, *arguments, **keywords)
         instance.__store__ = {}
         [prop.configure(name, cls) for name, prop in fields(cls, Property).items()] 
         return instance
         
     def __init__(self, **kwds ):
         """Creates an instance of this Model"""
-        self.differ = Differ(self, exclude = ['differ',])
+        super(Model, self).__init__()
         self.__key = None 
         for name, value in kwds.items():
             self[name] = value
@@ -584,19 +583,19 @@ class Model(object):
                 if prop.empty(value):
                     raise BadValueError("Property: %s is required" % name)
         
-        Simpson.put(self)
+        Lisa.save(self)
         self.differ.commit()
                
     @classmethod
-    def read(cls, key, mode = FetchMode.Property):
+    def read(cls, key, mode = FetchMode.All):
         """Retreives objects from the datastore """
         assert isinstance(key, (basestring, Key))
         namespace, kind, member = Schema.Get(cls)
         if isinstance(key, Key):
-            return Simpson.read((key, mode))[0]
+            return Lisa.read(key, mode)
         else: 
             key = Key(namespace, kind, key)
-            return Simpson.read((key, mode))[0]
+            return Lisa.read(key, mode)
     
     @classmethod
     def kind(cls):
@@ -611,7 +610,7 @@ class Model(object):
         for key in keys:
             assert isinstance(key, str)
             todelete.append(Key(namespace, kind, key)) 
-        Simpson.delete(*todelete)
+        Lisa.delete(*todelete)
        
     @classmethod
     def query(cls, query, **kwds):
