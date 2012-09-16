@@ -469,7 +469,7 @@ class Reference(Property):
     '''A Pointer to another persisted Model'''
     def __init__(self, cls, default = None, **arguments):
         '''Override the properties constructor'''
-        assert issubclass(cls, Model), "A Reference must point to a Model"
+        assert issubclass(cls, BaseModel), "A Reference must point to a Model"
         self.cls = cls
         Property.__init__(self, default, **arguments)
     
@@ -495,7 +495,7 @@ class Reference(Property):
         assert isinstance(value, self.cls), "You must use a subclass of: %s" % self.cls.__name__
         key = value.key()
         assert key.complete(), "Your %s's key must be complete" % value
-        assert key.saved or value.saved(), "Your %s must have been previously persisted in the DataStore"
+        assert key.saved, "Your %s must have been previously persisted in the DataStore"
         return value
 
 """
@@ -512,14 +512,34 @@ class Basic(Type):
         '''Since we are expecting a str, we just return the value'''
         return value
 
-
+"""
+BaseModel:
+The Base class of all model related objects, It
+supports the dictionary protocol.
+"""
 class BaseModel(object):
     '''The objects that all Models inherit'''
+
+    def __new__(cls, *arguments, **keywords):
+        '''Customizes all Model instances to include special attributes'''
+        instance = object.__new__(cls, *arguments, **keywords)
+        instance.__store__ = {} #We need a Store for the differ to work.
+        return instance
+
     def __init__(self):
         self.differ = Differ(self, exclude = ['differ',])
 
     def key(self):
         raise NotImplemented("Use a subclass of BaseModel")
+
+    def __setitem__(self, name, value):
+         raise NotImplemented("Use a subclass of BaseModel")
+
+    def __getitem__(self, name):
+         raise NotImplemented("Use a subclass of BaseModel")
+
+    def __delitem__(self, name):
+         raise NotImplemented("Use a subclass of BaseModel")
                
 """    
 Model: 
@@ -538,10 +558,9 @@ class Model(BaseModel):
     '''Unit of persistence'''
     def __new__(cls, *arguments, **keywords):
         '''Customizes all Model instances to include special attributes'''
+        instance = BaseModel.__new__(cls, *arguments, **keywords)
         if not hasattr(cls, "default"):
             cls.default = Default()
-        instance = object.__new__(cls, *arguments, **keywords)
-        instance.__store__ = {}
         [prop.configure(name, cls) for name, prop in fields(cls, Property).items()] 
         return instance
         

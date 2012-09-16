@@ -402,7 +402,6 @@ class CqlQuery(object):
                 model = self.kind()
                 descs = fields(model, Property)
                 values = {}
-                # print "Unmarshalling ROW: %s" % row
                 for name, value in zip(names, row):
                     if not value: continue
                     if name == "KEY": continue #Ignore the KEY attribute
@@ -482,7 +481,7 @@ class Lisa(local):
                 GLOBAL.COLUMNFAMILIES.add(kind)
 
     @staticmethod
-    def readColumn(converter, key, name):
+    def readColumn(key, name):
         '''Read a particular property to the column specified via @key'''
         assert key.iscomplete(), "Your key must be complete, before you can do reads"
         pool = poolFor(key.namespace)
@@ -492,16 +491,15 @@ class Lisa(local):
             conn.client.set_keyspace(key.namespace)
             cosc = conn.client.get(key.id, path, GLOBAL.CONSISTENCY)
         column = cosc.column
-        return converter.deconvert(column.value)
+        return column.value
         
     
     @staticmethod
-    def saveColumn(converter, key, name, value, ttl=None):
+    def saveColumn(key, name, value, ttl=None):
         '''Write a particular property to the column specified via @key'''
         assert key.iscomplete(), "Your key must be complete before you can do writes"
         pool = poolFor(key.namespace)
         timestamp = time.time()
-        value = converter.convert(value)
         parent = ColumnParent(column_family=key.kind)
         column = Column(name=name, value=value, timestamp=timestamp)
         if ttl:
@@ -526,12 +524,11 @@ class Lisa(local):
 
     @staticmethod
     def readManyColumns(namespace, kind, id, *arguments):
-        '''Read various properties from one Model arguments: [(name, Converter)]'''
+        '''Read various properties from one Model arguments: [name, name, name]'''
         assert namespace and kind and id, "specify namespace, kind, id"
         assert namespace and kind, "You must specify; namespace, kind"
         pool = poolFor(namespace)
-        names = {tup[0]: tup[1] for tup in arguments}
-        predicate = SlicePredicate(column_names=names.keys())
+        predicate = SlicePredicate(column_names=arguments)
         parent = ColumnParent(column_family=kind)
         result = None
         with using(pool) as conn:
@@ -539,20 +536,19 @@ class Lisa(local):
             results = conn.client.get_slice(id, parent, predicate, GLOBAL.CONSISTENCY)
         for cosc in results:
             column = cosc.column
-            yield column.name, names[column.name].deconvert(column.value)
+            yield column.name, column.value
       
 
     @staticmethod
     def saveManyColumns(namespace, kind, id, *arguments):
-        '''Write a lot of properties in one batch, arguments: [(name, value, Converter)]'''
+        '''Write a lot of properties in one batch, arguments: [(name, value)]'''
         # See Page 151 and Page 78 in the Cassandra Guide.
         assert namespace and kind and id, 'specify arguments namespace, kind, id'
         mutations = { kind : [] }
         for tuple in arguments:
-            converter = tuple[2]
             column = Column()
             column.name = tuple[0]
-            column.value = converter.convert(tuple[1])
+            column.value = tuple[1]
             column.timestamp = time.time()
             cosc = ColumnOrSuperColumn()
             cosc.column = column
@@ -849,7 +845,6 @@ class MetaModel(object):
                 prop = descriptors[name]
                 deconverted = prop.deconvert(cosc.column.value)
                 model[name] = deconverted 
-                print "Just Deconverted: %s" % prop
             else: # Deconvert dynamic properties, this deconverts column names, and column values
                 k, v = model.default
                 k = k() if isinstance(k, type) else k
