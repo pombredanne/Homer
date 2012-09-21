@@ -286,20 +286,19 @@ class TestList(TestCase):
     """Tests for List() descriptor"""
     def setUp(self):
         class Family(object):
-            birthdays = List(date)
-            nested = List(List(String))
+            birthdays = List(Date)
+            nested = List(String)
         self.test = Family()
     
     def testListSanity(self):
         """Sanity checks for List()"""
         sample = [ date(1990,8,5) for i in range(10)]
         self.test.birthdays = sample
-        self.test.nested.extend([["Hello", "World", ], ["Another", "Yes",]])
-        print self.test.nested
+        self.test.nested.extend(["Hello", "World","Another", "Yes",])
         self.assertEqual(self.test.birthdays, sample)
     
     def testListHandlesNones(self):
-        '''List should throw an error for Nones'''
+        '''List should not throw an error for Nones'''
         self.test.birthdays = None
     
     def testListTypeChecking(self):
@@ -334,18 +333,17 @@ class TestSet(TestCase):
     """Tests for Set() descriptor"""
     def setUp(self):
         class Person(object):
-            spouses = Set(String, default = set(["amy","tiffy"]))
-            pets = Set(Float)
+            spouses = Set(String, default=set(["amy","tiffy"]))
+            pets = Set(Float, default=[1.0, 2.0, 3.0])
         self.test = Person()
     
     def testSetSanity(self):
         """Sanity checks, for Sets; """
-        print self.test.spouses
-        print self.test.pets
-        self.assertEquals(self.test.spouses,set(["amy","tiffy"]))
-        self.test.pets = set([1,2,3,])
-        print self.test.pets
-        self.assertEquals(self.test.pets, set([1.0, 2.0, 3.0,]))
+        for i in ["amy", "tiffy"]:
+            self.assertTrue(i in self.test.spouses)
+        for i in [1.0, 2.0, 3.0]:
+            self.assertTrue(i in self.test.pets)
+
         
     def testSetsAreHomogenous(self):
         """asserts that Sets contents are homogeneous and validated"""

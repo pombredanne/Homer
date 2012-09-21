@@ -8,7 +8,7 @@ Copyright 2011, June inc.
 Description:
 Useful builtin functions and classes for everyday use of Homer.
 """
-__all__ = ["object", "fields", ]
+__all__ = ["object", "fields",]
 
 
 class object(object):
@@ -22,16 +22,12 @@ def fields(cls, instance):
     '''Searches a class heirachy for instances of a particular type'''
     if not isinstance(cls, type): cls = cls.__class__
     results = dict()
-    
     def add(name, prop):
         '''Inner helper function'''
         if isinstance(prop, instance) and not name.startswith("_"):
-            results[name] = prop
-    
+            results[name] = prop 
     # Search the instance/class heirachy.       
     for root in reversed(cls.__mro__):
         for name, prop in root.__dict__.items():
             add(name, prop) 
     return results
-    
-

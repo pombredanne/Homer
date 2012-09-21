@@ -29,8 +29,9 @@ import datetime
 import urlparse
 from contextlib import closing
 from homer.util import Size
-from .types import phone, blob
+from .types import phone, blob, TypedMap, TypedSet, TypedList, TypedCounter
 from .models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
+from .models import Converter as blank
 
 maxsize = 1024 * 1024 * 512
 __all__ = [
@@ -350,10 +351,11 @@ class Person(object):
 """
 class Set(UnIndexable):
     """A data descriptor for storing sets"""
-    def __init__(self, cls = object,default = set(),**arguments):
+    def __init__(self, cls=blank,default=set(),**arguments):
         """The type keyword here has a different meaning"""
         self.cls = cls
-        super(Set, self).__init__(default, **arguments)
+        set = TypedSet(T=cls, data=default)
+        super(Set, self).__init__(set, **arguments)
     
     def validate(self,value):
         """Validates the type you are setting and its contents"""
@@ -365,27 +367,8 @@ class Set(UnIndexable):
             try: value = set(value)
             except:
                 raise BadValueError("This property has to be set, got a : %s" % type(value))
-        coerced = set()
-        # Coercion is all or nothing. if any fails the entire operation fails
-        name = self.cls.__name__
-        if name in defaults: # Check if cls is a common descriptor.
-            validate = defaults[name] # Retrieve a singleton to deal with this.
-            for i in value:  # Normally Common descriptors take care of 'Nones'
-                coerced.add(validate(i))
-            return coerced        
-        else: # Do normal type coercion, third party devs should make sure their Descriptors are callable
-            for i in value: 
-                if isinstance(i, self.cls):
-                    coerced.append(i)
-                    continue
-                try:
-                    if isinstance(i, list): i = self.cls(*i)
-                    elif isinstance(i, dict): i = self.cls(**i)
-                    else: i = self.cls(i)
-                    coerced.append(i)       
-                except: 
-                    raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls)) 
-            return coerced
+        coerced = TypedSet(T=self.cls, data=value)
+        return coerced
 """
 List:
 A descriptor that stores homogeneous lists, it works like the Set descriptor except
@@ -402,9 +385,10 @@ person.harem.extend(["Aisha","Halima","Safia",])
 """
 class List(UnIndexable):
     """Stores a List of objects,You can specify the type of the objects this list contains"""
-    def __init__(self,cls = object, default = [], **arguments ):    
+    def __init__(self,cls=blank, default = [], **arguments ):    
         self.cls = cls
-        super(List, self).__init__(default, **arguments)
+        list = TypedList(T=cls, data=default)
+        super(List, self).__init__(list, **arguments)
      
     def validate(self,value):
         """Validates a list and all its contents"""
@@ -415,27 +399,8 @@ class List(UnIndexable):
             try: value = list(value)
             except:
                 raise BadValueError("This property has to be set, got a : %s" % type(value))
-        coerced = []
-        # COERCION IS AN ALL OR NOTHING OPERATION. IF ANY FAILS THE ENTIRE OPERATION FAILS
-        name = self.cls.__name__
-        if name in defaults: # CHECK IF CLS IS A COMMON DESCRIPTOR.
-            validate = defaults[name] # RETRIEVE A SINGLETON TO DEAL WITH THIS.
-            for i in value:  # NORMALLY COMMON DESCRIPTORS TAKE CARE OF 'NONES'
-                coerced.append(validate(i))
-            return coerced        
-        else: # DO NORMAL TYPE COERCION, THIRD PARTY DEVS SHOULD MAKE SURE THEIR DESCRIPTORS ARE CALLABLE
-            for i in value: 
-                if isinstance(i, self.cls):
-                    coerced.append(i)
-                    continue
-                try:
-                    if isinstance(i, list): i = self.cls(*i)
-                    elif isinstance(i, dict): i = self.cls(**i)
-                    else: i = self.cls(i)
-                    coerced.append(i)   
-                except: 
-                    raise BadValueError("Cannot coerce: %s to %s"% (i, self.cls))        
-            return coerced    
+        created = TypedList(T=self.cls, data=value)
+        return created  
 """
 Map:
 A descriptor for dict-like objects;
@@ -444,13 +409,13 @@ class Person(object):
     bookmarks = Map(String, URL)
 """
 class Map(UnIndexable):
-    def __init__(self, key=object, value=object, default = {}, **arguments):
+    def __init__(self, key=blank, value=blank, default = {}, **arguments):
         self.key, self.value = key, value
-        super(Map, self).__init__(default, **arguments)
+        map = TypedMap(key, value, data=default)
+        super(Map, self).__init__(map, **arguments)
       
     def validate(self, value):
         '''Simply does type checking'''
-        print "GOT VALUE: ", value
         value = super(Map, self).validate(value)
         if value is None:
             return None
@@ -458,27 +423,7 @@ class Map(UnIndexable):
             try: value = dict(value)
             except:
                 raise BadValueError("This property has to be set, got a : %s" % type(value))
-        coerced = {}
-        keyVal, valueVal = None, None
-       
-        if isinstance(self.key, type):
-            name = self.key.__name__
-            keyVal = defaults[name] if name in defaults else self.key
-        if isinstance(self.value, type):
-            val = self.value.__name__
-            valueVal = defaults[val] if val in defaults else self.value
-            
-        for k,v in value.items(): 
-            key = keyVal(k) 
-            value = valueVal(v)
-            coerced[key] = value
+        coerced = TypedMap(self.key, self.value, data=value)
         return coerced
-                
-# names are useful for getting supported common types
-names = { "Integer": Integer, "String": String, "Blob": Blob, "Boolean": Boolean, 
-    "URL": URL, "Time": Time, "DateTime": DateTime, "Date": Date, "Float": Float, 
-        "Map" : Map, "List": List, "Set": Set, "Phone": Phone,}             
-
-## Common Singletons
-defaults = { name : value() for name, value in names.items() }  
+        
 
