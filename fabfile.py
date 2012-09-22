@@ -60,7 +60,7 @@ def test(arguments=""):
         print("Couldn't Launch Cassandra, Quitting...")
         sys.exit(1)
     
-    time.sleep(7.0) # Wait for the Cassandra Server to fully launch
+    time.sleep(5.0) # Wait 5s for the Cassandra Server to fully launch
     header("Launched Cassandra Successfully")
     header("Running Unit tests")
     if not arguments:

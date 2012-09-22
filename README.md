@@ -43,7 +43,7 @@ options = {
             "username" : "", "password": "", "keyspace": "June",
             "strategy" : {
                "name": "SimpleStrategy", "factor": 1,
-            },
+             },
 }
 CONFIG.NAMESPACES["June"] = options
 CONFIG.DEFAULT_NAMESPACE = "June"
