@@ -489,13 +489,19 @@ class Reference(Property):
         else: return None
          
     def validate(self, value):
-        '''Makes sure the instance you set on a Reference has a complete key after type checking'''
+        '''Makes sure you can only set a Model or a Key on a Reference'''
         if value is None:
             return None
-        assert isinstance(value, self.cls), "You must use a subclass of: %s" % self.cls.__name__
-        key = value.key()
+        if isinstance(value, self.cls):
+            key = value.key()
+        elif isinstance(value, Key):
+            namespace, kind, member = Schema.Get(self.cls)
+            assert key.kind == kind, "Invalid Model, You are using different Models"
+            assert key.namespace == namespace, "Invalid Model, You are using different namespaces"
+        else:
+            raise BadValueError("You must use a subclass of: %s or a Key" % self.cls.__name__)
         assert key.complete(), "Your %s's key must be complete" % value
-        assert key.saved, "Your %s must have been previously persisted in the DataStore"
+        assert key.saved, "Your key must have been previously persisted to Cassandra"
         return value
 
 """
@@ -533,13 +539,13 @@ class BaseModel(object):
         raise NotImplemented("Use a subclass of BaseModel")
 
     def __setitem__(self, name, value):
-         raise NotImplemented("Use a subclass of BaseModel")
+        raise NotImplemented("Use a subclass of BaseModel")
 
     def __getitem__(self, name):
-         raise NotImplemented("Use a subclass of BaseModel")
+        raise NotImplemented("Use a subclass of BaseModel")
 
     def __delitem__(self, name):
-         raise NotImplemented("Use a subclass of BaseModel")
+        raise NotImplemented("Use a subclass of BaseModel")
                
 """    
 Model: 
@@ -611,6 +617,7 @@ class Model(BaseModel):
         assert isinstance(key, (basestring, Key))
         namespace, kind, member = Schema.Get(cls)
         if isinstance(key, Key):
+            assert kind == key.kind, "Mismatched Model, reading a %s with %s" % (kind, key.kind)
             return Lisa.read(key, mode)
         else: 
             key = Key(namespace, kind, key)

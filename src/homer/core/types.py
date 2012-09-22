@@ -104,7 +104,7 @@ class blob(object):
 Description:
 Typed Collections that are useful for the collection descriptors.
 """
-from .models import Converter
+from .models import Converter, Reference, Model
 from collections import MutableMapping, MutableSet, MutableSequence, Counter
 
 blank = Converter #An alias
@@ -134,8 +134,18 @@ class TypedMap(MutableMapping):
 
     def __init__(self, T=blank, V=blank, data={}):
         assert isinstance(T, type) and isinstance(V, type), "T and V must be classes"
-        assert issubclass(T, Converter) and issubclass(V, Converter), "T and V must be Converters"
-        self.T, self.V = T(), V()
+        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
+        assert issubclass(V, (Converter, Model)), "V must be a Converter or a Model"
+        # Convert Models to a References underneath.
+        if issubclass(T, Model):
+            self.T = Reference(T)
+        else: 
+            self.T = T()     
+        if issubclass(V, Model):
+            self.V = Reference(V)
+        else: 
+            self.V = V()
+        # Create the underlying data for the Map.
         self.__data__ = {}
         for k, v in data.iteritems():
             self[k] = v
@@ -191,9 +201,13 @@ class TypedList(MutableSequence):
     '''A List that validates content before addition or removal'''
     def __init__(self, T=blank, data=[]):
         assert isinstance(T, type), "T must be a class"
-        assert issubclass(T, Converter), "T must be a Converter"
+        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
+        # Converter Model classes to References
+        if issubclass(T, Model):
+            self.T = Reference(T)
+        else: 
+            self.T = T()
         self.__data__ = []
-        self.T = T()
         for k in data:
             self.append(k)
 
@@ -236,9 +250,13 @@ class TypedSet(MutableSet):
     '''A Set that validates content before addition'''
     def __init__(self, T=blank, data=set()):
         assert isinstance(T, type), "T must be a class"
-        assert issubclass(T, Converter), "T must be a Converter"
+        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
+        # Converter Models to References
+        if issubclass(T, Model):
+            self.T = Reference(T)
+        else: 
+            self.T = T()
         self.__data__ = set()
-        self.T = T()
         for k in data:
             self.add(k)
 

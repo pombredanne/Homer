@@ -170,7 +170,6 @@ from the filesystem.
 You can also create blobs from stream with a class method like thus:
 
 avatar = Blob.fromFile(filelike)
-
 ....
 """   
 class Blob(Basic):
