@@ -43,7 +43,7 @@ from cql.cassandra.ttypes import *
 
 from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
-from homer.options import NAMESPACES, DEFAULT_NAMESPACE
+from homer.options import CONFIG
 
 # MODULE EXCEPTIONS
 class ConnectionDisposedError(Exception):
@@ -64,6 +64,10 @@ class AllServersUnAvailableError(Exception):
 
 class InvalidNamespaceError(Exception):
     '''Thrown to show that there is a problem with the current Namespace in use'''
+    pass
+
+class ConfigurationError(Exception):
+    '''Thrown to signal that Homer was not configured properly'''
     pass
 
 # THREADSAFE GLOBAL CONFIGURATION.
@@ -97,16 +101,34 @@ def redo(function):
     return do
 
 
+"""
+optionsFor:
+This returns a configuration option for a namespace if it exists
+or else it returns the options for the default namespace. If there
+is no default namespace then it throws a ConfigurationError
+"""
+def optionsFor(namespace):
+    '''Returns configuration for a namespace or the default'''
+    found = None
+    if namespace not in CONFIG.NAMESPACES:
+        found = CONFIG.NAMESPACES.get(CONFIG.DEFAULT_NAMESPACE, None)
+    else:
+        found = CONFIG.NAMESPACES[namespace]
+    if not found:
+        raise ConfigurationError("No default namespace configured")
+    return found
+
 def poolFor(namespace):
     '''Returns or creates a new ConnectionPool for this namespace'''
     pool = None
     if namespace not in GLOBAL.POOLS:
-        found = NAMESPACES.get(namespace, DEFAULT_NAMESPACE)                    
-        pool = RoundRobinPool(found["options"])
+        found = optionsFor(namespace)             
+        pool = RoundRobinPool(found)
         GLOBAL.POOLS[namespace] = pool
     else:
         pool = GLOBAL.POOLS[namespace]
     return pool   
+
 
 # CONTROLLING CONSISTENCY   
 """
@@ -714,8 +736,7 @@ class MetaModel(object):
     @redo       
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this BaseModel'''
-        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
-        options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)["options"]
+        options = optionsFor(self.namespace)
         try:
             connection.client.set_keyspace(options["keyspace"])
             connection.client.system_add_column_family(self.asColumnFamily())
@@ -726,10 +747,8 @@ class MetaModel(object):
     @redo
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
-        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
-        print "Trying to create an index on" % self.model
         try:
-            options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
+            options = optionsFor(self.namespace)
             query = 'CREATE INDEX ON {kind}({name});'
             for name, property in self.fields.items():
                 if property.saveable() and property.indexed():
@@ -748,8 +767,7 @@ class MetaModel(object):
                     
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
-        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
-        options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
+        options = optionsFor(self.namespace)
         assert options is not None, "No configuration options for this keyspace"
         name = options['keyspace']
         strategy = options['strategy']['name']
@@ -763,8 +781,7 @@ class MetaModel(object):
       
     def asColumnFamily(self):
         '''Returns the native column family definition for this @BaseModel'''
-        from homer.options import NAMESPACES, DEFAULT_NAMESPACE
-        options = NAMESPACES.get(self.namespace, DEFAULT_NAMESPACE)['options']
+        options = optionsFor(self.namespace)
         assert options is not None, "No configuration options for this keyspace"
         namespace = options['keyspace']
         CF = CfDef()

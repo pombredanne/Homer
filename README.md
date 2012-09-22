@@ -32,17 +32,22 @@ So here we go:
 
 ```python
 # Relevant imports.
-from homer.options import *
+from homer.options import CONFIG
 from homer.core import Model, key, Key
 from homer.core.commons import *
 
-# Point Homer to Cassandra and create a default keyspace;
-# Do this before you declare your models.
-instances = ["localhost:9160", "localhost:9161",]
-c = DatastoreOptions(servers=instances, username="test", password="test")
-namespace = Namespace(name= "June", cassandra= c)
-namespaces.add(namespace)
-namespaces.default = "June" # or you could use namespaces.default = namespace
+# Do configuration for Homer.
+options = {
+            "size" : 25, "timeout" : 30.0, "recycle" : 8000,
+            "idle" : 10, "servers" : ["localhost:9160",],
+            "username" : "", "password": "", "keyspace": "June",
+            "strategy" : {
+               "name": "SimpleStrategy", "factor": 1,
+            },
+}
+CONFIG.NAMESPACES["June"] = options
+CONFIG.DEFAULT_NAMESPACE = "June"
+
 
 '''
 The snippet above points homer to your datastores and tells
@@ -53,6 +58,7 @@ below.
 @key("name", namespace="Logging")
 class Stat(object): ....
 
+But you have to create a different configuration for the namespace 'Logging';
 Ok, thats a bit too early; but read on!
 '''
 

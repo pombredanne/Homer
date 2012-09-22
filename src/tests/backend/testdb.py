@@ -24,7 +24,7 @@ Description:
 Tests for the the db module.
 """
 import time
-from homer.options import DEFAULT_OPTIONS
+from homer.options import CONFIG
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Lisa, Level, CqlQuery, FetchMode
 from unittest import TestCase, skip
 
@@ -35,7 +35,7 @@ class TestRoundRobinPool(TestCase):
     def setUp(self):
         '''Create the Pool'''
         print "Creating a Pool with the default connections"
-        self.pool = RoundRobinPool(DEFAULT_OPTIONS)
+        self.pool = RoundRobinPool(CONFIG.DEFAULT_OPTIONS)
     
     def tearDown(self):
         '''Dispose all alive connections in the Pool'''
@@ -84,7 +84,7 @@ class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
     def setUp(self):
-        self.pool = RoundRobinPool(DEFAULT_OPTIONS)
+        self.pool = RoundRobinPool(CONFIG.DEFAULT_OPTIONS)
     
     def tearDown(self):
         self.pool.disposeAll()
