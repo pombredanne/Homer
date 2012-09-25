@@ -443,7 +443,10 @@ class CqlQuery(object):
     
     def fetchone(self):
         '''Returns just one result'''
-        return iter(self).next()
+        try:
+            return iter(self).next()
+        except:
+            return None
                              
     def __str__(self):
         '''String representation of a CQLQuery.'''
