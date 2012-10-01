@@ -20,8 +20,35 @@
 # limitations under the License.
 #
 import sys
+from traceback import print_exc
+from homer.options import Settings
+from homer.backend.db import Lisa
 
 __all__ = ["Size", ]
+
+class Bootstrap(object):
+    '''A helper class for bootstrapping homer'''
+    
+    @classmethod
+    def MakeEveryModel(self):
+        '''Tries to create all the models, registered on Homer'''
+        from homer.core.models import Schema
+        debug = Settings.debug
+        namespaces = Schema.schema.keys()
+        for namespace in namespaces:
+            kinds = Schema.schema[namespace].keys()
+            for kind in kinds:
+                try:
+                    if debug:
+                        print("Creating Model: %s, %s" % (namespace, kind))
+                    clasz = Schema.ClassForModel(namespace, kind)
+                    instance = clasz()
+                    Lisa.create(instance);
+                except:
+                    if debug:
+                        print_exc()
+        
+
 """
 Size:
 Size provide utilities for checking size of objects in Kb, Mb and Gb.

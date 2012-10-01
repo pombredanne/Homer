@@ -29,6 +29,7 @@ import atexit
 import itertools
 import cPickle as pickle
 from functools import wraps
+from traceback import print_exc
 from contextlib import contextmanager as Context
 from threading import Thread, local, RLock
 from Queue import Queue, Empty, Full
@@ -496,14 +497,17 @@ class Lisa(local):
         kind = info[1]
         meta = MetaModel(model)
         pool = poolFor(namespace)
-        with using(pool) as conn:
-            if namespace not in GLOBAL.KEYSPACES:
-                meta.makeKeySpace(conn)
-                GLOBAL.KEYSPACES.add(namespace)
-            if kind not in GLOBAL.COLUMNFAMILIES:
-                meta.makeColumnFamily(conn) 
-                meta.makeIndexes(conn)
-                GLOBAL.COLUMNFAMILIES.add(kind)
+        try:
+            with using(pool) as conn:
+                if namespace not in GLOBAL.KEYSPACES:
+                    meta.makeKeySpace(conn)
+                    GLOBAL.KEYSPACES.add(namespace)
+                if kind not in GLOBAL.COLUMNFAMILIES:
+                    meta.makeColumnFamily(conn) 
+                    meta.makeIndexes(conn)
+                    GLOBAL.COLUMNFAMILIES.add(kind)
+        except:
+            print_exc();
 
     @staticmethod
     def readColumn(key, name):
