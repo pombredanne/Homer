@@ -57,7 +57,7 @@ CONFIG.NAMESPACES = { "Test": CONFIG.DEFAULT_OPTIONS}
 ##    
 class Settings(object):
     """ Specifies configuration for logging,"""
-    debug = True
+    DEBUG = True
     
     @classmethod
     def logger(self, name = "Default::Logger"):
@@ -65,7 +65,7 @@ class Settings(object):
         log = logging.getLogger(name)
         handler = logging.StreamHandler() #Maybe we should create a ScribeHandler... :)
         log.addHandler(handler)
-        if self.debug:
+        if self.DEBUG:
             log.setLevel(logging.DEBUG)
         else: log.setLevel(logging.INFO)
         return log

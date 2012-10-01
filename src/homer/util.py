@@ -33,19 +33,18 @@ class Bootstrap(object):
     def MakeEveryModel(self):
         '''Tries to create all the models, registered on Homer'''
         from homer.core.models import Schema
-        debug = Settings.debug
         namespaces = Schema.schema.keys()
         for namespace in namespaces:
             kinds = Schema.schema[namespace].keys()
             for kind in kinds:
                 try:
-                    if debug:
+                    if Settings.DEBUG:
                         print("Creating Model: %s, %s" % (namespace, kind))
                     clasz = Schema.ClassForModel(namespace, kind)
                     instance = clasz()
                     Lisa.create(instance);
                 except:
-                    if debug:
+                    if Settings.DEBUG:
                         print_exc()
         
 

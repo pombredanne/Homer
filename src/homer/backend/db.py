@@ -44,7 +44,7 @@ from cql.cassandra.ttypes import *
 
 from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
-from homer.options import CONFIG
+from homer.options import CONFIG, Settings
 
 # MODULE EXCEPTIONS
 class ConnectionDisposedError(Exception):
@@ -391,7 +391,7 @@ class CqlQuery(object):
             self.keyspace = found
         
         print "Executing Query: %s in %s" % (self.query, self.keyspace)
-        if not self.kind.__name__ in GLOBAL.COLUMNFAMILIES:
+        if not self.kind.__name__ in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
             print "Creating new Column Family: %s " % self.kind.__name__
             Lisa.create(self.kind())
                
@@ -653,7 +653,7 @@ class Lisa(local):
         info = Schema.Get(model)
         namespace = info[0]
         kind = info[1]
-        if kind not in GLOBAL.COLUMNFAMILIES:
+        if kind not in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
             Lisa.create(model)
         meta = MetaModel(model)
         changes = { meta.id() : meta.mutations() }
@@ -695,7 +695,7 @@ class Lisa(local):
             keyspace = info[0]
             assert namespace == keyspace, "All the Models should belong to %s" % namespace
             kind = info[1]
-            if kind not in GLOBAL.COLUMNFAMILIES:
+            if kind not in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
                 Lisa.create(model)
             meta = MetaModel(model)
             key = model.key()
