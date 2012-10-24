@@ -28,6 +28,7 @@ import time
 import atexit
 import itertools
 import cPickle as pickle
+from copy import deepcopy
 from functools import wraps
 from traceback import print_exc
 from contextlib import contextmanager as Context
@@ -113,6 +114,8 @@ def optionsFor(namespace):
     found = None
     if namespace not in CONFIG.NAMESPACES:
         found = CONFIG.NAMESPACES.get(CONFIG.DEFAULT_NAMESPACE, None)
+        found = deepcopy(found)
+        found['keyspace'] = namespace
     else:
         found = CONFIG.NAMESPACES[namespace]
     if not found:
@@ -500,8 +503,10 @@ class Lisa(local):
         try:
             with using(pool) as conn:
                 if namespace not in GLOBAL.KEYSPACES:
+                    #print("Trying to create keyspace: %s" % meta.namespace)
                     meta.makeKeySpace(conn)
                     GLOBAL.KEYSPACES.add(namespace)
+                    #print "Global keyspaces: %s" % GLOBAL.KEYSPACES
                 if kind not in GLOBAL.COLUMNFAMILIES:
                     meta.makeColumnFamily(conn) 
                     meta.makeIndexes(conn)
@@ -737,8 +742,8 @@ class MetaModel(object):
         '''Creates a new keyspace from the namespace property of this BaseModel'''
         try:
             connection.client.system_add_keyspace(self.asKeySpace())
-        except InvalidRequestException:
-            pass #raise DuplicateError("Another Keyspace with this name seems to exist")
+        except Exception as e:
+            pass
     
     @redo       
     def makeColumnFamily(self, connection):
@@ -770,7 +775,7 @@ class MetaModel(object):
                     
             self.wait(connection)
         except Exception as e:
-            raise e
+            pass
                     
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
