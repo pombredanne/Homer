@@ -32,12 +32,12 @@ class TestBatching(BaseTestCase):
             fullname = String(indexed = True)
             bookmarks = Map(String, URL)   
         
-        profile = Profile(id = str(uuid.uuid4()), fullname = "Iroiso Ikpokonte")
+        profile = Profile(id = str(uuid.uuid4()), fullname = "Iroiso Ikpokonte", bookmarks={})
         profile.save()
         
         l = []
         for i in range(500):
-            profile = Profile(id = str(i), fullname = "Iroiso Ikpokonte")
+            profile = Profile(id = str(i), fullname = "Iroiso Ikpokonte", bookmarks={})
             profile.bookmarks["google"] = "http://google.com"
             profile.bookmarks["twitter"] = "http://twitter.com"
             l.append(profile)

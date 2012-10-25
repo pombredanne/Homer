@@ -256,7 +256,7 @@ class URL(Basic):
     
     def empty(self, value):
         '''What does it mean for a URL to be empty'''
-        return value is None or bool(value.strip())
+        return value is None or not bool(value.strip())
         
     def validate(self,value):
         """Uses urlsplit to validate urls"""

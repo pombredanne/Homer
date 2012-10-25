@@ -294,7 +294,6 @@ class TestList(TestCase):
         """Sanity checks for List()"""
         sample = [ date(1990,8,5) for i in range(10)]
         self.test.birthdays = sample
-        self.test.nested.extend(["Hello", "World","Another", "Yes",])
         self.assertEqual(self.test.birthdays, sample)
     
     def testListHandlesNones(self):
@@ -302,7 +301,7 @@ class TestList(TestCase):
         self.test.birthdays = None
     
     def testListTypeChecking(self):
-        """This test should fail. It verifies that List type checking works"""
+        """This test verifies that List type checking works"""
         sample = [i for i in range(10)]
         with self.assertRaises(Exception):
             self.test.birthdays = sample
@@ -333,9 +332,11 @@ class TestSet(TestCase):
     """Tests for Set() descriptor"""
     def setUp(self):
         class Person(object):
-            spouses = Set(String, default=set(["amy","tiffy"]))
-            pets = Set(Float, default=[1.0, 2.0, 3.0])
+            spouses = Set(String)
+            pets = Set(Float)
         self.test = Person()
+        self.test.spouses = set(["amy","tiffy"])
+        self.test.pets = [1.0, 2.0, 3.0]
     
     def testSetSanity(self):
         """Sanity checks, for Sets; """
