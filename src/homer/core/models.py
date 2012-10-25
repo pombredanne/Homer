@@ -319,7 +319,7 @@ class Property(Converter):
     def validate(self, value):
         """Asserts that the value provided is compatible with this property"""
         if self.required and self.empty(value):
-            raise BadValueError("This property is required, it cannot be empty") 
+            raise BadValueError("Property: %s is required, it cannot be empty" % self.name) 
         if self.choices:
             if value not in self.choices:
                 raise BadValueError("The property %s is %r; it must be on of %r"% (self.name, value, self.choices))
