@@ -40,10 +40,14 @@ class TestModel(BaseTestCase):
         class Profile(Model):
             id = String(required = True, indexed = True)
             fullname = String(indexed = True)
+            bookmarks = Map(String, URL)
             
         cursor = self.connection
         profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
+        profile.bookmarks["google"] = "http://google.com"
+        profile.bookmarks["twitter"] = "http://twitter.com"
         profile.save() # Save to the datastore
+
         cursor.execute("USE Test;")
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
@@ -108,6 +112,7 @@ class TestModel(BaseTestCase):
             name = String(required = True, indexed = True)
             author = String(indexed = True)
             isbn = String(indexed = True)
+            
         
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
         book.save()

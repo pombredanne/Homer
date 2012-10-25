@@ -350,11 +350,10 @@ class Person(object):
 """
 class Set(UnIndexable):
     """A data descriptor for storing sets"""
-    def __init__(self, cls=blank,default=set(),**arguments):
+    def __init__(self, cls=blank):
         """The type keyword here has a different meaning"""
         self.cls = cls
-        set = TypedSet(T=cls, data=default)
-        super(Set, self).__init__(set, **arguments)
+        super(Set, self).__init__()
     
     def validate(self,value):
         """Validates the type you are setting and its contents"""
@@ -384,10 +383,9 @@ person.harem.extend(["Aisha","Halima","Safia",])
 """
 class List(UnIndexable):
     """Stores a List of objects,You can specify the type of the objects this list contains"""
-    def __init__(self,cls=blank, default = [], **arguments ):    
+    def __init__(self, cls=blank):    
         self.cls = cls
-        list = TypedList(T=cls, data=default)
-        super(List, self).__init__(list, **arguments)
+        super(List, self).__init__()
      
     def validate(self,value):
         """Validates a list and all its contents"""
@@ -408,10 +406,9 @@ class Person(object):
     bookmarks = Map(String, URL)
 """
 class Map(UnIndexable):
-    def __init__(self, key=blank, value=blank, default = {}, **arguments):
+    def __init__(self, key=blank, value=blank):
         self.key, self.value = key, value
-        map = TypedMap(key, value, data=default)
-        super(Map, self).__init__(map, **arguments)
+        super(Map, self).__init__()
       
     def validate(self, value):
         '''Simply does type checking'''
