@@ -393,9 +393,9 @@ class CqlQuery(object):
             found = Schema.Get(self.kind)[0]
             self.keyspace = found
         
-        print "Executing Query: %s in %s" % (self.query, self.keyspace)
+        #print "Executing Query: %s in %s" % (self.query, self.keyspace)
         if not self.kind.__name__ in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
-            print "Creating new Column Family: %s " % self.kind.__name__
+            #print "Creating new Column Family: %s " % self.kind.__name__
             Lisa.create(self.kind())
                
         pool = poolFor(self.keyspace)
@@ -403,7 +403,7 @@ class CqlQuery(object):
             #print "Executing %s" % self
             conn.client.set_keyspace(self.keyspace)
             cursor = conn.cursor()
-            print "Transferring query: %s to the server" % self.query
+            #print "Transferring query: %s to the server" % self.query
             cursor.execute(self.query, dict(self.keywords))
             self.cursor = cursor
           
@@ -764,14 +764,14 @@ class MetaModel(object):
             query = 'CREATE INDEX ON {kind}({name});'
             for name, property in self.fields.items():
                 if property.saveable() and property.indexed():
-                    print "Creating index on: %s" % property
+                    # print "Creating index on: %s" % property
                     cursor = connection.cursor()
                     formatted = query.format(kind = self.kind, name= property.name)
-                    print formatted
+                    # print formatted
                     cursor.execute("USE %s;" % options['keyspace'])
                     cursor.execute(formatted)
                 else:
-                    print "Cannot index: %s" % property
+                    # print "Cannot index: %s" % property
                     
             self.wait(connection)
         except Exception as e:
