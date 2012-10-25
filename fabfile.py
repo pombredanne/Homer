@@ -8,7 +8,6 @@ import os
 import sys
 import shutil
 from datetime import datetime
-from gates.core import Application, run
 
 import time
 from fabric.api import local, run, cd
