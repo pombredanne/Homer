@@ -460,10 +460,13 @@ class UnIndexedType(UnIndexable, Type):
     pass
 
 from homer.backend import Lisa, CqlQuery, FetchMode
+
 """
 Reference:
 A Pointer to another Model that has been persisted
-in the database.
+in the database. The Reference property is not fool hardy. i.e.
+It does not verify if the Model it points to exists or not on cassandra.
+It only checks that the model you are trying to set on it has a complete key.
 """  
 class Reference(Property):
     '''A Pointer to another persisted Model'''
@@ -501,7 +504,6 @@ class Reference(Property):
         else:
             raise BadValueError("You must use a subclass of: %s or a Key" % self.cls.__name__)
         assert key.complete(), "Your %s's key must be complete" % value
-        assert key.saved, "Your key must have been previously persisted to Cassandra"
         return value
 
 """

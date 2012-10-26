@@ -69,7 +69,7 @@ class UUID(Basic):
     
     def __init__(self, default = uuid.uuid4(), indexed=True, **keywords):
         '''Simply makes sure that a UUID Property is READWRITE'''
-        super(UUID,self).__init__(default=default, type=str, indexed=indexed, 
+        super(UUID,self).__init__(default=default, type=unicode, indexed=indexed, 
             mode=READWRITE, **keywords)
     
     def validate(self, value):
@@ -252,7 +252,7 @@ class Person(object):
 """        
 class URL(Basic):
     """Makes sure that a string you are creating is a valid URL"""
-    type = str
+    type = unicode
     
     def empty(self, value):
         '''What does it mean for a URL to be empty'''
