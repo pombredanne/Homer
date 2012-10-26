@@ -140,7 +140,7 @@ class String(Basic):
         """ Construct property """
         if length <= 0:
             raise ValueError("Length must be greater than zero")
-        super(String,self).__init__(default = default, type = str,**arguments)
+        super(String,self).__init__(default = default, type = unicode,**arguments)
         self.length = length
    
     def validate(self,value):
