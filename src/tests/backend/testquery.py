@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 import time
+import binascii
 from homer.core import *
 from homer.backend import *
 from .testdb import BaseTestCase
@@ -46,7 +47,8 @@ class TestCqlQuery(BaseTestCase):
             book = Book(name = i, author="Anne Rice")
             book.save()
  
-        query = CqlQuery(Book, "SELECT * FROM Book WHERE author= :author; ", author="Anne Rice")
+        #query = CqlQuery(Book, "SELECT * FROM Book")
+        query = CqlQuery(Book, "SELECT * FROM Book WHERE author= :author; ", author=binascii.hexlify("Anne Rice"))
         results = list(query)
         assert(len(results) == 500)
         print "Found Total Results: " , len(results)

@@ -318,10 +318,6 @@ class TestReference(BaseTestCase):
         with self.assertRaises(Exception):
             book.author = "Hello"
         
-        with self.assertRaises(Exception):
-            author = Person(name = "iroiso")
-            book.author = author #Allows only saved keys
-        
         print "Checking Automatic Reference Read"
         id = Key("Test","Book","Pride")
         # id.columns = ["name", "author"]

@@ -1,7 +1,9 @@
-FEATURE LIST FOR v1.2
-=====================
-1.  Write a bootstrap [setup/teardown/clean] script that will automate installs of all dependencies
-2.  Write JSON Serialization and Deserialization; (Be careful to avoid mass assignment exploits)
+FEATURE LIST
+============
+1. Do automatic conversion for parameters to model.query()
+2. Create a threading.lock object for the global variables in the db module. ::: Done
+3. Think about issues regarding having a global consistency level. ::: Done
+
 
 '''
 DESIGN SCRIPT

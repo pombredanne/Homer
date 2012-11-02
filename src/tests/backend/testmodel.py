@@ -131,6 +131,7 @@ class TestModel(BaseTestCase):
     
     def testQuery(self):
         '''Shows that CQL Queries work'''
+        import binascii
         @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
@@ -140,7 +141,7 @@ class TestModel(BaseTestCase):
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
         book.save()
        
-        b = Book.query('WHERE author=:author', author='J.R.R Tolkein').fetchone()
+        b = Book.query('WHERE author=:author', author=binascii.hexlify('J.R.R Tolkein')).fetchone()
         assert isinstance(b, Book)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         print b.name

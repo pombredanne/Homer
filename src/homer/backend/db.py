@@ -72,12 +72,12 @@ class ConfigurationError(Exception):
     '''Thrown to signal that Homer was not configured properly'''
     pass
 
-# THREADSAFE GLOBAL CONFIGURATION.
-GLOBAL = local()
-GLOBAL.POOLS = dict()
-GLOBAL.KEYSPACES = set()
-GLOBAL.COLUMNFAMILIES = set()
-GLOBAL.CONSISTENCY = ConsistencyLevel.ONE
+# GLOBAL CONFIGURATION.
+LOCK = RLock()
+POOLS = dict()
+KEYSPACES = set()
+COLUMNFAMILIES = set()
+
 
 # CONSTANTS
 __all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool",\
@@ -125,12 +125,15 @@ def optionsFor(namespace):
 def poolFor(namespace):
     '''Returns or creates a new ConnectionPool for this namespace'''
     pool = None
-    if namespace not in GLOBAL.POOLS:
+    global LOCK
+    if namespace not in POOLS:
         found = optionsFor(namespace)             
         pool = RoundRobinPool(found)
-        GLOBAL.POOLS[namespace] = pool
+        with LOCK:
+            POOLS[namespace] = pool
     else:
-        pool = GLOBAL.POOLS[namespace]
+        with LOCK:
+            pool = POOLS[namespace]
     return pool   
 
 
@@ -149,16 +152,17 @@ class Consistency(object):
         
     def __enter__(self):
         '''Changes the current consistency to self.level'''
-        self.previous = GLOBAL.CONSISTENCY
-        GLOBAL.CONSISTENCY = self.level
+        self.previous = Lisa.consistency
+        Lisa.consistency = self.level
         
     def __exit__(self, *arguments, **kwds):
         '''Revert the global consistency to the previous setting.'''
-        GLOBAL.CONSISTENCY = self.previous
+        Lisa.consistency = self.previous
 
 '''
 Level:
-Allows you to Manage the Global Consistency Level of the Module.
+Allows you to Manage the Global Consistency Level of the Module,
+Consistency levels are threadlocal, which makes sense.
 i.e.
 
 with Level.Quorum:
@@ -168,7 +172,7 @@ with Level.All:
     # Do some highly consistent thing here.
     
 '''
-class Level(object):
+class Level(local):
     '''Manages Different Consistency Levels'''
     Any = Consistency(ConsistencyLevel.ANY)
     All = Consistency(ConsistencyLevel.ALL)
@@ -394,7 +398,7 @@ class CqlQuery(object):
             self.keyspace = found
         
         #print "Executing Query: %s in %s" % (self.query, self.keyspace)
-        if not self.kind.__name__ in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
+        if not self.kind.__name__ in COLUMNFAMILIES and Settings.DEBUG:
             #print "Creating new Column Family: %s " % self.kind.__name__
             Lisa.create(self.kind())
                
@@ -411,7 +415,7 @@ class CqlQuery(object):
         '''Execute your queries and converts data to python data models'''
         # EXECUTE THE QUERY IF IT HASN'T BEEN EXECUTED
         if self.cursor is None: self.execute() 
-        # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURN CqlResultType.ROWS, 
+        # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURNS CqlResultType.ROWS, 
         # SO TO FIGURE OUT COUNTS I MANUALLY SEARCH THE QUERY WITH A REGEX
         if re.search(self.pattern, self.query):
             #print "Count expression found;"
@@ -489,6 +493,7 @@ print "Albert's surname is: %s and Gbodi's age is: %s" % results[0], results[1]
 '''
 class Lisa(local):
     '''A Neater and simpler interface to Cassandra'''
+    consistency = ConsistencyLevel.ONE #Consistency level for this copy of Lisa.
 
     @staticmethod
     def create(model):
@@ -500,22 +505,25 @@ class Lisa(local):
         kind = info[1]
         meta = MetaModel(model)
         pool = poolFor(namespace)
+        global LOCK
         try:
             with using(pool) as conn:
-                if namespace not in GLOBAL.KEYSPACES:
+                if namespace not in KEYSPACES:
                     #print("Trying to create keyspace: %s" % meta.namespace)
                     meta.makeKeySpace(conn)
-                    GLOBAL.KEYSPACES.add(namespace)
+                    with LOCK:
+                        KEYSPACES.add(namespace)
                     #print "Global keyspaces: %s" % GLOBAL.KEYSPACES
-                if kind not in GLOBAL.COLUMNFAMILIES:
+                if kind not in COLUMNFAMILIES:
                     meta.makeColumnFamily(conn) 
                     meta.makeIndexes(conn)
-                    GLOBAL.COLUMNFAMILIES.add(kind)
+                    with LOCK:
+                        COLUMNFAMILIES.add(kind)
         except:
             print_exc();
 
-    @staticmethod
-    def readColumn(key, name):
+    @classmethod
+    def readColumn(clasz, key, name):
         '''Read a particular property to the column specified via @key'''
         assert key.iscomplete(), "Your key must be complete, before you can do reads"
         pool = poolFor(key.namespace)
@@ -523,13 +531,13 @@ class Lisa(local):
         cosc = None
         with using(pool) as conn:
             conn.client.set_keyspace(key.namespace)
-            cosc = conn.client.get(key.id, path, GLOBAL.CONSISTENCY)
+            cosc = conn.client.get(key.id, path, clasz.consistency)
         column = cosc.column
         return column.value
         
     
-    @staticmethod
-    def saveColumn(key, name, value, ttl=None):
+    @classmethod
+    def saveColumn(clasz, key, name, value, ttl=None):
         '''Write a particular property to the column specified via @key'''
         assert key.iscomplete(), "Your key must be complete before you can do writes"
         pool = poolFor(key.namespace)
@@ -541,11 +549,11 @@ class Lisa(local):
         cosc = None
         with using(pool) as conn:
             conn.client.set_keyspace(key.namespace)
-            conn.client.insert(key.id, parent, column, GLOBAL.CONSISTENCY)
+            conn.client.insert(key.id, parent, column, clasz.consistency)
         
 
-    @staticmethod
-    def deleteColumn(key, name):
+    @classmethod
+    def deleteColumn(clasz, key, name):
         '''Delete the property specified by @key'''
         assert key.iscomplete(), "Your key must be complete before you can do writes"
         pool = poolFor(key.namespace)
@@ -553,11 +561,11 @@ class Lisa(local):
         path = ColumnPath(column_family=key.kind, column=name)
         with using(pool) as conn:
             conn.client.set_keyspace(key.namespace)
-            cosc = conn.client.remove(key.id, path, timestamp, GLOBAL.CONSISTENCY)
+            cosc = conn.client.remove(key.id, path, timestamp, clasz.consistency)
      
 
-    @staticmethod
-    def readManyColumns(namespace, kind, id, *arguments):
+    @classmethod
+    def readManyColumns(clasz, namespace, kind, id, *arguments):
         '''Read various properties from one Model arguments: [name, name, name]'''
         assert namespace and kind and id, "specify namespace, kind, id"
         assert namespace and kind, "You must specify; namespace, kind"
@@ -567,14 +575,14 @@ class Lisa(local):
         result = None
         with using(pool) as conn:
             conn.client.set_keyspace(namespace)
-            results = conn.client.get_slice(id, parent, predicate, GLOBAL.CONSISTENCY)
+            results = conn.client.get_slice(id, parent, predicate, clasz.consistency)
         for cosc in results:
             column = cosc.column
             yield column.name, column.value
       
 
-    @staticmethod
-    def saveManyColumns(namespace, kind, id, *arguments):
+    @classmethod
+    def saveManyColumns(clasz, namespace, kind, id, *arguments):
         '''Write a lot of properties in one batch, arguments: [(name, value)]'''
         # See Page 151 and Page 78 in the Cassandra Guide.
         assert namespace and kind and id, 'specify arguments namespace, kind, id'
@@ -593,11 +601,11 @@ class Lisa(local):
         pool = poolFor(namespace)
         with using(pool) as conn:
             conn.client.set_keyspace(namespace)
-            conn.client.batch_mutate(changes, GLOBAL.CONSISTENCY)
+            conn.client.batch_mutate(changes, clasz.consistency)
         
 
-    @staticmethod
-    def deleteManyColumns(namespace, kind, id, *arguments):
+    @classmethod
+    def deleteManyColumns(clasz, namespace, kind, id, *arguments):
         '''Delete a lot of properties in one batch, arguments: ["name", "name"]'''
         assert namespace and kind and id, 'specify arguments namespace, kind, id'
         mutations = { kind : [] }
@@ -613,11 +621,11 @@ class Lisa(local):
         pool = poolFor(namespace)
         with using(pool) as conn:
             conn.client.set_keyspace(namespace)
-            conn.client.batch_mutate(changes, GLOBAL.CONSISTENCY)
+            conn.client.batch_mutate(changes, clasz.consistency)
 
    
-    @staticmethod
-    def read(key, fetchmode=FetchMode.Property):
+    @classmethod
+    def read(clasz, key, fetchmode=FetchMode.Property):
         '''Read a Model from Cassandra'''
         assert key and fetchmode, "specify key and fetchmode"
         assert key.complete(), "your key has to be complete"
@@ -638,13 +646,13 @@ class Lisa(local):
         pool = poolFor(key.namespace)
         with using(pool) as conn:
             conn.client.set_keyspace(key.namespace)
-            coscs = conn.client.get_slice(key.id, parent, predicate, GLOBAL.CONSISTENCY)
+            coscs = conn.client.get_slice(key.id, parent, predicate, clasz.consistency)
             found = MetaModel.load(key, coscs)
         return found    
 
     
-    @staticmethod
-    def save(model):
+    @classmethod
+    def save(clasz, model):
         '''Write one Model to Cassandra'''
         from homer.core.models import key, BaseModel
         # PUT PERSISTS ALL CHANGES IN A MODEL IN A SINGLE BATCH
@@ -653,12 +661,12 @@ class Lisa(local):
             pool = poolFor(namespace)
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
-                conn.client.batch_mutate(mutations, GLOBAL.CONSISTENCY)    
+                conn.client.batch_mutate(mutations, clasz.consistency)    
         assert issubclass(model.__class__, BaseModel), "%s must inherit from BaseModel" % model
         info = Schema.Get(model)
         namespace = info[0]
         kind = info[1]
-        if kind not in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
+        if kind not in COLUMNFAMILIES and Settings.DEBUG:
             Lisa.create(model)
         meta = MetaModel(model)
         changes = { meta.id() : meta.mutations() }
@@ -666,8 +674,8 @@ class Lisa(local):
         key = model.key()
         key.saved = True
             
-    @staticmethod
-    def delete(*keys):
+    @classmethod
+    def delete(clasz, *keys):
         '''Deletes a List of keys which represents Models'''
         for key in keys:
             assert key.complete(), "Your Key has to be complete to a delete"
@@ -677,11 +685,11 @@ class Lisa(local):
             with using(pool) as conn:
                 #print "DELETING %s FROM CASSANDRA" % key 
                 conn.client.set_keyspace(key.namespace)
-                conn.client.remove(key.id, path, clock, GLOBAL.CONSISTENCY)
+                conn.client.remove(key.id, path, clock, clasz.consistency)
 
     
-    @staticmethod
-    def saveMany(namespace, *models):
+    @classmethod
+    def saveMany(clasz, namespace, *models):
         '''Write a Lot of Models in one batch, They must all belong to one keyspace'''
         from homer.core.models import key, BaseModel
         # PERSISTS ALL CHANGES IN *MODELS IN A SINGLE BATCH
@@ -690,7 +698,7 @@ class Lisa(local):
             pool = poolFor(namespace)
             with using(pool) as conn:
                 conn.client.set_keyspace(namespace)
-                conn.client.batch_mutate(mutations, GLOBAL.CONSISTENCY)    
+                conn.client.batch_mutate(mutations, clasz.consistency)    
         # BATCH ALL THE INDIVIDUAL CHANGES IN ONE TRANSFER
         mutations = {}
         for model in models:
@@ -700,7 +708,7 @@ class Lisa(local):
             keyspace = info[0]
             assert namespace == keyspace, "All the Models should belong to %s" % namespace
             kind = info[1]
-            if kind not in GLOBAL.COLUMNFAMILIES and Settings.DEBUG:
+            if kind not in COLUMNFAMILIES and Settings.DEBUG:
                 Lisa.create(model)
             meta = MetaModel(model)
             key = model.key()
@@ -712,9 +720,11 @@ class Lisa(local):
     def clear():
         '''Clears internal state of @this'''
         #print 'Clearing internal state of the Datastore Mapper'
-        GLOBAL.KEYSPACES.clear()
-        GLOBAL.COLUMNFAMILIES.clear()
-        GLOBAL.POOLS.clear()
+        global LOCK
+        with LOCK:
+            KEYSPACES.clear()
+            COLUMNFAMILIES.clear()
+            POOLS.clear()
             
 ##
 # MetaModel:
@@ -830,7 +840,7 @@ class MetaModel(object):
     
     def defaultType(self):
         '''Returns the default validation class for a particular BaseModel'''
-        return "UTF8Type"
+        return "BytesType"
     
     def wait(self, conn):
         '''Waits for schema agreement accross the entire cluster'''
