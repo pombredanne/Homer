@@ -641,11 +641,18 @@ class Model(BaseModel):
     def query(cls, **kwds):
         """Interface to Cql from your model, which yields models"""
         #NOTE: Only static properties can be indexed by homer, 
-        #      so we don't worry about dynamic properties
+        #      so we don't worry about querying for dynamic properties
         query = ""
+        started = False
         for name in kwds:
-            pattern = "%s=:%s" % (name, name)
-            query += pattern
+            if not started:
+                pattern = "%s=:%s" % (name, name)
+                query += pattern
+                started = True
+            else:
+                pattern = " AND %s=:%s" % (name, name)
+                query += pattern
+
         q = 'SELECT * FROM %s WHERE %s' % (cls.kind(), query)
         query = CqlQuery(cls, q, **kwds)
         query.convert = True

@@ -327,4 +327,28 @@ class TestReference(BaseTestCase):
         found = self.db.read(id, FetchMode.Property)
         self.assertTrue(found.author.name == "sasuke")
         self.assertTrue(found.author == person)
+
+    def testQuery(self):
+        from homer.core.commons import String
+        print "######## Creating Models ################"
+        @key("name")    
+        class Person(Model):
+            name = String(required = True)
+            
+        @key("name")
+        class Book(Model):
+            name = String(required = True, indexed = True)
+            isbn = String(indexed=True)
+            author = Reference(Person, indexed=True)
+        
+        print "Persisting Person"
+        person = Person(name = "Tolstoy")
+        person.save()
+        print "Persisting Book"
+        book = Book(name="War and Peace", isbn="1234", author = person)
+        book.save()
+
+        found = Book.query(author=person, isbn="1234").fetchone()
+        self.assertTrue(found == book)
+        
      
