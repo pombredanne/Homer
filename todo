@@ -4,7 +4,7 @@ FEATURE LIST
 2. Create a threading.lock object for the global variables in the db module. ::: Done
 3. Think about issues regarding having a global consistency level. ::: Done
 
-
+Book.query(name="War and Peace", author="Tolstoy")
 '''
 DESIGN SCRIPT
 Styles for Default Types:

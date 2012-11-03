@@ -26,6 +26,7 @@ Provides a very nice abstraction around Cassandra;
 import re
 import time
 import atexit
+import binascii
 import itertools
 import cPickle as pickle
 from copy import deepcopy
@@ -72,7 +73,7 @@ class ConfigurationError(Exception):
     '''Thrown to signal that Homer was not configured properly'''
     pass
 
-# GLOBAL CONFIGURATION.
+# SHARED STATE
 LOCK = RLock()
 POOLS = dict()
 KEYSPACES = set()
@@ -125,7 +126,6 @@ def optionsFor(namespace):
 def poolFor(namespace):
     '''Returns or creates a new ConnectionPool for this namespace'''
     pool = None
-    global LOCK
     if namespace not in POOLS:
         found = optionsFor(namespace)             
         pool = RoundRobinPool(found)
@@ -366,6 +366,17 @@ class EvictionThread(Thread):
                 connection.dispose()
                 time.sleep(self.delay/1000)
 
+###
+# Cassandra Mapping Section;
+###
+
+"""
+FetchMode:
+Specifies how you want read behavior to be
+"""
+class FetchMode(object):
+    Property, All = 1, 2
+
 ####
 # CQL Query Support
 ####
@@ -373,23 +384,46 @@ class EvictionThread(Thread):
 CqlQuery:
 A CqlQuery wraps CQL queries in Cassandra 1.0.+, However it
 provides a very distinguishing feature, it automatically
-returns query results as Model instances or python types
+returns query results as models.
 """
 class CqlQuery(object):
-    """ A very nice wrapper around the CQL Query Interface """
+    """ A very nice wrapper around the CQL query interface """
     pattern = re.compile(r'COUNT\(.+\)', re.IGNORECASE | re.DOTALL) #
+
     def __init__(self, kind, query, **keywords):
         '''Initialize constructor parameters '''
         from homer.core.models import key, BaseModel
         assert isinstance(kind, type), "%s must be a class" % kind
         assert issubclass(kind, BaseModel), "%s must be a subclass of BaseModel" % kind
         self.kind = kind
+        self.convert = False
         self.keyspace = None
         self.query = query
         self.keywords = keywords
         self.cursor = None
         self.count = False
     
+    def parse(self, keywords):
+        '''Uses the descriptors in the Model to convert keywords'''
+        if not self.convert:
+            return keywords
+        converted = {}
+        props = fields(self.kind, Property)
+        for name, value in keywords.items():
+            converter = props.get(name, None)
+            if converter:
+                value = converter.convert(value)
+                if not isinstance(value, basestring):
+                    value = unicode(value, "utf-8")
+                converted[name] = binascii.hexlify(value)
+            else:
+                T, V = self.kind.default
+                value = V.convert(value)
+                if not isinstance(value, basestring):
+                    value = unicode(value, "utf-8")
+                converted[name] = binascii.hexlify(value)
+        return converted
+
     def execute(self):
         '''Executes @self.query in self.keyspace and returns a cursor'''
         # FIGURE OUT WHICH KEYSPACE THE MODEL BELONGS TO
@@ -408,7 +442,10 @@ class CqlQuery(object):
             conn.client.set_keyspace(self.keyspace)
             cursor = conn.cursor()
             #print "Transferring query: %s to the server" % self.query
-            cursor.execute(self.query, dict(self.keywords))
+            keywords = self.keywords
+            if self.convert:
+                keywords = self.parse(keywords)
+            cursor.execute(self.query, dict(keywords))
             self.cursor = cursor
           
     def __iter__(self):
@@ -459,17 +496,6 @@ class CqlQuery(object):
     def __str__(self):
         '''String representation of a CQLQuery.'''
         return "CqlQuery: %s" % self.query
-
-###
-# Cassandra Mapping Section;
-###
-
-"""
-FetchMode:
-Specifies how you want read behavior to be
-"""
-class FetchMode(object):
-    Property, All = 1, 2
     
 '''
 Lisa:
@@ -505,7 +531,6 @@ class Lisa(local):
         kind = info[1]
         meta = MetaModel(model)
         pool = poolFor(namespace)
-        global LOCK
         try:
             with using(pool) as conn:
                 if namespace not in KEYSPACES:
@@ -719,8 +744,7 @@ class Lisa(local):
     @staticmethod
     def clear():
         '''Clears internal state of @this'''
-        #print 'Clearing internal state of the Datastore Mapper'
-        global LOCK
+        #print 'Clearing internal state of the Datastore Mapper
         with LOCK:
             KEYSPACES.clear()
             COLUMNFAMILIES.clear()
@@ -728,8 +752,7 @@ class Lisa(local):
             
 ##
 # MetaModel:
-# A Helper class that transforms BaseModel's and Properties to Cassandra's
-# data model.
+# A Helper class that transforms BaseModel to Cassandra's data model.
 ##
 class MetaModel(object):
     '''Changes a BaseModel to Cassandra's DataModel..'''

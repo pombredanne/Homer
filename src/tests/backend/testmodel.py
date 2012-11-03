@@ -141,7 +141,7 @@ class TestModel(BaseTestCase):
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
         book.save()
        
-        b = Book.query('WHERE author=:author', author=binascii.hexlify('J.R.R Tolkein')).fetchone()
+        b = Book.query(author='J.R.R Tolkein').fetchone()
         assert isinstance(b, Book)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         print b.name

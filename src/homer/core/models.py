@@ -641,12 +641,18 @@ class Model(BaseModel):
         Lisa.delete(*todelete)
        
     @classmethod
-    def query(cls, query, **kwds):
+    def query(cls, **kwds):
         """Interface to Cql from your model, which yields models"""
-        props = [name for name in fields(cls, Property).keys() if name is not "default"]
-        names = ", ".join(props)
-        q = 'SELECT * FROM %s %s' % (cls.kind(), query)
-        return CqlQuery(cls, q, **kwds)
+        #NOTE: Only static properties can be indexed by homer, 
+        #      so we don't worry about dynamic properties
+        query = ""
+        for name in kwds:
+            pattern = "%s=:%s" % (name, name)
+            query += pattern
+        q = 'SELECT * FROM %s WHERE %s' % (cls.kind(), query)
+        query = CqlQuery(cls, q, **kwds)
+        query.convert = True
+        return query
     
     @classmethod
     def count(cls):
