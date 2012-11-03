@@ -312,11 +312,18 @@ class TestReference(BaseTestCase):
         book = Book(name = "Pride", author = person)
         self.db.save(book)
         
+        book2 = Book(name="House", author=Key("Test","Person","Sasuke"))
+        self.db.save(book2)
+        
         print "Checking Conversion Routine"
         k = eval(Book.author.convert(person))
         self.assertTrue(k == Key("Test","Person","sasuke"))
         with self.assertRaises(Exception):
+            print "Checks if Reference accepts other datatypes"
             book.author = "Hello"
+        with self.assertRaises(Exception):
+            print "Checks if Reference verifies key kinds before saving them"
+            book.author = Key("Test", "Book", "House")
         
         print "Checking Automatic Reference Read"
         id = Key("Test","Book","Pride")
