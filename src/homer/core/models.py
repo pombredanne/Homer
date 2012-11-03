@@ -479,11 +479,8 @@ class Reference(Property):
     def convert(self, value):
         '''References are stored as Keys in the datastore'''
         value = self.validate(value)
-        if value is not None:
-            if isinstance(value, Key):
-                return repr(value)
-            elif isinstance(value, BaseModel):
-                return repr(value.key())
+        if isinstance(value, BaseModel):
+            return repr(value.key())
         else: 
             return repr(None)
         
@@ -501,13 +498,8 @@ class Reference(Property):
             return None
         if isinstance(value, self.cls):
             key = value.key()
-        elif isinstance(value, Key):
-            namespace, kind, member = Schema.Get(self.cls)
-            assert value.kind == kind, "Invalid Model, You are using different Models"
-            assert value.namespace == namespace, "Invalid Model, You are using different namespaces"
-            key = value
         else:
-            raise BadValueError("You must use a subclass of: %s or a Key" % self.cls.__name__)
+            raise BadValueError("You must use a subclass of: %s" % self.cls.__name__)
         assert key.complete(), "Your %s's key must be complete" % value
         return value
 
