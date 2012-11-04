@@ -166,7 +166,8 @@ class Key(object):
         
     def __unicode__(self):
         """Unicode representation of a key"""
-        return unicode(self)
+        format = u"Key('{self.namespace}', '{self.kind}', '{self.id}')"
+        return format.format(self=self)
     
     def __eq__(self, other):
         '''Compare two keys for equality'''

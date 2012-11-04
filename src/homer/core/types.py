@@ -16,6 +16,7 @@ assert mobile.number == '2481237654'
 """
 import sys
 import json
+import codecs
 import hashlib
 
 __all__ = ["phone", "blob", "TypedMap", "TypedSet", "TypedList", "TypedCounter",]
@@ -65,7 +66,8 @@ class blob(object):
     def __init__(self, content="", mimetype="application/text", description="", **keywords):
         '''Basic constructor for a blob'''
         self.metadata = {}
-        self.content = content
+        encode = codecs.getencoder("utf-8")
+        self.content = encode(content)[0]
         self.mimetype = mimetype
         self.description = description
         self.metadata.update(keywords)
@@ -90,9 +92,12 @@ class blob(object):
         
     def __repr__(self):
         '''Returns a JSON representation of the contents of this blob'''
-        dump = {"metadata": self.metadata, "content": self.content,\
-           "mimetype": self.mimetype, "description": self.description, 
-                        "checksum": self.checksum}
+        dump = dict()
+        dump['metadata'] = self.metadata
+        dump['content'] = self.content
+        dump['mimetype'] = self.mimetype
+        dump['description'] = self.description
+        dump['checksum'] = self.checksum
         return json.dumps(dump)
         
     def __str__(self): 

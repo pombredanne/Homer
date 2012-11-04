@@ -69,7 +69,7 @@ class UUID(Basic):
     
     def __init__(self, default = uuid.uuid4(), indexed=True, **keywords):
         '''Simply makes sure that a UUID Property is READWRITE'''
-        super(UUID,self).__init__(default=default, type=unicode, indexed=indexed, 
+        super(UUID,self).__init__(default=default, type=str, indexed=indexed, 
             mode=READWRITE, **keywords)
     
     def validate(self, value):
@@ -140,7 +140,7 @@ class String(Basic):
         """ Construct property """
         if length <= 0:
             raise ValueError("Length must be greater than zero")
-        super(String,self).__init__(default = default, type = unicode,**arguments)
+        super(String,self).__init__(default = default,**arguments)
         self.length = length
    
     def validate(self,value):
@@ -148,6 +148,8 @@ class String(Basic):
         # TODO: Add support for regex based validation.
         assert value is not None, "Value must not be None"
         value = super(String,self).validate(value)
+        if not isinstance(value, basestring):
+            value = str(value)
         assert len(value) <= self.length,"String longer than expected,\
             required : %s , got : %s" % (self.length, len(value))
         return value
@@ -182,7 +184,7 @@ class Blob(Basic):
         """
         assert "choices" not in arguments,"Choices do not mean anything in Blobs"
         self.__size = size
-        super(Blob,self).__init__(type = str, default = default, **arguments)
+        super(Blob,self).__init__(type=str, default = default, **arguments)
     
 
     def indexed(self):
@@ -204,7 +206,10 @@ class Blob(Basic):
             raise BadValueError("Your blob size must be less than:\
                 %s , got: %s" % self.size, inBytes )
         if not isinstance(value, blob):
-            value = blob(str(value))
+            if isinstance(value, basestring):
+                value = blob(value)
+            else:
+                value = blob(str(value))
         return value
     
     def convert(self, value):
@@ -252,7 +257,6 @@ class Person(object):
 """        
 class URL(Basic):
     """Makes sure that a string you are creating is a valid URL"""
-    type = unicode
     
     def empty(self, value):
         '''What does it mean for a URL to be empty'''

@@ -407,20 +407,17 @@ class CqlQuery(object):
         '''Uses the descriptors in the Model to convert keywords'''
         if not self.convert:
             return keywords
+
         converted = {}
         props = fields(self.kind, Property)
         for name, value in keywords.items():
             converter = props.get(name, None)
             if converter:
                 value = converter.convert(value)
-                if not isinstance(value, basestring):
-                    value = unicode(value, "utf-8")
                 converted[name] = binascii.hexlify(value)
             else:
                 T, V = self.kind.default
                 value = V.convert(value)
-                if not isinstance(value, basestring):
-                    value = unicode(value, "utf-8")
                 converted[name] = binascii.hexlify(value)
         return converted
 
