@@ -511,7 +511,7 @@ class Basic(Type):
     '''A Type that can be converted with str'''
     def convert(self,  value):
         '''Converts the basic type with the str operation'''
-        return unicode(self.validate(value))
+        return unicode(self.validate(value), "utf-8")
         
     def deconvert(self, value):
         '''Since we are expecting a str, we just return the value'''
