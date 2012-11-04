@@ -525,6 +525,7 @@ class Lisa(local):
     def create(model):
         """Creates a new ColumnFamily from this Model"""
         from homer.core.models import key, BaseModel
+        global KEYSPACES, COLUMNFAMILIES
         assert isinstance(model, BaseModel),"%s must inherit from BaseModel" % model
         info = Schema.Get(model) 
         namespace = info[0]
@@ -538,7 +539,7 @@ class Lisa(local):
                     meta.makeKeySpace(conn)
                     with LOCK:
                         KEYSPACES.add(namespace)
-                    #print "Global keyspaces: %s" % GLOBAL.KEYSPACES
+                    #print "Global keyspaces: %s" % KEYSPACES
                 if kind not in COLUMNFAMILIES:
                     meta.makeColumnFamily(conn) 
                     meta.makeIndexes(conn)
