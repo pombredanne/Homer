@@ -864,7 +864,7 @@ class MetaModel(object):
     
     def defaultType(self):
         '''Returns the default validation class for a particular BaseModel'''
-        return "UTF8Type"
+        return "BytesType"
     
     def wait(self, conn):
         '''Waits for schema agreement accross the entire cluster'''

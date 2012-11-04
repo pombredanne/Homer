@@ -23,6 +23,7 @@ Copyright 2011, June inc.
 Description:
 Contains Model, Key and @key
 """
+import codecs
 import datetime
 import cPickle as pickle
 from copy import copy, deepcopy
@@ -509,9 +510,14 @@ Represents a type that you can convert and deconvert with str()
 """
 class Basic(Type):
     '''A Type that can be converted with str'''
+
     def convert(self,  value):
         '''Converts the basic type with the str operation'''
-        return unicode(self.validate(value), "utf-8")
+        codec = codecs.lookup("utf-8")
+        value = self.validate(value)
+        if not isinstance(value, basestring):
+            value = str(value)
+        return codec.encode(value)[0]
         
     def deconvert(self, value):
         '''Since we are expecting a str, we just return the value'''
