@@ -26,6 +26,7 @@ Provides a very nice abstraction around Cassandra;
 import re
 import time
 import atexit
+import codecs
 import binascii
 import itertools
 import cPickle as pickle
@@ -471,14 +472,14 @@ class CqlQuery(object):
                     if name == "KEY": continue #Ignore the KEY attribute
                     prop = descs.get(name, None)
                     if prop:
-                        found = prop.deconvert(str(value))
+                        found = prop.deconvert(value)
                         model[name] = found
                     else:
                         k, v = model.default
                         k = k() if isinstance(k, type) else k
                         v = v() if isinstance(v, type) else v
-                        name = k.deconvert(str(value))
-                        value = v.deconvert(str(value))
+                        name = k.deconvert(value)
+                        value = v.deconvert(value)
                         model[name] = value
                 yield model
                 row = cursor.fetchone()
@@ -766,7 +767,11 @@ class MetaModel(object):
     
     def id(self):
         '''Returns the appropriate representation of the key of self.model'''
-        return str(self.model.key().id)
+        encode = codecs.getencoder("utf-8")
+        val = self.model.key().id
+        if not isinstance(val, basestring):
+            val = str(val)
+        return encode(val)[0]
     
     @redo   
     def makeKeySpace(self, connection):

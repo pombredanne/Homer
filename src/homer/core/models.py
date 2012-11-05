@@ -666,6 +666,12 @@ class Model(BaseModel):
         return query
     
     @classmethod
+    def all(cls):
+        '''Returns all instances of this Model stored in the datastore'''
+        query = CqlQuery(cls, "SELECT * FROM %s" % cls.kind())
+        return query
+
+    @classmethod
     def count(cls):
         '''Counts all the instances of this Model from the datastore'''
         return CqlQuery(cls, "SELECT COUNT(*) FROM %s;" %(cls.kind(),)).fetchone()

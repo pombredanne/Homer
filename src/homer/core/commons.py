@@ -146,7 +146,6 @@ class String(Basic):
     def validate(self,value):
         """Validate length here"""
         # TODO: Add support for regex based validation.
-        assert value is not None, "Value must not be None"
         value = super(String,self).validate(value)
         if not isinstance(value, basestring):
             value = str(value)
