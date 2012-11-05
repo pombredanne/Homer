@@ -65,8 +65,8 @@ Ok, thats a bit too early; but read on!
 # Declare your model. 
 @key("name")
 class Profile(Model): 
-    name = String("", indexed = True)
-    link = URL("http://june.com", indexed = True)
+    name = String("", indexed=True)
+    link = URL("http://june.com", indexed=True)
     
 '''
 The `@key("name")` idiom makes the 'name' field the primary key
@@ -105,11 +105,11 @@ with Level.All:
 Other Consistency Levels are (One, Two, Three, EachQuorum, LocalQuorum and Any), 
 You can also use CQL to search the secondary index, with the idiom below.
 '''
-results = Profile.query("WHERE link=:link", link="http://facebook.com/iroiso")
-assert results.next() == another
+found = Profile.query(link="http://facebook.com/iroiso").fetchone()
+assert found == another
 
 '''
-The *results* object above is a generator that yields Profile instances when you
+The Profile.query() returns a generator that yields Profile instances when you
 iterate over it. 
 ''''
 ```
