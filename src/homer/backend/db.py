@@ -87,6 +87,8 @@ __all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool",\
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
 FETCHSIZE = 2000000000 #AT MOST THE DB MODULE WILL TRY TO READ ALL THE COLUMNS
+encoder = codecs.getencoder('utf-8')
+encode = lambda content: encoder(content)[0]
 
 # UTILITIES AND HELPER FUNCTIONS
 def redo(function):
@@ -415,11 +417,15 @@ class CqlQuery(object):
             converter = props.get(name, None)
             if converter:
                 value = converter.convert(value)
-                converted[name] = binascii.hexlify(value)
+                if not isinstance(value, basestring):
+                    value = str(value)
+                converted[name] = encode(value)
             else:
                 T, V = self.kind.default
                 value = V.convert(value)
-                converted[name] = binascii.hexlify(value)
+                if not isinstance(value, basestring):
+                    value = str(value)
+                converted[name] = encode(value)
         return converted
 
     def execute(self):
@@ -767,11 +773,10 @@ class MetaModel(object):
     
     def id(self):
         '''Returns the appropriate representation of the key of self.model'''
-        encode = codecs.getencoder("utf-8")
         val = self.model.key().id
         if not isinstance(val, basestring):
             val = str(val)
-        return encode(val)[0]
+        return encode(val)
     
     @redo   
     def makeKeySpace(self, connection):
@@ -866,7 +871,7 @@ class MetaModel(object):
     
     def defaultType(self):
         '''Returns the default validation class for a particular BaseModel'''
-        return "BytesType"
+        return "UTF8Type"
     
     def wait(self, conn):
         '''Waits for schema agreement accross the entire cluster'''

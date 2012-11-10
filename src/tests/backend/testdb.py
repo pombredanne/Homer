@@ -345,7 +345,7 @@ class TestReference(BaseTestCase):
         person = Person(name = "Tolstoy")
         person.save()
         print "Persisting Book"
-        book = Book(name="War and Peace", isbn="1234", author = person)
+        book = Book(name="War and Peace", isbn="1234", author=person)
         book.save()
 
         found = Book.query(author=person, isbn="1234").fetchone()
