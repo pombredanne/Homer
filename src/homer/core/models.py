@@ -336,10 +336,6 @@ class Property(Converter):
     def saveable(self):
         '''All descriptors can be saved by default'''
         return True
-        
-    def create(self, instance):
-        '''Enables a property to do custom things during creation'''
-        pass 
            
     def configure(self, name, owner):
         """Allow this property to know its name, and owner"""

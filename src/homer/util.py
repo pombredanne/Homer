@@ -38,8 +38,7 @@ class Bootstrap(object):
             kinds = Schema.schema[namespace].keys()
             for kind in kinds:
                 try:
-                    if Settings.DEBUG:
-                        print("Creating Model: %s, %s" % (namespace, kind))
+                    logging.info("Creating Model: %s, %s" % (namespace, kind))
                     clasz = Schema.ClassForModel(namespace, kind)
                     instance = clasz()
                     Lisa.create(instance);

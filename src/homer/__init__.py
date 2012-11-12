@@ -6,8 +6,8 @@ License: Apache License 2.0
 Copyright 2011, June inc.
 
 Description:
-The absolute minimum you need to know to use Cassandra
-and Redis 
+The simplest, pragmatic and most beautiful object non-relational
+mapper for apache cassandra.
 
 #...
 
@@ -20,4 +20,4 @@ class Shinobi(Model):
 from .core import *
 from .backend import *
 
-version = "1.1.1"
+version = "0.9.4"

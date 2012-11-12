@@ -23,14 +23,14 @@ from os.path import abspath, join, dirname
 
 setup(
     name="homer",
-    version="0.9.0.beta",
-    description="Python Object Non-Relational Mapper for Cassandra",
+    version="0.9.4",
+    description="A Beautiful Python Object Non-Relational Mapper for Cassandra",
     long_description=open(abspath(join(dirname(__file__), 'README.md'))).read(),
     maintainer='Iroiso Ikpokonte',
     maintainer_email='iroiso@live.com',
     package_dir = {'': 'src',},
-    url="http://github.com/iroiso/homer",
-    packages=["homer", "homer.core", "homer.backend",],
+    url="http://github.com/Junery/Homer.git",
+    packages=["homer",],
     provides=["homer"],
     install_requires =["cql==1.0.6", "thrift"],
     classifiers=[

@@ -28,6 +28,7 @@ import time
 import atexit
 import codecs
 import binascii
+import logging
 import itertools
 import cPickle as pickle
 from copy import deepcopy
@@ -98,7 +99,7 @@ def redo(function):
         attempts = 1
         while True:
             try:
-                #print 'Calling: %s; count: %s' % (function.__name__, attempts)
+                logging.debug('Calling: %s; count: %s' % (function.__name__, attempts))
                 return function(*arguments, **keywords)
             except Exception, e:
                 if not attempts < RETRY:
@@ -249,7 +250,7 @@ class RoundRobinPool(Pool):
                 #IF WE ARE UNDER QUOTA JUST CREATE A NEW CONNECTION
                 if self.count < self.maxConnections:  
                     addr = self.__address().next()
-                    #print "Creating a new connection to address: %s" % addr
+                    logging.info("Creating a new connection to address: %s" % addr)
                     connection = Connection(self, addr, \
                         self.keyspace, self.username, self.password)
                     self.count += 1
@@ -281,7 +282,7 @@ class RoundRobinPool(Pool):
     def disposeAll(self):
         '''Disposes all the Connections in the Pool, typically called at System Exit'''
         with self.lock:
-            print "Pool Shutdown: Disposing: the %s remaining Connections" % self.queue.qsize()
+            logging.info("Pool Shutdown: Disposing: the %s remaining Connections" % self.queue.qsize())
             while True:
                 try:
                     connection = self.queue.get(False)
@@ -435,19 +436,20 @@ class CqlQuery(object):
             found = Schema.Get(self.kind)[0]
             self.keyspace = found
         
-        #print "Executing Query: %s in %s" % (self.query, self.keyspace)
+        logging.info("Executing Query: %s in %s" % (self.query, self.keyspace))
         if not self.kind.__name__ in COLUMNFAMILIES and Settings.DEBUG:
-            #print "Creating new Column Family: %s " % self.kind.__name__
+            logging.info("Creating new Column Family: %s " % self.kind.__name__)
             Lisa.create(self.kind())
                
         pool = poolFor(self.keyspace)
         with using(pool) as conn:
-            #print "Executing %s" % self
+            logging.info("Executing %s" % self)
             conn.client.set_keyspace(self.keyspace)
             cursor = conn.cursor()
-            #print "Transferring query: %s to the server" % self.query
+            
             keywords = self.keywords
             if self.convert:
+                logging.info("Converting parameters for query: %s" % self.query)
                 keywords = self.parse(keywords)
             cursor.execute(self.query, dict(keywords))
             self.cursor = cursor
@@ -459,10 +461,10 @@ class CqlQuery(object):
         # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURNS CqlResultType.ROWS, 
         # SO TO FIGURE OUT COUNTS I MANUALLY SEARCH THE QUERY WITH A REGEX
         if re.search(self.pattern, self.query):
-            #print "Count expression found;"
+            logging.info("Count expression found;")
             yield self.cursor.fetchone()[0]
         else:
-            #print "Deciphering rows as usual"
+            logging.info("Deciphering rows as usual")
             cursor = self.cursor
             description = self.cursor.description
             if not description:
@@ -539,11 +541,11 @@ class Lisa(local):
         try:
             with using(pool) as conn:
                 if namespace not in KEYSPACES:
-                    #print("Trying to create keyspace: %s" % meta.namespace)
+                    logging.info("Trying to create keyspace: %s" % meta.namespace)
                     meta.makeKeySpace(conn)
                     with LOCK:
+                        logging.info("Adding keyspace: %s to global records" % namespace)
                         KEYSPACES.add(namespace)
-                    #print "Global keyspaces: %s" % KEYSPACES
                 if kind not in COLUMNFAMILIES:
                     meta.makeColumnFamily(conn) 
                     meta.makeIndexes(conn)
@@ -713,7 +715,7 @@ class Lisa(local):
             clock = time.time()
             pool = poolFor(key.namespace)
             with using(pool) as conn:
-                #print "DELETING %s FROM CASSANDRA" % key 
+                logging.info("DELETING %s FROM CASSANDRA" % key )
                 conn.client.set_keyspace(key.namespace)
                 conn.client.remove(key.id, path, clock, clasz.consistency)
 
@@ -749,7 +751,7 @@ class Lisa(local):
     @staticmethod
     def clear():
         '''Clears internal state of @this'''
-        #print 'Clearing internal state of the Datastore Mapper
+        logging.info('Clearing internal state of the Datastore Mapper')
         with LOCK:
             KEYSPACES.clear()
             COLUMNFAMILIES.clear()
@@ -805,14 +807,13 @@ class MetaModel(object):
             query = 'CREATE INDEX ON {kind}({name});'
             for name, property in self.fields.items():
                 if property.saveable() and property.indexed():
-                    # print "Creating index on: %s" % property
+                    logging.info("Creating index on: %s" % property)
                     cursor = connection.cursor()
                     formatted = query.format(kind = self.kind, name= property.name)
-                    # print formatted
                     cursor.execute("USE %s;" % options['keyspace'])
                     cursor.execute(formatted)
                 else:
-                    # print "Cannot index: %s" % property
+                    logging.info("Cannot index: %s" % property)
                     pass
             self.wait(connection)
         except Exception as e:
@@ -931,10 +932,11 @@ class MetaModel(object):
     def mutations(self):
         '''Returns a {} of mutations that have occurred since last commit'''
         # See Page 151 and Page 78 in the Cassandra Guide.
+        logging.info("Batching mutations")
         mutations = { self.kind : [] }
         differ = self.model.differ
-        # Marshalling additions
-        # print 'Marshalling additions'
+        
+        logging.info('Marshalling additions')
         for name in differ.added():
             column = self.getColumn(name, self.model[name]) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()
@@ -942,7 +944,7 @@ class MetaModel(object):
             mutation = Mutation()
             mutation.column_or_supercolumn = cosc
             mutations[self.kind].append(mutation)
-        # print 'Marshalling modifications'
+        logging.info('Marshalling modifications')
         for name in differ.modified():
             column = self.getColumn(name, self.model[name]) #=> Fetch the Column for this name
             cosc = ColumnOrSuperColumn()
@@ -951,7 +953,7 @@ class MetaModel(object):
             mutation.column_or_supercolumn = cosc
             mutations[self.kind].append(mutation)  
         # Remove all the deleted columns
-        # print 'Marshalling deletions'
+        logging.info('Marshalling deletions')
         deletion = Deletion()
         deletion.timestamp = int(time.time())
         predicate = SlicePredicate()
