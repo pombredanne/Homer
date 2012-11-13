@@ -30,7 +30,7 @@ setup(
     maintainer_email='iroiso@live.com',
     package_dir = {'': 'src',},
     url="http://github.com/Junery/Homer.git",
-    packages=["homer",],
+    packages=["homer", "homer.core", "homer.backend"],
     provides=["homer"],
     install_requires =["cql==1.0.6", "thrift"],
     classifiers=[
