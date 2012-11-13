@@ -23,6 +23,7 @@ import sys
 from traceback import print_exc
 from homer.options import Settings
 from homer.backend.db import Lisa
+import logging
 
 __all__ = ["Size", ]
 
