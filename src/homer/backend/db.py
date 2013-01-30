@@ -84,12 +84,13 @@ COLUMNFAMILIES = set()
 
 # CONSTANTS
 __all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool",\
-                "Connection", "ConnectionDisposedError",]
+                "Connection", "ConnectionDisposedError", "store"]
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
 FETCHSIZE = 2000000000 #AT MOST THE DB MODULE WILL TRY TO READ ALL THE COLUMNS
 encoder = codecs.getencoder('utf-8')
 encode = lambda content: encoder(content)[0]
+
 
 # UTILITIES AND HELPER FUNCTIONS
 def redo(function):
@@ -969,4 +970,6 @@ class MetaModel(object):
         deletions.deletion = deletion
         mutations[self.kind].append(deletions) 
         return mutations
-        
+
+# Global Variables
+store = Lisa()       

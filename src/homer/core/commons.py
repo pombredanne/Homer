@@ -31,13 +31,13 @@ from contextlib import closing
 from homer.util import Size
 from .types import phone, blob, TypedMap, TypedSet, TypedList, TypedCounter
 from .models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
-from .models import Converter as blank
+from .models import Converter as blank, Key, Model
 
 maxsize = 1024 * 1024 * 512
 __all__ = [
             "Integer","String","Blob","Boolean","URL", 
             "Time","DateTime","Phone","Date","Float", "Map", 
-            "Set", "List", "UUID",
+            "Set", "List", "UUID", "KeyHolder",
 ]
 
 """
@@ -143,7 +143,7 @@ class String(Basic):
         super(String,self).__init__(default = default,**arguments)
         self.length = length
    
-    def validate(self,value):
+    def validate(self, value):
         """Validate length here"""
         # TODO: Add support for regex based validation.
         value = super(String,self).validate(value)
@@ -153,7 +153,37 @@ class String(Basic):
             required : %s , got : %s" % (self.length, len(value))
         return value
         
+
+"""
+KeyHolder:
+A KeyHolder is a data descriptor that is designed for storing complete
+keys in the datastore. It knows how to convert models to Key objects if
+necessary, It doesn't care about the data type of the Model it just
+ascertains that the key is complete before storage.
+"""
+class KeyHolder(Property):
+    '''A descriptor that stores a single complete key'''
+
+    def convert(self, value):
+        '''Does a repr() on a key object'''
+        return repr(value)
+
+    def deconvert(self, value):
+        '''Does an eval() on a string value to return an key'''
+        val = eval(value)
+        assert isinstance(val, Key), "Value didn't convert to a Key"
+        return val
     
+    def validate(self, value):
+        '''Validates any object put in a key holder'''
+        assert isinstance(value, Key) or isinstance(value, Model),\
+            "You must pass in a Model or Key to a KeyHolder"
+        if isinstance(value, Model):
+            value = value.key()
+        if not value.complete():  
+            raise BadValueError("Your key is not complete")
+        return value
+   
 """
 Blob:
 Blob is Data descriptor for modeling blobs, it provides useful features like size

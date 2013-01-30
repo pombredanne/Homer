@@ -12,7 +12,8 @@ from unittest import TestCase,expectedFailure,skip
 from homer.core.commons import *
 from homer.core.types import phone, blob
 from homer.core.models import READONLY, BadValueError
-from datetime import date,datetime
+from homer.core.models import key, Model, Key
+from datetime import date, datetime
 
 class TestPhone(TestCase):
     '''Tests or the Phone descriptor'''
@@ -350,4 +351,39 @@ class TestSet(TestCase):
         """asserts that Sets contents are homogeneous and validated"""
         with self.assertRaises(Exception):
             self.test.pets = set(["Hello", "I should fail",])
+
+
+class TestKeyHolder(TestCase):
+    '''Tests for the KeyHolder() descriptor'''
+    def setUp(self):
+        class Person(object):
+            owner = KeyHolder()
+            keys = List(KeyHolder)
+        self.test = Person()
+        self.test.keys = []
+
+    def testSanity(self):
+        '''Basic mental checks for the KeyHolder object'''
+        @key('id', "namespace")
+        class House(Model):
+            id = String()
+            number = Integer()
+
+        house = House(id="Iroiso")
+        self.test.owner = house # Tests conversion from a model
+
+        self.assertTrue(self.test.owner is not None)
+        self.assertEqual(self.test.owner, Key("namespace", "House", "Iroiso"))
+
+        val = Key("namespace", "House", "1")
+        self.test.owner = val # Tests ordinary assignment.
+
+        self.test.keys.append(val)
+        self.test.keys.append(house.key())
+        self.assertTrue(len(self.test.keys), 2)
+        
+        for a in self.test.keys:
+            self.assertTrue(isinstance(a, Key))
+
+
                                   
