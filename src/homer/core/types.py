@@ -20,7 +20,7 @@ import re
 import codecs
 import hashlib
 
-__all__ = ["phone", "blob", "TypedMap", "TypedSet", "TypedList", "TypedCounter",]
+__all__ = ["phone", "blob", "TypedMap", "TypedSet", "TypedList",]
 
 
 class phone(object):
@@ -98,10 +98,16 @@ class blob(object):
         return "Blob: [mimetype:%s, checksum:%s, description:%s]" % \
             (self.mimetype, self.checksum, self.description)
 
+
 """
 Description:
-Typed Collections that are useful for the collection descriptors.
+Typed Collections that are useful for the collection descriptors. Typed
+Collections can be used to store collections of Simple Types or Models
+in Cassandra; Typed Collections have one special feature however, if they
+are used to store Models; they store the Model keys instead of pickling the
+Models themselves.
 """
+
 from .models import Converter, Reference, Model
 from collections import MutableMapping, MutableSet, MutableSequence, Counter
 
@@ -131,11 +137,19 @@ class TypedMap(MutableMapping):
     '''A map that does validation of keys and values'''
 
     def __init__(self, T=blank, V=blank, data={}):
-        assert isinstance(T, type) and isinstance(V, type), "T and V must be classes"
-        assert issubclass(T, (Converter,)), "T must be a Converter"
-        assert issubclass(V, (Converter,)), "V must be a Converter"
-        # Convert Models to a References underneath.
-        self.T, self.V = T(), V()
+        '''Initialization routine for TypeMap'''
+        assert issubclass(T, (Converter, Model)), "T must be a Converter"
+        assert issubclass(V, (Converter, Model)), "V must be a Converter"
+        # Convert Models to KeyHolders Beneath.
+        if issubclass(T, Model):
+            self.T = KeyHolder(T)
+        else:
+            self.T = T()
+        if issubclass(V, Model):
+            self.V = KeyHolder(V)
+        else:
+            self.V = V()
+        
         # Create the underlying data for the Map.
         self.__data__ = {}
         for k, v in data.iteritems():
@@ -171,7 +185,9 @@ class TypedMap(MutableMapping):
 """
 TypedList:
 A mutable sequence type that does data validation before storing
-data. by default it behave like an ordinary list..
+data. By default it behaves like an ordinary list.
+If the data type (the `cls` attribute) of a TypedList is a Model, 
+the TypedList stores the key of the Model instead of pickling the Model itself.
 
 e.g.
 from homer.core.commons import String
@@ -191,9 +207,13 @@ assert var[0] == 'H'
 class TypedList(MutableSequence):
     '''A List that validates content before addition or removal'''
     def __init__(self, T=blank, data=[]):
-        assert isinstance(T, type), "T must be a class"
-        assert issubclass(T, (Converter,)), "T must be a Converter"
-        self.T = T()
+        '''Initializes a TypedList'''
+        assert issubclass(T, (Converter, Model)), "T must be a Converter"
+
+        if issubclass(T, Model):
+            self.T = KeyHolder(T)
+        else:
+            self.T = T()
         self.__data__ = []
         for k in data:
             self.append(k)
@@ -237,9 +257,12 @@ class TypedSet(MutableSet):
     '''A Set that validates content before addition'''
     def __init__(self, T=blank, data=set()):
         assert isinstance(T, type), "T must be a class"
-        assert issubclass(T, (Converter, )), "T must be a Converter or a Model"
-        # Converter Models to References
-        self.T = T()
+        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
+        # Converter Models to KeyHolders
+        if issubclass(T, Model):
+            self.T = KeyHolder(T)
+        else:
+            self.T = T()
         self.__data__ = set()
         for k in data:
             self.add(k)
@@ -268,17 +291,3 @@ class TypedSet(MutableSet):
     def __len__(self):
         return len(self.__data__)
 
-"""
-TypedCounter:
-A mixin of a Counter and a TypedMap. There is catch
-though; a TypedCounter does not support any of the different
-construction configurations of the default Counter type.
-But it works as expected.
-"""
-class TypedCounter(Counter, TypedMap):
-    '''A Counter that does validation of data'''
-
-    def __init__(self, T=blank, V=blank):
-        '''Basic initialisation of the TypedMap'''
-        TypedMap.__init__(self, T, V)
-        super(Counter, self).__init__()          

@@ -29,7 +29,7 @@ import datetime
 import urlparse
 from contextlib import closing
 from homer.util import Size
-from .types import phone, blob, TypedMap, TypedSet, TypedList, TypedCounter
+from .types import phone, blob, TypedMap, TypedSet, TypedList
 from .models import READWRITE, Basic, Type, BadValueError, Property, UnIndexable, UnIndexedType
 from .models import Converter as blank, Key, Model
 
