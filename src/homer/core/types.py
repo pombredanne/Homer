@@ -139,17 +139,10 @@ class TypedMap(MutableMapping):
 
     def __init__(self, T=blank, V=blank, data={}):
         assert isinstance(T, type) and isinstance(V, type), "T and V must be classes"
-        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
-        assert issubclass(V, (Converter, Model)), "V must be a Converter or a Model"
+        assert issubclass(T, (Converter,)), "T must be a Converter"
+        assert issubclass(V, (Converter,)), "V must be a Converter"
         # Convert Models to a References underneath.
-        if issubclass(T, Model):
-            self.T = Reference(T)
-        else: 
-            self.T = T()     
-        if issubclass(V, Model):
-            self.V = Reference(V)
-        else: 
-            self.V = V()
+        self.T, self.V = T(), V()
         # Create the underlying data for the Map.
         self.__data__ = {}
         for k, v in data.iteritems():
@@ -206,12 +199,8 @@ class TypedList(MutableSequence):
     '''A List that validates content before addition or removal'''
     def __init__(self, T=blank, data=[]):
         assert isinstance(T, type), "T must be a class"
-        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
-        # Converter Model classes to References
-        if issubclass(T, Model):
-            self.T = Reference(T)
-        else: 
-            self.T = T()
+        assert issubclass(T, (Converter,)), "T must be a Converter"
+        self.T = T()
         self.__data__ = []
         for k in data:
             self.append(k)
@@ -255,12 +244,9 @@ class TypedSet(MutableSet):
     '''A Set that validates content before addition'''
     def __init__(self, T=blank, data=set()):
         assert isinstance(T, type), "T must be a class"
-        assert issubclass(T, (Converter, Model)), "T must be a Converter or a Model"
+        assert issubclass(T, (Converter, )), "T must be a Converter or a Model"
         # Converter Models to References
-        if issubclass(T, Model):
-            self.T = Reference(T)
-        else: 
-            self.T = T()
+        self.T = T()
         self.__data__ = set()
         for k in data:
             self.add(k)
