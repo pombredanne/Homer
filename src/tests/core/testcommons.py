@@ -383,5 +383,26 @@ class TestKeyHolder(TestCase):
         for a in self.test.keys:
             self.assertTrue(isinstance(a, Key))
 
+    def testTypeChecking(self):
+        '''Tests that KeyHolder supports type checking'''
+        @key('name', 'namespace')
+        class Owner(Model):
+            name = String()
+
+        class House(object):
+            id = String()
+            holder = KeyHolder(Owner)
+
+        house = House()
+        owner = Owner(name="Iroiso")
+        house.holder = owner
+        self.assertTrue(isinstance(house.holder, Key))
+
+        with self.assertRaises(AssertionError):
+            house.holder = Key("namespace", "Profile", "iroiso")
+        house.holder = Key("namespace", "Owner", 'yum')
+        
+            
+
 
                                   
