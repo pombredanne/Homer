@@ -16,18 +16,18 @@ class TestPhone(TestCase):
     
     def testSanity(self):
         '''Makes sure that basic usage is sane'''
-        mobile = phone("+234", "(0248) 123-7654")
-        self.assertEquals(mobile.country, "+234")
-        self.assertEquals(mobile.number, "2481237654")
+        with self.assertRaises(ValueError):
+            mobile = phone("(0248) 123-7654")
+        mobile = phone("+2348094486101")
     
     def testRepr(self):
         '''Makes sure that phones get a valid python repr'''
-        mobile = phone("+234", "(0248) 123-7654")
+        mobile = phone("+2348094486101")
         self.assertEquals(eval(repr(mobile)), mobile)
         
     def testStr(self):
         '''Makes sure that phones are properly stringified'''
-        mobile = phone("+234", "(0248) 123-7654")
+        mobile = phone("+2342481237654")
         self.assertEquals("+2342481237654", str(mobile))
         
 class TestBlob(TestCase):

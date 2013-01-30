@@ -24,17 +24,15 @@ class TestPhone(TestCase):
             
         self.clasz = Person
         self.person = Person()
-        self.person.mobile = phone("+234", "08094486101")
+        self.person.mobile = phone("+2348094486101")
 
     def testSanity(self):
         '''sanity tests or a phone'''
-        with self.assertRaises(BadValueError):
-            self.person.mobile = "+123458790"
+        
         with self.assertRaises(BadValueError):
             self.person.mobile = None
-        self.person.mobile = phone("+234", "08094486101")
-        self.person.mobile = ("+234", "08094486101")
-    
+        self.person.mobile = phone("+2348094486101")
+           
     def testConversionAndDeconversion(self):
         '''Tests conversion and Deconversion'''
         descriptor = Phone()

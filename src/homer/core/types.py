@@ -16,6 +16,7 @@ assert mobile.number == '2481237654'
 """
 import sys
 import json
+import re
 import codecs
 import hashlib
 
@@ -23,24 +24,16 @@ __all__ = ["phone", "blob", "TypedMap", "TypedSet", "TypedList", "TypedCounter",
 
 
 class phone(object):
-    '''A Phone number in international format'''
-    def __init__(self, country, number):
-        '''country == 'country code' number == 'local number' '''
-        assert isinstance(country, str) and isinstance(number, str), "Type Error, Please use strings instead"
-        country, number = country.strip(), number.strip()
-        if country[0] != '+':
-            raise ValueError("Country code must begin with a '+'")
-        # Strip out all non numbers, and remove the first zeros
-        value = [c for c in number if c.isdigit()]
-        if value[0] == '0':
-            value = value[1:]    
-        self.__number = ''.join(value)
-        self.__country = country
-    
-    @property
-    def country(self):
-        '''A readonly property that returns the country of this phone number'''
-        return self.__country
+    '''An immutable Phone number in international format'''
+    pattern = re.compile("^\+(?:[0-9] ?){6,14}[0-9]$")
+
+    def __init__(self, number):
+        '''Simply pass in the number as one block. '''
+        assert isinstance(number, str), "Type Error, Please use strings instead"
+        number = number.strip()
+        if not re.search(self.pattern, number):
+            raise ValueError("Invalid international phone number")
+        self.__number = number
     
     @property
     def number(self):
@@ -50,15 +43,15 @@ class phone(object):
     def __eq__(self, other):
         '''Equality tests'''
         assert isinstance(other, phone),"%s must be a phone type" % other
-        return self.__number == other.__number and self.__country == other.__country
+        return self.number == other.number
          
     def __str__(self):
         '''String representation of an international phone number'''
-        return self.country + self.number
+        return self.number
     
     def __repr__(self):
         '''Returns a phone object as a tuple'''
-        return "phone('%s', '%s')" % (self.country, self.number)
+        return "phone('%s')" % (self.number)
 
 
 class blob(object):
