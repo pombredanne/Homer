@@ -34,15 +34,15 @@ class Differ(object):
     def __init__(self, instance, exclude):
         '''Inserts all the objects in @args to this differ'''
         from homer.core.models import Model
-        assert isinstance(instance, Model), "Differ's only work on Models"
+        assert isinstance(instance, Model), "Differs only work on Models"
         self.excluded = exclude
         self.replica = copy.deepcopy(instance.__store__)
         self.model = instance.__store__
         self.instance = instance
     
     def forbidden(self, name):
-        '''Attributes that start with '_' are automatically avoided'''
-        return name.startswith("_") or name in self.excluded
+        '''Excludes names in provided in self.excluded'''
+        return name in self.excluded
               
     def added(self):
         '''Yields the names of the attributes that were recently added to this model'''

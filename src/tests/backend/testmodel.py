@@ -131,7 +131,6 @@ class TestModel(BaseTestCase):
     
     def testQuery(self):
         '''Shows that CQL Queries work'''
-        import binascii
         @key("name")
         class Book(Model):
             name = String(required = True, indexed = True)
@@ -151,5 +150,39 @@ class TestModel(BaseTestCase):
         self.assertTrue(b.name == "Lord of the Rings")
         self.assertTrue(b.author == "J.R.R Tolkein")
         self.assertTrue(b.isbn == "12345")
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+
+    def testHiddenPropertiesAreStored(self):
+        '''Shows that hidden descriptors in a model are persisted as usual'''
+        @key("name")
+        class Book(Model):
+            name = String(required=True, indexed=True)
+            __related = List(String)
+            __isbn__ = String(indexed=True)
+
+            def add(self, relative):
+                '''Pathway to the hidden descriptor of the model'''
+                if self.__related is None:
+                    self.__related = []
+                self.__related.append(relative)
+
+            def hasRelative(self, relative):
+                return relative in self.__related
+
+        book = Book(name="LOTR", __isbn__="12345")
+        book.add("Hello")
+        book.add("World")
+        book.save()
+
+        b = Book.read("LOTR")
+        print "Book: %s" % b
+        assert isinstance(b, Book)
+        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        print b.name
+        print b.__isbn__
+        assert b.name == "LOTR"
+        assert b.__isbn__ == "12345"
+        assert b.hasRelative("Hello")
+        assert b.hasRelative("World")
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 

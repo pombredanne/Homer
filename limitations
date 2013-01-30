@@ -1,0 +1,3 @@
+1. You cannot use Model.query() with descriptors whose identifiers 
+   begin with an underscore('_') e.g. hidden descriptors. This is because
+   of lack of support in CQL.

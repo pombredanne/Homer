@@ -24,7 +24,7 @@ def fields(cls, instance):
     results = dict()
     def add(name, prop):
         '''Inner helper function'''
-        if isinstance(prop, instance) and not name.startswith("_"):
+        if isinstance(prop, instance):
             results[name] = prop 
     # Search the instance/class heirachy.       
     for root in reversed(cls.__mro__):

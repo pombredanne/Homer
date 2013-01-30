@@ -457,9 +457,15 @@ class CqlQuery(object):
     def __iter__(self):
         '''Execute your queries and converts data to python data models'''
         # EXECUTE THE QUERY IF IT HASN'T BEEN EXECUTED
-        if self.cursor is None: self.execute() 
+        try:
+            if self.cursor is None: 
+                self.execute() 
+        except Exception as e:
+            logging.exception("Something wen't wrong when executing the query: %s, error: %s" % self, str(e))
+
         # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURNS CqlResultType.ROWS, 
         # SO TO FIGURE OUT COUNTS I MANUALLY SEARCH THE QUERY WITH A REGEX
+
         if re.search(self.pattern, self.query):
             logging.info("Count expression found;")
             yield self.cursor.fetchone()[0]
