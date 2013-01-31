@@ -12,7 +12,7 @@ from unittest import TestCase,expectedFailure,skip
 from homer.core.commons import *
 from homer.core.types import phone, blob
 from homer.core.models import READONLY, BadValueError
-from homer.core.models import key, Model, Key
+from homer.core.models import key, Model, Key, KeyHolder
 from datetime import date, datetime
 
 class TestPhone(TestCase):

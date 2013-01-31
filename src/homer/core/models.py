@@ -35,8 +35,10 @@ from .builtins import object, fields
 from .differ import Differ, DiffError
 
 READWRITE, READONLY = 1, 2
-__all__ = [ "Model", "key", "Key", "Reference", "Property", "Type",\
-                     "UnIndexable", "UnIndexedType", "READONLY", "READWRITE" ]
+__all__ = [ 
+            "Model", "key", "Key", "Reference", "KeyHolder", "Property", "Type",
+            "UnIndexable", "UnIndexedType", "READONLY", "READWRITE",
+]
 
 """Exceptions """
 class BadKeyError(Exception):
@@ -499,6 +501,50 @@ class Reference(Property):
         else:
             raise BadValueError("You must use a subclass of: %s" % self.cls.__name__)
         assert key.complete(), "Your %s's key must be complete" % value
+        return value
+
+"""
+KeyHolder:
+A KeyHolder is a data descriptor that is designed for storing complete
+keys in the datastore. It knows how to convert models to Key objects if
+necessary. If the `cls` keyword parameter is provided it does type checking
+on on the keys before storage.
+"""
+class KeyHolder(Property):
+    '''A descriptor that stores a single complete key'''
+    def __init__(self, cls=None, **keywords):
+        '''initialize a KeyHolder'''
+        if cls:
+            assert issubclass(cls, Model), "You must pass in a subclass of Model"
+        self.cls = cls
+        super(KeyHolder, self).__init__(**keywords)
+
+    def convert(self, value):
+        '''Does a repr() on a key object'''
+        return repr(value)
+
+    def deconvert(self, value):
+        '''Does an eval() on a string value to return an key'''
+        val = eval(value)
+        assert isinstance(val, Key), "Value didn't convert to a Key"
+        return val
+    
+    def validate(self, value):
+        '''Validates any object put in a key holder'''
+        assert isinstance(value, Key) or isinstance(value, Model),\
+            "You must pass in a Model or Key to a KeyHolder"
+        if self.cls:
+            if isinstance(value, Model):
+                assert isinstance(value, self.cls),"You must provide an instance of %s" % self.cls.__name__
+            else:
+                assert isinstance(value, Key)
+                kind = getattr(value, "kind", None)
+                assert kind is not None, "You must provide a complete key, GOT: %s" % value
+                assert kind == self.cls.__name__, "Invalid kind got: %s require: %s" % (kind, self.cls.__name__)
+        if isinstance(value, Model):
+            value = value.key()
+        if not value.complete():  
+            raise BadValueError("Your key is not complete")
         return value
 
 """

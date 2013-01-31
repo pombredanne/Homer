@@ -107,8 +107,8 @@ in Cassandra; Typed Collections have one special feature however, if they
 are used to store Models; they store the Model keys instead of pickling the
 Models themselves.
 """
-
-from .models import Converter, Reference, Model
+from homer.backend import store
+from homer.core.models import Converter, Reference, Model, KeyHolder
 from collections import MutableMapping, MutableSet, MutableSequence, Counter
 
 blank = Converter #An alias
@@ -163,7 +163,10 @@ class TypedMap(MutableMapping):
     def __getitem__(self, key):
         '''Validate and possibly transform key before retreival'''
         key = self.T(key)
-        return self.__data__[key]
+        value = self.__data__[key]
+        if isinstance(self.V, KeyHolder) and self.V.cls is not None:
+            return store.read(value)
+        return value
 
     def __delitem__(self, key):
         '''Validate and possibly transform key before deletion'''
@@ -172,7 +175,12 @@ class TypedMap(MutableMapping):
 
     def __iter__(self):
         '''Returns a iterable over the data set'''
-        return self.__data__.__iter__()
+        # If we have KeyHolders with Models in them, read the Models and return them.
+        for k in self.__data__:
+            if isinstance(self.T, KeyHolder) and self.T.cls is not None:
+                yield store.read(k)
+            else:
+                yield k
     
     def __eq__(self, other):
         return self.__data__ == other
@@ -229,7 +237,12 @@ class TypedList(MutableSequence):
         self.__data__[index] = value
 
     def __getitem__(self, index):
-        return self.__data__(index) 
+        '''Read the item stored at @index, possibly transforming it before returning it'''
+        value = self.__data__[index]
+        if isinstance(self.T, KeyHolder) and self.T.cls is not None:
+            return store.read(value)
+        else:
+            return value
 
     def __contains__(self, item):
         value = self.T(item)
@@ -243,7 +256,11 @@ class TypedList(MutableSequence):
 
     def __iter__(self):
         '''Returns a iterable over the data set'''
-        return self.__data__.__iter__()
+        for k in self.__data__:
+            if isinstance(self.T, KeyHolder) and self.T.cls is not None:
+                yield store.read(k)
+            else:
+                yield k
 
     def __eq__(self, other):
         return self.__data__ == other
@@ -281,9 +298,17 @@ class TypedSet(MutableSet):
         value = self.T(item)
         return value in self.__data__
 
+    def _from_iterable(self, iterable):
+        '''Overridden to make this behave more like a Set'''
+        return TypedSet(self.T, iterable)
+
     def __iter__(self):
         '''Returns a iterable over the data set'''
-        return self.__data__.__iter__()
+        for k in self.__data__:
+            if isinstance(self.T, KeyHolder) and self.T.cls is not None:
+                yield store.read(k)
+            else:
+                yield k
 
     def __eq__(self, other):
         return self.__data__ == other
