@@ -398,7 +398,7 @@ class List(UnIndexable):
         if not isinstance(value, list):
             try: value = list(value)
             except:
-                raise BadValueError("This property has to be set, got a : %s" % type(value))
+                raise BadValueError("Could not coerce %s to a set" % type(value))
         created = TypedList(T=self.cls, data=value)
         return created  
 """
@@ -420,8 +420,8 @@ class Map(UnIndexable):
             return None
         if not isinstance(value, dict):
             try: value = dict(value)
-            except:
-                raise BadValueError("This property has to be set, got a : %s" % type(value))
+            except Exception as e:
+                raise BadValueError("Could not coerce %s to dictionary" % type(value))
         coerced = TypedMap(self.key, self.value, data=value)
         return coerced
         

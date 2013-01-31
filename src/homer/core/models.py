@@ -165,7 +165,11 @@ class Key(object):
             return True
         else:
             return False
-        
+    
+    def __hash__(self):
+        '''A Key object is hashable'''
+        return hash(repr(self))
+
     def __unicode__(self):
         """Unicode representation of a key"""
         format = u"Key('{self.namespace}', '{self.kind}', '{self.id}')"

@@ -318,14 +318,15 @@ class TestMap(TestCase):
         '''Makes sure that Maps are sane'''
         map = {"Google": "http://google.com", 234: "http://234next.com", 1.345: "http://base.com"}
         self.test.bookmarks = map
-        self.assertEquals(self.test.bookmarks, {"Google": "http://google.com", "234": "http://234next.com", "1.345": "http://base.com"})
+        self.assertEquals(self.test.bookmarks, {"Google": "http://google.com", 
+            "234": "http://234next.com", "1.345": "http://base.com"}
+        )
     
     def testMapDoesValidation(self):
         """Makes sure that Maps do validation"""
         with self.assertRaises(Exception):
             self.test.bookmarks["hello"] = 1
             self.cls.bookmarks.convert(self.test)
-        
              
 class TestSet(TestCase):
     """Tests for Set() descriptor"""
@@ -400,9 +401,5 @@ class TestKeyHolder(TestCase):
 
         with self.assertRaises(AssertionError):
             house.holder = Key("namespace", "Profile", "iroiso")
-        house.holder = Key("namespace", "Owner", 'yum')
-        
-            
-
-
-                                  
+        house.holder = Key("namespace", "Owner", 'yum') 
+                                           

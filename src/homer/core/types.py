@@ -182,6 +182,10 @@ class TypedMap(MutableMapping):
             else:
                 yield k
     
+    def __str__(self):
+        '''String representation of an object'''
+        return str(self.__data__)
+
     def __eq__(self, other):
         return self.__data__ == other
 

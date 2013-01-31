@@ -72,6 +72,5 @@ class TestDateTypes(BaseTestCase):
         
         found = Person.read('lob')
         self.assertEquals(person, found)
-        self.assertEquals(person.date, found.date)
-        
-    
+        self.assertEquals(person.date, found.date)   
+            
