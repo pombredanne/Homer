@@ -248,6 +248,9 @@ class TypedList(MutableSequence):
         else:
             return value
 
+    def __str__(self):
+        return str(self.__data__)
+
     def __contains__(self, item):
         value = self.T(item)
         return value in self.__data__
@@ -313,6 +316,9 @@ class TypedSet(MutableSet):
                 yield store.read(k)
             else:
                 yield k
+
+    def __str__(self):
+        return str(self.__data__)
 
     def __eq__(self, other):
         return self.__data__ == other
