@@ -23,12 +23,39 @@ Copyright 2011, June inc.
 Description:
 Common descriptors for day to day usage
 """
+import cql
 from datetime import datetime, time
 from homer.core.commons import String, Map, URL, List, Set
-from homer.core.models import Model, key
+from homer.core.models import Model, key, Schema
+from homer.backend.db import store
 from .testdb import BaseTestCase
 from unittest import TestCase, skip
 
+################### MODULE SET UP AND TEARDOWN CODE ############################
+def setUpModule():
+    '''Remove the side effects of previous modules in homer'''
+    try:
+        global connection
+        connection = cql.connect("localhost", 9160).cursor()
+        connection.execute("DROP KEYSPACE Test;")
+    except Exception as e:
+        print e
+
+
+def tearDownModule():
+    '''Remove this side effects of this module from homer'''
+    try:
+        global connection
+        store.clear()
+        Schema.clear()
+        connection.execute("DROP KEYSPACE Test;")
+        connection.close()
+    except Exception as e:
+        print e
+
+#################################################################################
+
+########################## TEST DATA MODELS #####################################
 @key('id')
 class Book(Model):
     id = String()
@@ -41,7 +68,20 @@ class Person(Model):
     kbookmarks = Map(Book, URL)
     vbookmarks = Map(String, Book)
 
-@skip("Broken by other tests")
+@key('id')
+class User(Model):
+    id = String()
+    books = List(Book)
+
+@key('id')
+class House(Model):
+    id = String()
+    books = Set(Book)
+
+
+#################################################################################
+
+############################# UNIT TESTS PROPER #################################
 class TestMap(TestCase):
     """Tests for the Map() descriptor"""
 
@@ -71,13 +111,6 @@ class TestMap(TestCase):
         print "FOUND " +  str(found.vbookmarks)
         self.assertTrue(isinstance(person.vbookmarks['Hello'], Book))
 
-
-@key('id')
-class User(Model):
-    id = String()
-    books = List(Book)
-
-@skip("Broken by other tests")
 class TestList(TestCase):
     '''Unittests for the List type'''
 
@@ -97,13 +130,6 @@ class TestList(TestCase):
         self.assertTrue(len(found.books) == 10)
         print user.books
 
-
-@key('id')
-class House(Model):
-    id = String()
-    books = Set(Book)
-
-@skip("Broken by other tests")
 class TestSet(TestCase):
     '''Unittests for the Set type'''
     

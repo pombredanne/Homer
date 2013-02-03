@@ -353,10 +353,10 @@ class Person(object):
 """
 class Set(UnIndexable):
     """A data descriptor for storing sets"""
-    def __init__(self, cls=blank):
+    def __init__(self, cls=blank, **keywords):
         """The type keyword here has a different meaning"""
         self.cls = cls
-        super(Set, self).__init__()
+        super(Set, self).__init__(**keywords)
     
     def validate(self,value):
         """Validates the type you are setting and its contents"""
@@ -386,9 +386,9 @@ person.harem.extend(["Aisha","Halima","Safia",])
 """
 class List(UnIndexable):
     """Stores a List of objects,You can specify the type of the objects this list contains"""
-    def __init__(self, cls=blank):    
+    def __init__(self, cls=blank, **keywords):    
         self.cls = cls
-        super(List, self).__init__()
+        super(List, self).__init__(**keywords)
      
     def validate(self,value):
         """Validates a list and all its contents"""
@@ -400,7 +400,8 @@ class List(UnIndexable):
             except:
                 raise BadValueError("Could not coerce %s to a set" % type(value))
         created = TypedList(T=self.cls, data=value)
-        return created  
+        return created 
+ 
 """
 Map:
 A descriptor for dict-like objects;
@@ -409,9 +410,9 @@ class Person(object):
     bookmarks = Map(String, URL)
 """
 class Map(UnIndexable):
-    def __init__(self, key=blank, value=blank):
+    def __init__(self, key=blank, value=blank, **keywords):
         self.key, self.value = key, value
-        super(Map, self).__init__()
+        super(Map, self).__init__(**keywords)
       
     def validate(self, value):
         '''Simply does type checking'''
