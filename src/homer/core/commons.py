@@ -302,7 +302,7 @@ class DateTime(Type):
         '''Converts a value from the datastore to a native python object'''
         return eval(value)
         
-    def empty(value):
+    def empty(self, value):
         '''DateTime's are empty when they are none'''
         return value is None
         
@@ -398,7 +398,7 @@ class List(UnIndexable):
         if not isinstance(value, list):
             try: value = list(value)
             except:
-                raise BadValueError("Could not coerce %s to a set" % type(value))
+                raise BadValueError("Could not coerce %s to a list" % type(value))
         created = TypedList(T=self.cls, data=value)
         return created 
  

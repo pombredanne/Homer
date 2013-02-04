@@ -637,7 +637,7 @@ class Model(BaseModel):
             value = found() if callable(found) else found
             if value is None:
                 raise BadKeyError("The key for %s cannot be None" % self)
-            return value   
+            return str(value)  
         if self.__key is None:
             namespace, kind, key = Schema.Get(self)
             self.__id = key
