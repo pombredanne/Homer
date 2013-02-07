@@ -28,7 +28,7 @@ import logging
 __all__ = ["Size", ]
 
 class Bootstrap(object):
-    '''A helper class for bootstrapping homer'''
+    '''A helper class for bootstrapping Homer Models.'''
     
     @classmethod
     def MakeEveryModel(self):
@@ -46,6 +46,18 @@ class Bootstrap(object):
                 except:
                     if Settings.DEBUG:
                         print_exc()
+
+    @classmethod
+    def MakeModels(self, *models):
+        '''Tries to bootstrap all the models that have been passed in'''
+        from homer.core.models import Model
+        for model in models:
+            try:
+                logging.info("Creating Model: %s" % model)
+                Lisa.create(model);
+            except:
+                if Settings.DEBUG:
+                    print_exc()
         
 
 """

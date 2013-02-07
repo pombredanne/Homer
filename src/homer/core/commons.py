@@ -27,6 +27,7 @@ import re
 import uuid
 import datetime
 import urlparse
+import traceback
 from contextlib import closing
 from homer.util import Size
 from .types import phone, blob, TypedMap, TypedSet, TypedList
@@ -366,8 +367,8 @@ class Set(UnIndexable):
             
         if not isinstance(value, set):
             try: value = set(value)
-            except:
-                raise BadValueError("This property has to be set, got a : %s" % type(value))
+            except Exception as e:
+                raise BadValueError("Could not coerce %s to a set due to: %s" % (type(value), str(e)))
         coerced = TypedSet(T=self.cls, data=value)
         return coerced
 """
@@ -397,8 +398,8 @@ class List(UnIndexable):
             return None
         if not isinstance(value, list):
             try: value = list(value)
-            except:
-                raise BadValueError("Could not coerce %s to a list" % type(value))
+            except Exception as e:
+                raise BadValueError("Could not coerce %s to a list due to: %s" % (type(value), str(e)))
         created = TypedList(T=self.cls, data=value)
         return created 
  
@@ -422,7 +423,7 @@ class Map(UnIndexable):
         if not isinstance(value, dict):
             try: value = dict(value)
             except Exception as e:
-                raise BadValueError("Could not coerce %s to dictionary" % type(value))
+                raise BadValueError("Could not coerce %s to a dictionary due to: %s" % (type(value), str(e)))
         coerced = TypedMap(self.key, self.value, data=value)
         return coerced
         

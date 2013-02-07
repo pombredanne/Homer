@@ -537,9 +537,10 @@ class Lisa(local):
     @staticmethod
     def create(model):
         """Creates a new ColumnFamily from this Model"""
-        from homer.core.models import key, BaseModel
+        from homer.core.models import key, Model
         global KEYSPACES, COLUMNFAMILIES
-        assert isinstance(model, BaseModel),"%s must inherit from BaseModel" % model
+        model = model if isinstance(model, type) else model.__class__
+        assert issubclass(model, Model),"%s must inherit from Model" % model
         info = Schema.Get(model) 
         namespace = info[0]
         kind = info[1]

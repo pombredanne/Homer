@@ -82,7 +82,7 @@ class House(Model):
 #################################################################################
 
 ############################# UNIT TESTS PROPER #################################
-skip("Passes but requires isolation")
+@skip("Passes but requires isolation")
 class TestMap(TestCase):
     """Tests for the Map() descriptor"""
 
@@ -112,7 +112,7 @@ class TestMap(TestCase):
         print "FOUND " +  str(found.vbookmarks)
         self.assertTrue(isinstance(person.vbookmarks['Hello'], Book))
 
-skip("Passes but requires isolation")
+@skip("Passes but requires isolation")
 class TestList(TestCase):
     '''Unittests for the List type'''
 
@@ -132,7 +132,7 @@ class TestList(TestCase):
         self.assertTrue(len(found.books) == 10)
         print user.books
 
-skip("Passes but requires isolation")
+@skip("Passes but requires isolation")
 class TestSet(TestCase):
     '''Unittests for the Set type'''
     
