@@ -362,7 +362,6 @@ class UnIndexable(Property):
     
     def convert(self, value):
         '''Pickles this object to the datastore'''
-        value = self.validate(value)
         return pickle.dumps(value)
     
     def deconvert(self, value):
@@ -536,7 +535,7 @@ class KeyHolder(Property):
     def validate(self, value):
         '''Validates any object put in a key holder'''
         assert isinstance(value, Key) or isinstance(value, Model),\
-            "You must pass in a Model or Key to a KeyHolder"
+            "You must pass in a Model or Key to a KeyHolder not a : %s" % value
         if self.cls:
             if isinstance(value, Model):
                 assert isinstance(value, self.cls),"You must provide an instance of %s" % self.cls.__name__

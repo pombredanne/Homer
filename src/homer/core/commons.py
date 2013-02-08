@@ -364,7 +364,10 @@ class Set(UnIndexable):
         value = super(Set,self).validate(value)
         if value is None:
             return None
-            
+        
+        if isinstance(value, TypedSet):
+            if value.T == self.cls:
+                return value
         if not isinstance(value, set):
             try: value = set(value)
             except Exception as e:
@@ -396,6 +399,9 @@ class List(UnIndexable):
         value = super(List,self).validate(value)
         if value is None:
             return None
+        if isinstance(value, TypedList):
+            if value.T == self.cls:
+                return value
         if not isinstance(value, list):
             try: value = list(value)
             except Exception as e:
@@ -420,6 +426,9 @@ class Map(UnIndexable):
         value = super(Map, self).validate(value)
         if value is None:
             return None
+        if isinstance(value, TypedMap):
+            if value.T == self.key and value.V == self.value:
+                return value
         if not isinstance(value, dict):
             try: value = dict(value)
             except Exception as e:
