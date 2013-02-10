@@ -82,6 +82,33 @@ class TestModel(BaseTestCase):
         with Level.All:
             self.db.saveMany("Test",*l)
         self.assertTrue(Profile.count() == 501)
+
+
+    def testCountWithFilters(self):
+        '''Show that counts with filters work'''
+        import time
+        import uuid
+        
+        @key("id")
+        class Profile(Model):
+            id = String(required = True, indexed = True)
+            fullname = String(indexed=True)
+            bookmarks = Map(String, URL)   
+        
+        profile = Profile(id = str(uuid.uuid4()), fullname = "Iroiso Ikpokonte", bookmarks={})
+        profile.save()
+       
+        l = []
+        for i in range(500):
+            profile = Profile(id = str(i), fullname = "Iroiso", bookmarks={})
+            profile.bookmarks["google"] = "http://google.com"
+            profile.bookmarks["twitter"] = "http://twitter.com"
+            l.append(profile)
+        
+        start = time.time()
+        with Level.All:
+            self.db.saveMany("Test",*l)
+        self.assertTrue(Profile.count(fullname="Iroiso") == 500)
                   
     def testDelete(self):
         '''Shows that deletes work as expected'''

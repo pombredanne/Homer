@@ -717,9 +717,26 @@ class Model(BaseModel):
         return query
 
     @classmethod
-    def count(cls):
+    def count(cls, **keywords):
         '''Counts all the instances of this Model from the datastore'''
-        return CqlQuery(cls, "SELECT COUNT(*) FROM %s;" %(cls.kind(),)).fetchone()
+        if not keywords:
+            return CqlQuery(cls, "SELECT COUNT(*) FROM %s;" %(cls.kind(),)).fetchone()
+        else:
+            # Dynamically build the WHERE clause.
+            extras = ""
+            started = False
+            for name in keywords:
+                if not started:
+                    pattern = "%s=:%s" % (name, name)
+                    extras += pattern
+                    started = True
+                else:
+                    pattern = " AND %s=:%s" % (name, name)
+                    query += pattern
+            q = "SELECT COUNT(*) FROM %s WHERE %s;" % (cls.kind(), extras)
+            query = CqlQuery(cls, q, **keywords)
+            query.convert = True
+            return query.fetchone()
          
     def keys(self):
         '''Returns a copy of all the keys in this model excluding the key property'''
