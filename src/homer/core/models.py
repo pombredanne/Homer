@@ -798,6 +798,8 @@ class Model(BaseModel):
     
     def __eq__(self, other):
         '''Two Models are equal if and only if their keys are equal'''
+        if not isinstance(other, Model):
+            return False
         return self.key() == other.key()
             
     def __len__(self):
