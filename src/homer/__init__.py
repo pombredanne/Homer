@@ -20,4 +20,4 @@ class Shinobi(Model):
 from .core import *
 from .backend import *
 
-version = "0.9.7"
+version = "0.9.8"
