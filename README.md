@@ -50,8 +50,8 @@ class Profile(Model):
 The `@key("name")` idiom makes the 'name' field the primary key
 of all Profile models. The String and URL properties are just common
 descriptors for data conversion and validation; adding `indexed=true` tells 
-Homer to index the names and link property of the Profile class which
-would allow us to query against them later.
+Homer to index the name and link property of the Profile class which would allow 
+us to query against them later.
 You can create new models like ordinary python classes, like this:
 '''
 person = Profile(name='Yoda', link='http://faceboook.com/yoda', fullname="Master Yoda")
@@ -68,7 +68,8 @@ Notice all the things you aren't doing:
 1. You aren't creating any keyspaces
 2. You aren't creating any column families.
 3. Serialization and Deserialization
-4. You aren't creating any thrift connections or doing any connection pooling or any other low level stuff.
+4. You aren't creating any thrift connections or doing any connection pooling or 
+   any other low level stuff.
 
 Nice huh :), Send me some coffee :D
 
@@ -97,8 +98,8 @@ with Level.All:
 '''
 You can also query the indexes on cassandra with homer using the idiom: 
 '''
-iter = Profile.query(fullname="Master Yoda") # Which returns a generator that yields Profile instances 
-found = Profile.query(fullname="Master Yoda").fetchone() # Which allows you to retrieve the first result.
+iter = Profile.query(fullname="Master Yoda") # Returns a iterable generator that yields Profile instances 
+found = Profile.query(fullname="Master Yoda").fetchone() # Retreive the first result.
 assert found == person
 
 '''
@@ -108,8 +109,8 @@ count = Profile.count() # To count all the Profile models, or
 count = Profile.count(fullname="Master Yoda")
 
 '''   
-Finally you can retrieve all your models using Profile.all() which returns an generator object you can
-iterate over, like so:
+Finally you can retrieve all your models using Profile.all() which returns an generator 
+object you can iterate over, like so:
 '''
 for person in Profile.all():
     print person.name
@@ -119,10 +120,12 @@ This is by no means a complete guide. There is still alot of documenting
 and explaining to do, need more samples? please dive into the [Tests Directory](http://github.com/junery/homer/src/tests) 
 to quench your thirst. Any suggestions or improvements? Fork away!
 
-Does any of these seem interesting? then, you'd like to join us! or contribute, 
-either ways we'd love to hear from you. Reach out to us iroiso at live dot com.
+Wanna know about all the other cool things homer does for you behind the scenes?
+Read: [All the Reasons why should use Homer](http://github.com/junery/homer/docs/OddsAndEnds.md)
+
+Does any of these seem interesting? then maybe you'd like to join us our startup or contribute to Homer. 
+Either ways we'd love to hear from you. Reach out to me here: iroiso at live dot com.
 
 Notes:
 ------
-Another opensource project made with love in the Junery; pragmatic, simple,  
-beautiful and pleasurable to use.
+Another pragmatic, beautiful and simple opensource project: "Made with Love in June." 
