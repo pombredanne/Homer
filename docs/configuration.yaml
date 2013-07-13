@@ -2,7 +2,7 @@
 # Annotated sample configuration file for Homer;
 
 Homer:
-    debug : True # This says we want verbose output...
+    debug : True # This says we want verbose logging and output and auto creation of models and keyspaces.
     default : Test
                
     # Configuration for all the namespaces, Any unconfigured namespace homer encounters 
