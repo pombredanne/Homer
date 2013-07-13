@@ -32,74 +32,88 @@ So here we go:
 
 ```python
 # Relevant imports.
-from homer.options import CONFIG
-from homer.core import Model, key, Key
-from homer.core.commons import String, URL
-
+from homer import String, URL
+from homer import key, Model, Level
 
 '''
-The snippet above points homer to your datastores and tells
-Homer to map all models to the 'June' keyspace by default. You
-can always map a Model to a different keyspace with the idiom 
-below.
-
-@key("name", namespace="Logging")
-class Stat(object): ....
-
-But you have to create a different configuration for the namespace 'Logging';
-Ok, thats a bit too early; but read on!
+Homer models are python classes that extend the homer 'Model' super class.
+Let's create a model for storing profile information in cassandra.
 '''
 
-# Declare your model. 
 @key("name")
 class Profile(Model): 
-    name = String("", indexed=True)
-    link = URL("http://june.com", indexed=True)
+    name = String()
+    fullname = String(indexed=True)
+    link = URL("http://rafiki.me/user/new", indexed=True)
     
 '''
 The `@key("name")` idiom makes the 'name' field the primary key
 of all Profile models. The String and URL properties are just common
-descriptors for data validation; adding `indexed=true` tells 
-Casssandra to index all 'names' and 'links' which is useful for CQL
-queries as we'll see later on.
+descriptors for data conversion and validation; adding `indexed=true` tells 
+Homer to index the names and link property of the Profile class which
+would allow us to query against them later.
+You can create new models like ordinary python classes, like this:
 '''
-
-# Specify your consistency level and save your instance.
-with Level.Quorum:
-    person = Profile(name='Yoda', link='http://faceboook.com/yoda')
-    person.save()
-
-# You can also save with the default consistency level which is Consistency Level One.  
-another = Profile(name='Iroiso', link='http://facebook.com/iroiso')
-another.save()
-
+person = Profile(name='Yoda', link='http://faceboook.com/yoda', fullname="Master Yoda")
 
 '''
+Then you can save the person to cassandra by calling person.save(), 
+this stores the profile you created with the default consistency level which is
+ConsistencyLevel.ONE
+'''
+person.save()
+
+'''
+Notice all the things you aren't doing:
+1. You aren't creating any keyspaces
+2. You aren't creating any column families.
+3. Serialization and Deserialization
+4. You aren't creating any thrift connections or doing any connection pooling or any other low level stuff.
+
+Nice huh :), Send me some coffee :D
+
 Homer will automatically create a Column Family named 'Profile' 
-in a keyspace named 'June' when you save an instance of your model
-for the first time.
+in a keyspace named 'Homer' when you save an instance of your model
+for the first time; It handles connection pooling, batch updates, and does a lot of cool
+things under the hood for you. Homer's behavior is very configurable, and simple to configure.
+I'll show you how to configure this in later documentation.
 '''
 
-# Reading from Cassandra is Simple.
+# You can also save stuff with a different consistency level.  
+another = Profile(name='Iroiso', link='http://facebook.com/iroiso')
+with Level.Quorum:        #You can also use Level.One, Level.Two, or Level.All
+    another.save()
+
+
+# Reading from Cassandra with Homer is Simple.
 found = Profile.read('Yoda') 
 assert person == found
 
-# Want stronger consistency? you can use the 'with Level.All' clause too!
+# Want stronger consistency when you read or write? you can use the 'with Level.All' clause too!
 with Level.All:
     found = Profile.read('Yoda')
     assert person == found
     
 '''
-Other Consistency Levels are (One, Two, Three, EachQuorum, LocalQuorum and Any), 
-You can also use CQL to search the secondary index, with the idiom below.
+You can also query the indexes on cassandra with homer using the idiom: 
 '''
-found = Profile.query(link="http://facebook.com/iroiso").fetchone()
-assert found == another
+iter = Profile.query(fullname="Master Yoda") # Which returns a generator that yields Profile instances 
+found = Profile.query(fullname="Master Yoda").fetchone() # Which allows you to retrieve the first result.
+assert found == person
 
 '''
-The Profile.query() returns a generator that yields Profile instances when you
-iterate over it. 
-''''
+and you can count all your models using Profile.count (which also takes parameters and filters); 
+'''
+count = Profile.count() # To count all the Profile models, or
+count = Profile.count(fullname="Master Yoda")
+
+'''   
+Finally you can retrieve all your models using Profile.all() which returns an generator object you can
+iterate over, like so:
+'''
+for person in Profile.all():
+    print person.name
+
 ```
 This is by no means a complete guide. There is still alot of documenting
 and explaining to do, need more samples? please dive into the [Tests Directory](http://github.com/junery/homer/src/tests) 
