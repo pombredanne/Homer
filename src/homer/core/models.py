@@ -816,7 +816,7 @@ class Model(BaseModel):
             key = self.key()
         except BadKeyError:
             key = None
-        format = "[Model] %s : ( key: %s )" % (self.kind(), key)
+        format = "[Model] :: %s : %s" % (self.kind(), key)
         return format
         
     def __unicode__(self):

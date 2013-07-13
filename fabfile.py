@@ -3,6 +3,8 @@
 # Author Iroiso,
 # Copyright 2012 June
 #
+# Description:
+# Fabric makes things easier...sometimes.
 
 import os
 import sys
@@ -12,7 +14,6 @@ from datetime import datetime
 import time
 from fabric.api import local, run, cd
 
-CASSANDRA_HOME = "~/Hub/apache-cassandra-1.0.6"
 sys.path.extend(["./src", "./lib"])
 
 def header(message, char= "="):
@@ -53,7 +54,7 @@ def test(arguments=""):
     '''Runs unittests for the project'''
     header("Launching Apache Cassandra")
     home = os.path.expanduser("~/.pid")
-    command = CASSANDRA_HOME + "/bin/cassandra -p %s" % home
+    command = "cassandra -p %s" % home
     result = local(command)
     if result.failed:
         print("Couldn't Launch Cassandra, Quitting...")

@@ -49,7 +49,7 @@ class TestModel(BaseTestCase):
         profile.bookmarks["twitter"] = "http://twitter.com"
         profile.save() # Save to the datastore
 
-        cursor.execute("Use %s" % Settings.default())
+        cursor.execute("Use %s" % Settings.keyspace())
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
@@ -121,7 +121,7 @@ class TestModel(BaseTestCase):
         book = Book(name = "Pride", author="Anne Rice")
         book.save()
         cursor = self.connection
-        cursor.execute("USE %s" % Settings.default())
+        cursor.execute("USE %s" % Settings.keyspace())
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
         print cursor.description
         row = cursor.fetchone()

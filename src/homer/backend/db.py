@@ -50,6 +50,11 @@ from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
 from homer.options import Settings, ConfigurationError
 
+# TODO 
+# 1. Investigate the effect of other strategy options here and test them on homer
+# 2. Write a sample block in the annotated sample configuration file  
+# 3. Add the configuration file to the Homer project folder.
+
 __all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool", "Connection", "ConnectionDisposedError", "store"]
 
 # MODULE EXCEPTIONS
@@ -110,6 +115,8 @@ optionsFor:
 This returns a configuration option for a namespace if it exists
 or else it returns the options for the default namespace. If there
 is no default namespace then it throws a ConfigurationError
+
+@throws ConfigurationError
 """
 def optionsFor(namespace):
     '''Returns configuration for a namespace or the default'''
@@ -122,6 +129,14 @@ def optionsFor(namespace):
         found = Settings.namespaces()[namespace]
     return found
 
+"""
+poolFor:
+This returns the connection pool for @namespace if it exists, 
+if it doesn't exist yet, this method creates a new connection pool
+for @namespace, stores its and returns it.
+
+@throws ConfigurationError 
+"""
 def poolFor(namespace):
     '''Returns or creates a new ConnectionPool for this namespace'''
     pool = None
@@ -134,6 +149,21 @@ def poolFor(namespace):
         with __LOCK__:
             pool = __POOLS__[namespace]
     return pool   
+
+"""
+keyspaceFor:
+This returns the keyspace for @namespace if one is configured for it.
+If it doesn't find a keyspace it throws a ConfigurationError.
+
+@throws ConfigurationError
+"""  
+def keyspaceFor(namespace):
+    '''Returns the Cassandra keyspace for @namespace'''
+    conf = optionsFor(namespace)
+    keyspace = conf.get("keyspace", None)
+    if keyspace is None:
+        raise ConfigurationError("Couldn't found a keyspace specified for in namespace: %s" % namespace)
+    return keyspace
 
 
 # CONTROLLING CONSISTENCY   
@@ -426,15 +456,15 @@ class CqlQuery(object):
         '''Executes @self.query in self.keyspace and returns a cursor'''
         # FIGURE OUT WHICH KEYSPACE THE MODEL BELONGS TO
         if not self.keyspace:
-            found = Schema.Get(self.kind)[0]
-            self.keyspace = found
+            self.namespace = Schema.Get(self.kind)[0] #Every Model is guaranteed to have a namespace at init time.
+            self.keyspace = keyspaceFor(self.namespace)
         
         logging.info("Executing Query: %s in %s" % (self.query, self.keyspace))
         if not self.kind.__name__ in __COLUMNFAMILIES__ and Settings.debug():
             logging.info("Creating new Column Family: %s " % self.kind.__name__)
             Lisa.create(self.kind())
                
-        pool = poolFor(self.keyspace)
+        pool = poolFor(self.namespace)
         with using(pool) as conn:
             logging.info("Executing %s" % self)
             conn.client.set_keyspace(self.keyspace)
@@ -455,6 +485,8 @@ class CqlQuery(object):
                 self.execute() 
         except Exception as e:
             logging.exception("Something wen't wrong when executing the query: %s, error: %s" % self, str(e))
+            if Settings.debug():
+                print_exc()
 
         # FOR SOME ODD REASON CASSANDRA 1.0.0 ALWAYS RETURNS CqlResultType.ROWS, 
         # SO TO FIGURE OUT COUNTS I MANUALLY SEARCH THE QUERY WITH A REGEX
@@ -500,7 +532,7 @@ class CqlQuery(object):
                              
     def __str__(self):
         '''String representation of a CQLQuery.'''
-        return "CqlQuery: %s" % self.query
+        return "[CqlQuery]: %s" % self.query
     
 '''
 Lisa:
@@ -562,7 +594,8 @@ class Lisa(local):
         path = ColumnPath(column_family=key.kind, column=name)
         cosc = None
         with using(pool) as conn:
-            conn.client.set_keyspace(key.namespace)
+            keyspace = keyspaceFor(key.namespace)
+            conn.client.set_keyspace(keyspace)
             cosc = conn.client.get(key.id, path, clasz.consistency)
         column = cosc.column
         return column.value
@@ -580,7 +613,8 @@ class Lisa(local):
             column.ttl = ttl
         cosc = None
         with using(pool) as conn:
-            conn.client.set_keyspace(key.namespace)
+            keyspace = keyspaceFor(key.namespace)
+            conn.client.set_keyspace(keyspace)
             conn.client.insert(key.id, parent, column, clasz.consistency)
         
 
@@ -592,7 +626,8 @@ class Lisa(local):
         timestamp = time.time()
         path = ColumnPath(column_family=key.kind, column=name)
         with using(pool) as conn:
-            conn.client.set_keyspace(key.namespace)
+            keyspace = keyspaceFor(key.namespace)
+            conn.client.set_keyspace(keyspace)
             cosc = conn.client.remove(key.id, path, timestamp, clasz.consistency)
      
 
@@ -606,7 +641,8 @@ class Lisa(local):
         parent = ColumnParent(column_family=kind)
         result = None
         with using(pool) as conn:
-            conn.client.set_keyspace(namespace)
+            keyspace = keyspaceFor(namespace)
+            conn.client.set_keyspace(keyspace)
             results = conn.client.get_slice(id, parent, predicate, clasz.consistency)
         for cosc in results:
             column = cosc.column
@@ -632,7 +668,8 @@ class Lisa(local):
         changes = {id : mutations}
         pool = poolFor(namespace)
         with using(pool) as conn:
-            conn.client.set_keyspace(namespace)
+            keyspace = keyspaceFor(namespace)
+            conn.client.set_keyspace(keyspace)
             conn.client.batch_mutate(changes, clasz.consistency)
         
 
@@ -652,7 +689,8 @@ class Lisa(local):
         changes = {id : mutations}
         pool = poolFor(namespace)
         with using(pool) as conn:
-            conn.client.set_keyspace(namespace)
+            keyspace = keyspaceFor(namespace)
+            conn.client.set_keyspace(keyspace)
             conn.client.batch_mutate(changes, clasz.consistency)
 
    
@@ -677,7 +715,8 @@ class Lisa(local):
         found = None
         pool = poolFor(key.namespace)
         with using(pool) as conn:
-            conn.client.set_keyspace(key.namespace)
+            keyspace = keyspaceFor(key.namespace)
+            conn.client.set_keyspace(keyspace)
             coscs = conn.client.get_slice(key.id, parent, predicate, clasz.consistency)
             found = MetaModel.load(key, coscs)
         return found    
@@ -692,7 +731,8 @@ class Lisa(local):
             '''Stores all the mutations in one batch operation'''
             pool = poolFor(namespace)
             with using(pool) as conn:
-                conn.client.set_keyspace(namespace)
+                keyspace = keyspaceFor(namespace)
+                conn.client.set_keyspace(keyspace)
                 conn.client.batch_mutate(mutations, clasz.consistency)    
         assert issubclass(model.__class__, BaseModel), "%s must inherit from BaseModel" % model
         info = Schema.Get(model)
@@ -716,7 +756,8 @@ class Lisa(local):
             pool = poolFor(key.namespace)
             with using(pool) as conn:
                 logging.info("DELETING %s FROM CASSANDRA" % key )
-                conn.client.set_keyspace(key.namespace)
+                keyspace = keyspaceFor(key.namespace)
+                conn.client.set_keyspace(keyspace)
                 conn.client.remove(key.id, path, clock, clasz.consistency)
 
     
@@ -729,7 +770,8 @@ class Lisa(local):
             '''Stores all the mutations in one batch operation'''
             pool = poolFor(namespace)
             with using(pool) as conn:
-                conn.client.set_keyspace(namespace)
+                keyspace = keyspaceFor(namespace)
+                conn.client.set_keyspace(keyspace)
                 conn.client.batch_mutate(mutations, clasz.consistency)    
         # BATCH ALL THE INDIVIDUAL CHANGES IN ONE TRANSFER
         mutations = {}
@@ -737,8 +779,9 @@ class Lisa(local):
             assert issubclass(model.__class__, BaseModel), "parameter model:\
                 %s must inherit from BaseModel" % model
             info = Schema.Get(model)
-            keyspace = info[0]
-            assert namespace == keyspace, "All the Models should belong to %s" % namespace
+            keyspace = keyspaceFor(info[0])
+            mnamespace = info[0]
+            assert namespace == mnamespace, "All the Models must belong to %s for this operation to complete" % namespace
             kind = info[1]
             if kind not in __COLUMNFAMILIES__ and Settings.debug():
                 Lisa.create(model)
@@ -746,7 +789,7 @@ class Lisa(local):
             key = model.key()
             key.saved = True
             mutations[meta.id()] = meta.mutations()
-        commit(keyspace,mutations)    
+        commit(namespace,mutations)    
   
     @staticmethod
     def clear():
@@ -768,6 +811,7 @@ class MetaModel(object):
         info = Schema.Get(model)
         self.model = model
         self.namespace = info[0]
+        self.keyspace = keyspaceFor(self.namespace)
         self.kind = info[1]
         self.key = info[2]
         self.comment = self.kind.__doc__
@@ -791,39 +835,39 @@ class MetaModel(object):
     @redo       
     def makeColumnFamily(self, connection):
         '''Creates a new column family from the 'kind' property of this BaseModel'''
-        options = optionsFor(self.namespace)
         try:
-            connection.client.set_keyspace(options["keyspace"])
+            connection.client.set_keyspace(self.keyspace)
             connection.client.system_add_column_family(self.asColumnFamily())
             self.wait(connection)
         except InvalidRequestException as e:
-            pass #raise DuplicateError("Another Keyspace with this name seems to exist")
+            if Settings.debug():
+                print_exc()
     
     @redo
     def makeIndexes(self, connection):
         '''Creates Indices for all the indexed properties in the model'''
-        try:
-            options = optionsFor(self.namespace)
-            query = 'CREATE INDEX ON {kind}({name});'
-            for name, property in self.fields.items():
-                if property.saveable() and property.indexed():
+        query = 'CREATE INDEX ON {kind}({name});'
+        for name, property in self.fields.items():
+            if property.saveable() and property.indexed():
+                try:
                     logging.info("Creating index on: %s" % property)
                     cursor = connection.cursor()
                     formatted = query.format(kind = self.kind, name= property.name)
-                    cursor.execute("USE %s;" % options['keyspace'])
+                    cursor.execute("USE %s;" % self.keyspace)
                     cursor.execute(formatted)
-                else:
-                    logging.info("Cannot index: %s" % property)
-                    pass
-            self.wait(connection)
-        except Exception as e:
-            pass
-                    
+                except Exception as e:
+                    logging.exception(e)
+                    if Settings.debug():
+                        print_exc()
+            else:
+                logging.info("%s is not indexable" % property)
+        self.wait(connection)
+        
+                
     def asKeySpace(self):
         '''Returns the native keyspace definition for this object;'''
         options = optionsFor(self.namespace)
-        assert options is not None, "No configuration options for this keyspace"
-        name = options['keyspace']
+        name = self.keyspace
         strategy = options['strategy']['name']
         package = 'org.apache.cassandra.locator.%s' % strategy
         replication = options['strategy']['factor']
@@ -835,11 +879,8 @@ class MetaModel(object):
       
     def asColumnFamily(self):
         '''Returns the native column family definition for this @BaseModel'''
-        options = optionsFor(self.namespace)
-        assert options is not None, "No configuration options for this keyspace"
-        namespace = options['keyspace']
         CF = CfDef()
-        CF.keyspace = namespace
+        CF.keyspace = self.keyspace
         CF.name = self.kind
         CF.comment = self.model.__doc__
         def expand(value):
@@ -935,7 +976,6 @@ class MetaModel(object):
         logging.info("Batching mutations")
         mutations = { self.kind : [] }
         differ = self.model.differ
-        
         logging.info('Marshalling additions')
         for name in differ.added():
             column = self.getColumn(name, self.model[name]) #=> Fetch the Column for this name

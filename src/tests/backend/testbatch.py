@@ -52,7 +52,7 @@ class TestBatching(BaseTestCase):
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         
         cursor = self.connection
-        cursor.execute("USE %s" % Settings.default())
+        cursor.execute("USE %s" % Settings.keyspace())
         cursor.execute("SELECT COUNT(*) FROM Profile;")
         count = cursor.fetchone()[0]
         print "Count: ", count

@@ -39,11 +39,11 @@ class ConfigurationError(Exception):
 # FALL BACK CONFIGURATION OPTIONS USED BY DEFAULT, WHEN NO OTHER CONFIGURATION IS AVAILABLE
 __DEFAULT__ = {
     "debug" : True,
-    "default" : "Homer",
+    "default" : "Test",
     
     # All the Namespaces that Homer would use and their respective configurations.
     "namespaces" : {
-        "Homer" : {
+        "Test" : {
               "size" : 10, 
               "timeout" : 30.0, 
               "recycle" : 8000,
@@ -90,7 +90,7 @@ class Settings(local):
             with open(file) as f:
                 string = f.read()
                 try:
-                     # PRAGMA: NO COVER; I assume that the {} loaded here properly configured - @Iroiso
+                    # PRAGMA: NO COVER; I assume that the {} loaded here properly configured - @Iroiso
                     self.__configuration__ = yaml.load(string)["Homer"]
                     self.__initialize__()
                 except KeyError:
@@ -111,12 +111,24 @@ class Settings(local):
             return copy.deepcopy(value)
         except KeyError:
             raise ConfigurationError("Homer hasn't been properly configured, It can't find the Namespaces dictionary")
-            
+    
+    @classmethod
+    def keyspace(self):
+        """Returns the keyspace for the default namespace"""
+        namespace = self.default()
+        options = self.namespaces().get(namespace, None)
+        if options is None:
+            raise ConfigurationError("Couldn't find Namespace: %s" % namespace)
+        keyspace = options.get("keyspace", None)
+        if keyspace is None:
+            raise ConfigurationError("Couldn't find a Keyspace in Namespace: %s" % namespace)
+        return keyspace
+        
     @classmethod
     def default(self):
         """Returns the configuration for the default namespace for Homer"""
         found = self.__configuration__.get("default", None)
         if not found:
-            raise ConfigurationError("You haven't configured any default keyspace yet.")
+            raise ConfigurationError("You haven't configured any default namespace yet.")
         else:
             return found

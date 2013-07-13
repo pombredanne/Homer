@@ -141,7 +141,7 @@ class BaseTestCase(TestCase):
         try:
             self.db.clear()
             Schema.Clear()
-            self.connection.execute("DROP KEYSPACE %s" % Settings.default())
+            self.connection.execute("DROP KEYSPACE %s" % Settings.keyspace())
             self.connection.close()
         except Exception as e:
             print e
@@ -164,7 +164,7 @@ class TestLisa(BaseTestCase):
             twitter = URL("http://twitter.com/homer", indexed = True)
         
         self.db.create(Person()); #=> Quantum Leap; This was the first time I tested my assumptions on Homer
-        self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE %s" % Settings.default()))
+        self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE %s" % Settings.keyspace()))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
@@ -179,7 +179,7 @@ class TestLisa(BaseTestCase):
         cursor = self.connection
         profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
         self.db.save(profile)
-        cursor.execute("USE %s" % Settings.default())
+        cursor.execute("USE %s" % Settings.keyspace())
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
@@ -196,7 +196,7 @@ class TestLisa(BaseTestCase):
         
         cursor = self.connection
         self.db.save(Message(id=1, message="Something broke damn"))
-        cursor.execute("USE %s" % Settings.default())
+        cursor.execute("USE %s" % Settings.keyspace())
         cursor.execute("SELECT id, message FROM Message WHERE KEY='1'")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
@@ -216,7 +216,7 @@ class TestLisa(BaseTestCase):
         profile = House(id = "1234", fullname = "Iroiso Ikpokonte")
         self.db.save(profile)
         time.sleep(3) #=> Sleep for 3 secs and see if you can still find it in the datastore
-        cursor.execute("USE %s" % Settings.default())
+        cursor.execute("USE %s" % Settings.keyspace())
         cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
         row = cursor.fetchone()
         self.assertTrue(row[0] == None)
@@ -278,7 +278,7 @@ class TestLisa(BaseTestCase):
         book = Book(name = "Pride", author="Anne Rice")
         self.db.save(book)
         cursor = self.connection
-        cursor.execute("USE %s" % Settings.default())
+        cursor.execute("USE %s" % Settings.keyspace())
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
         #print cursor.description
         row = cursor.fetchone()
