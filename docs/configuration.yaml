@@ -1,0 +1,82 @@
+# Author: Iroiso Ikpokonte
+# Annotated sample configuration file for Homer;
+
+Homer:
+    debug : True # This says we want verbose output...
+    default : Test
+               
+    # Configuration for all the namespaces, Any unconfigured namespace homer encounters 
+    # will use the default configuration,
+    namespaces : 
+        ########################################################################################################
+        #                            HOW TO CONFIGURE A NAMESPACE                                              #
+        # The yaml structure below shows how to configure the behavior of a particular namespace,              #
+        # we'll specify the configuration for all objects in the 'Account' namespace; e.g:                     #
+        #                                                                                                      #
+        #    @key('id', namespace='Account')                                                                   #
+        #    class Person(Model):                                                                              #
+        #         id = UUID()                                                                                  #
+        #         name = String(indexed=True)                                                                  #
+        #                                                                                                      #
+        ########################################################################################################
+        Account :
+            size : 30           # Use a connection pool with 25 connections for all requests to this namespace
+            timeout : 30        # Sets the default timeout of thrift connections to cassandra.
+            recycle : 8000      # Removes idle connections in the pool for this namespace every 8000s
+            idle : 10           # Sets the maximum number of idle connections that are allowed in the pool
+            servers : ["localhost:9160", "127.0.0.1:9160", ] # Which servers should we connect to?,
+            username : "worker" # Authentication credentials for the cassandra server
+            password : "3e25960a79dbc69b674cd4ec67a72c62" # ditto
+            keyspace : June     # Specifies the keyspace in Cassandra where the models in 'Account' will be stored.
+            
+            # The strategy block determines Cassandra's distributed behaviour, the configuration options
+            # here represent options of Cassandra replication strategies verbatim.
+            strategy : 
+                name : "SimpleStrategy"
+                factor : 1
+       
+        # Another Namespace, added for illustration purposes, You can have as many namespaces as you want.
+        # The 'Test' namespace shows you how to configure homer to use a different replication strategy.
+        Test :
+            size: 25
+            timeout : 30.0
+            recycle : 8000
+            idle : 10
+            servers : ["localhost:9160", "localhost:9160", ]
+            username : Test
+            password: Test
+            keyspace : June
+            strategy : 
+                name: "SimpleStrategy"
+                factor : 1
+                      
+    ######################################################################################################## 
+    #                            OPTIONAL: (CONFIGURING LOGGING FOR HOMER)                                 #
+    # This part of the configuration file will be converted to a dictionary which will be used to          # 
+    # configure the python logging module using logging.config.dictConfig; so anything that is acceptable  #
+    # there is acceptable here, you just have to translate the dictConfig dictionary schema to its YAML    #
+    # equivalent which is simpler to read and write anyway.                                                #
+    #                                                                                                      #
+    ########################################################################################################
+    logging :
+        version : 1
+        formatters :
+            simple :
+                format : '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        handlers :
+            console :
+                class : logging.StreamHandler
+                level : DEBUG
+                formatter : simple
+                stream : ext://sys.stdout       
+        root :
+            handlers : [console,]
+            level : 'INFO'
+                
+            
+            
+            
+            
+        
+        
+           
