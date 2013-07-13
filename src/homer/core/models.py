@@ -107,9 +107,9 @@ class Schema(object):
     @classmethod
     def Put(cls, namespace, model, key):
         """Stores Meta Information for a particular class"""
-        from homer.options import CONFIG
+        from homer.options import Settings
         if not namespace:
-            namespace = CONFIG.DEFAULT_NAMESPACE
+            namespace = Settings.default()
         kind = model.__name__    
         if not namespace in cls.schema:
             cls.schema[namespace] = WeakValueDictionary()    
@@ -121,7 +121,7 @@ class Schema(object):
                 exists in the Namespace: %s" % (model, namespace))
     
     @classmethod
-    def clear(cls):
+    def Clear(cls):
         '''Clears the internal state of the Schema object'''
         cls.schema.clear()
         cls.keys.clear()
@@ -812,7 +812,11 @@ class Model(BaseModel):
         
     def __str__(self):
         '''A String representation of this Model'''
-        format = "Model: %s" % (self.kind(), )
+        try:
+            key = self.key()
+        except BadKeyError:
+            key = None
+        format = "[Model] %s : ( key: %s )" % (self.kind(), key)
         return format
         
     def __unicode__(self):

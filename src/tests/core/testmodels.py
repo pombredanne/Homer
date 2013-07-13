@@ -19,7 +19,7 @@ class TestKeyAndModel(TestCase):
     def tearDown(self):
         '''Clears the internal state of the schema object'''
         print 'Clearing internal state of the Schema object'
-        Schema.clear()
+        Schema.Clear()
         
     def testkeySanity(self):
         """Makes sure that basic usage for @key works"""

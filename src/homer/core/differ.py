@@ -16,13 +16,13 @@
 #
 import copy
 from threading import Lock
+
 """
 Differ:
 The differ module contains utilities that helps homer to diff objects
 and retrieve properties that have changed. This is helpful because it
-reduces the payload of thrift or memcache protocol requests.
+reduces the payload of thrift requests to cassandra.
 """
-
 
 class DiffError(Exception):
     """Represents any exception that gets thrown during diffing"""

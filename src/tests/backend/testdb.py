@@ -24,7 +24,7 @@ Description:
 Tests for the the db module.
 """
 import time
-from homer.options import CONFIG
+from homer.options import Settings
 from homer.core.models import BadValueError
 from homer.backend import RoundRobinPool, Connection, ConnectionDisposedError, Lisa, Level, CqlQuery, FetchMode
 from unittest import TestCase, skip
@@ -36,7 +36,8 @@ class TestRoundRobinPool(TestCase):
     def setUp(self):
         '''Create the Pool'''
         print "Creating a Pool with the default connections"
-        self.pool = RoundRobinPool(CONFIG.DEFAULT_OPTIONS)
+        default = Settings.default()
+        self.pool = RoundRobinPool(Settings.namespaces().get(default))
     
     def tearDown(self):
         '''Dispose all alive connections in the Pool'''
@@ -85,7 +86,8 @@ class TestConnection(TestCase):
     '''Integration Tests for Connection'''
     
     def setUp(self):
-        self.pool = RoundRobinPool(CONFIG.DEFAULT_OPTIONS)
+        default = Settings.default()
+        self.pool = RoundRobinPool(Settings.namespaces().get(default))
     
     def tearDown(self):
         self.pool.disposeAll()
@@ -138,8 +140,8 @@ class BaseTestCase(TestCase):
         '''Release resources that have been allocated'''
         try:
             self.db.clear()
-            Schema.clear()
-            self.connection.execute("DROP KEYSPACE Test;")
+            Schema.Clear()
+            self.connection.execute("DROP KEYSPACE %s" % Settings.default())
             self.connection.close()
         except Exception as e:
             print e
@@ -162,7 +164,7 @@ class TestLisa(BaseTestCase):
             twitter = URL("http://twitter.com/homer", indexed = True)
         
         self.db.create(Person()); #=> Quantum Leap; This was the first time I tested my assumptions on Homer
-        self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE Test;"))
+        self.assertRaises(Exception, lambda : self.connection.execute("CREATE KEYSPACE %s" % Settings.default()))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE COLUMNFAMILY Person;"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(twitter);"))
         self.assertRaises(Exception, lambda : self.connection.execute("CREATE INDEX ON Person(name);"))
@@ -177,7 +179,7 @@ class TestLisa(BaseTestCase):
         cursor = self.connection
         profile = Profile(id = "1234", fullname = "Iroiso Ikpokonte")
         self.db.save(profile)
-        cursor.execute("USE Test;")
+        cursor.execute("USE %s" % Settings.default())
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
@@ -194,7 +196,7 @@ class TestLisa(BaseTestCase):
         
         cursor = self.connection
         self.db.save(Message(id=1, message="Something broke damn"))
-        cursor.execute("USE Test;")
+        cursor.execute("USE %s" % Settings.default())
         cursor.execute("SELECT id, message FROM Message WHERE KEY='1'")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
@@ -214,7 +216,7 @@ class TestLisa(BaseTestCase):
         profile = House(id = "1234", fullname = "Iroiso Ikpokonte")
         self.db.save(profile)
         time.sleep(3) #=> Sleep for 3 secs and see if you can still find it in the datastore
-        cursor.execute("USE Test;")
+        cursor.execute("USE %s" % Settings.default())
         cursor.execute("SELECT fullname FROM House WHERE KEY=1234;")
         row = cursor.fetchone()
         self.assertTrue(row[0] == None)
@@ -230,7 +232,7 @@ class TestLisa(BaseTestCase):
         book = Book(name="Lord of the Rings", author="J.R.R Tolkein", isbn="12345")
         self.db.save(book)
         
-        k = Key("Test", "Book", "Lord of the Rings")
+        k = Key(Settings.default(), "Book", "Lord of the Rings")
         #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
         b = self.db.read(k, FetchMode.Property)
         assert isinstance(b, Book)
@@ -258,7 +260,7 @@ class TestLisa(BaseTestCase):
         book.save()
         print "Book len:" , len(book)
         
-        k = Key("Test", "Book", "Lord of the Rings")
+        k = Key(Settings.default(), "Book", "Lord of the Rings")
         #k.columns = ["name", "author", "isbn", "titles"] #We'll specify the columns manually for now
         b = self.db.read(k, FetchMode.All)
         assert isinstance(b, Book)
@@ -276,12 +278,12 @@ class TestLisa(BaseTestCase):
         book = Book(name = "Pride", author="Anne Rice")
         self.db.save(book)
         cursor = self.connection
-        cursor.execute("USE Test")
+        cursor.execute("USE %s" % Settings.default())
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
         #print cursor.description
         row = cursor.fetchone()
         self.assertTrue(row[0] == "Pride")
-        k = Key('Test', 'Book', 'Pride')
+        k = Key(Settings.default(), 'Book', 'Pride')
         self.db.delete(k)
         cursor.execute("SELECT name FROM Book WHERE KEY=Pride")
         row = cursor.fetchone()
@@ -315,14 +317,14 @@ class TestReference(BaseTestCase):
         
         print "Checking Conversion Routine"
         k = eval(Book.author.convert(person))
-        self.assertTrue(k == Key("Test","Person","sasuke"))
+        self.assertTrue(k == Key(Settings.default(),"Person","sasuke"))
         
         with self.assertRaises(BadValueError):
             print "Checks if Reference accepts other kinds"
-            book.author = Key("Test", "Book", "House")
+            book.author = Key(Settings.default(), "Book", "House")
         
         print "Checking Automatic Reference Read"
-        id = Key("Test","Book","Pride")
+        id = Key(Settings.default(),"Book","Pride")
         # id.columns = ["name", "author"]
         found = self.db.read(id, FetchMode.Property)
         self.assertTrue(found.author.name == "sasuke")

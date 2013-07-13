@@ -25,8 +25,13 @@ from homer.options import Settings
 from homer.backend.db import Lisa
 import logging
 
-__all__ = ["Size", ]
+__all__ = ["Size", "Bootstrap"]
 
+"""
+Bootstrap:
+An object with methods that allow you to manually create or recreate
+homer models and or rebuild their indexes.
+"""
 class Bootstrap(object):
     '''A helper class for bootstrapping Homer Models.'''
     
@@ -44,7 +49,7 @@ class Bootstrap(object):
                     instance = clasz()
                     Lisa.create(instance);
                 except:
-                    if Settings.DEBUG:
+                    if Settings.debug():
                         print_exc()
 
     @classmethod
@@ -56,9 +61,13 @@ class Bootstrap(object):
                 logging.info("Creating Model: %s" % model)
                 Lisa.create(model);
             except:
-                if Settings.DEBUG:
+                if Settings.debug():
                     print_exc()
-        
+    
+    @classmethod
+    def rebuildIndexes(self, *models):
+        '''Tries to rebuild all the indexes on the models that have been passed in.'''
+        raise NotImplementedError("Not implemented yet!")
 
 """
 Size:

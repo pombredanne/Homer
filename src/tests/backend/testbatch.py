@@ -16,6 +16,7 @@
 #
 import time
 from homer.core import *
+from homer.options import Settings
 from homer.backend import Level
 from .testdb import BaseTestCase
 
@@ -46,12 +47,12 @@ class TestBatching(BaseTestCase):
         print ''
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         with Level.All:
-            self.db.saveMany("Test",*l)
+            self.db.saveMany(Settings.default(),*l)
         print "Time Taken to put 500 Profiles: %s secs" % (time.time() - start)
         print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         
         cursor = self.connection
-        cursor.execute("USE Test;")
+        cursor.execute("USE %s" % Settings.default())
         cursor.execute("SELECT COUNT(*) FROM Profile;")
         count = cursor.fetchone()[0]
         print "Count: ", count

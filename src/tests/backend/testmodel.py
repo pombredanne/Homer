@@ -16,6 +16,7 @@
 #
 import time
 from homer.core import *
+from homer.options import Settings
 from homer.core.models import BadValueError
 from homer.backend import *
 from .testdb import BaseTestCase
@@ -48,7 +49,7 @@ class TestModel(BaseTestCase):
         profile.bookmarks["twitter"] = "http://twitter.com"
         profile.save() # Save to the datastore
 
-        cursor.execute("USE Test;")
+        cursor.execute("Use %s" % Settings.default())
         cursor.execute("SELECT id, fullname FROM Profile WHERE KEY=1234;")
         self.assertTrue(cursor.rowcount == 1)
         row = cursor.fetchone()
@@ -80,7 +81,7 @@ class TestModel(BaseTestCase):
         
         start = time.time()
         with Level.All:
-            self.db.saveMany("Test",*l)
+            self.db.saveMany(Settings.default(),*l)
         self.assertTrue(Profile.count() == 501)
 
 
@@ -107,7 +108,7 @@ class TestModel(BaseTestCase):
         
         start = time.time()
         with Level.All:
-            self.db.saveMany("Test",*l)
+            self.db.saveMany(Settings.default(),*l)
         self.assertTrue(Profile.count(fullname="Iroiso") == 500)
                   
     def testDelete(self):
@@ -120,7 +121,7 @@ class TestModel(BaseTestCase):
         book = Book(name = "Pride", author="Anne Rice")
         book.save()
         cursor = self.connection
-        cursor.execute("USE Test")
+        cursor.execute("USE %s" % Settings.default())
         cursor.execute("SELECT name, author FROM Book WHERE KEY=Pride")
         print cursor.description
         row = cursor.fetchone()

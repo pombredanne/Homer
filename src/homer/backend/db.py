@@ -48,7 +48,9 @@ from cql.cassandra.ttypes import *
 
 from homer.core.builtins import fields
 from homer.core.models import Type, Property, Schema
-from homer.options import CONFIG, Settings
+from homer.options import Settings, ConfigurationError
+
+__all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool", "Connection", "ConnectionDisposedError", "store"]
 
 # MODULE EXCEPTIONS
 class ConnectionDisposedError(Exception):
@@ -71,20 +73,14 @@ class InvalidNamespaceError(Exception):
     '''Thrown to show that there is a problem with the current Namespace in use'''
     pass
 
-class ConfigurationError(Exception):
-    '''Thrown to signal that Homer was not configured properly'''
-    pass
-
 # SHARED STATE
-LOCK = RLock()
-POOLS = dict()
-KEYSPACES = set()
-COLUMNFAMILIES = set()
-
+__LOCK__ = RLock()
+__POOLS__ = dict()
+__KEYSPACES__ = set()
+__COLUMNFAMILIES__ = set()
 
 # CONSTANTS
-__all__ = ["CqlQuery", "Lisa", "Level", "FetchMode", "RoundRobinPool",\
-                "Connection", "ConnectionDisposedError", "store"]
+logging = logging.getLogger("homer") # Homer uses a single logging configuration id library wide to keep things simple.
 POOLED, CHECKEDOUT, DISPOSED = 0, 1, 2
 RETRY = 3
 FETCHSIZE = 2000000000 #AT MOST THE DB MODULE WILL TRY TO READ ALL THE COLUMNS
@@ -118,27 +114,25 @@ is no default namespace then it throws a ConfigurationError
 def optionsFor(namespace):
     '''Returns configuration for a namespace or the default'''
     found = None
-    if namespace not in CONFIG.NAMESPACES:
-        found = CONFIG.NAMESPACES.get(CONFIG.DEFAULT_NAMESPACE, None)
-        found = deepcopy(found)
-        found['keyspace'] = namespace
+    namespaces = Settings.namespaces()
+    if namespace not in namespaces:
+        default = Settings.default()
+        found = Settings.namespaces()[default]
     else:
-        found = CONFIG.NAMESPACES[namespace]
-    if not found:
-        raise ConfigurationError("No default namespace configured")
+        found = Settings.namespaces()[namespace]
     return found
 
 def poolFor(namespace):
     '''Returns or creates a new ConnectionPool for this namespace'''
     pool = None
-    if namespace not in POOLS:
+    if namespace not in __POOLS__:
         found = optionsFor(namespace)             
         pool = RoundRobinPool(found)
-        with LOCK:
-            POOLS[namespace] = pool
+        with __LOCK__:
+            __POOLS__[namespace] = pool
     else:
-        with LOCK:
-            pool = POOLS[namespace]
+        with __LOCK__:
+            pool = __POOLS__[namespace]
     return pool   
 
 
@@ -310,7 +304,6 @@ class Connection(local):
         self.address = address
         self.state = CHECKEDOUT
         self.pool = pool
-        self.log = options.logger("Connection for Address: %s" % self.address)
         self.transport.open()
         self.open = True
         self.keyspace = keyspace
@@ -334,7 +327,7 @@ class Connection(local):
         try:
             self.pool.put(self)
         except e:
-            self.log.error("Exception occurred when adding to Pool: %s " % str(e))
+            logging.error("Exception occurred when adding to Pool: %s " % str(e))
            
     def dispose(self):
         '''Close this connection and mark it as DISPOSED'''
@@ -358,7 +351,6 @@ class EvictionThread(Thread):
         self.maxIdle = maxIdle
         self.delay = delay
         self.name = "EVICTION-THREAD: %s" % pool.keyspace
-        self.log = options.logger(self.name)
         self.daemon = True
         self.start()
         
@@ -366,7 +358,7 @@ class EvictionThread(Thread):
         """Evicts Idle Connections periodically from a Connection Pool"""
         while True:
             if not self.pool.queue.qsize() <= self.maxIdle:
-                self.log.info("Evicting Idle Connections, Queue Size: %s" % self.pool.queue.qsize())
+                logging.info("Evicting Idle Connections, Queue Size: %s" % self.pool.queue.qsize())
                 connection = self.pool.queue.get(False)
                 connection.dispose()
                 time.sleep(self.delay/1000)
@@ -438,7 +430,7 @@ class CqlQuery(object):
             self.keyspace = found
         
         logging.info("Executing Query: %s in %s" % (self.query, self.keyspace))
-        if not self.kind.__name__ in COLUMNFAMILIES and Settings.DEBUG:
+        if not self.kind.__name__ in __COLUMNFAMILIES__ and Settings.debug():
             logging.info("Creating new Column Family: %s " % self.kind.__name__)
             Lisa.create(self.kind())
                
@@ -538,7 +530,7 @@ class Lisa(local):
     def create(model):
         """Creates a new ColumnFamily from this Model"""
         from homer.core.models import key, Model
-        global KEYSPACES, COLUMNFAMILIES
+        global __KEYSPACES__, __COLUMNFAMILIES__
         model = model if isinstance(model, type) else model.__class__
         assert issubclass(model, Model),"%s must inherit from Model" % model
         info = Schema.Get(model) 
@@ -548,17 +540,17 @@ class Lisa(local):
         pool = poolFor(namespace)
         try:
             with using(pool) as conn:
-                if namespace not in KEYSPACES:
+                if namespace not in __KEYSPACES__:
                     logging.info("Trying to create keyspace: %s" % meta.namespace)
                     meta.makeKeySpace(conn)
-                    with LOCK:
+                    with __LOCK__:
                         logging.info("Adding keyspace: %s to global records" % namespace)
-                        KEYSPACES.add(namespace)
-                if kind not in COLUMNFAMILIES:
+                        __KEYSPACES__.add(namespace)
+                if kind not in __COLUMNFAMILIES__:
                     meta.makeColumnFamily(conn) 
                     meta.makeIndexes(conn)
-                    with LOCK:
-                        COLUMNFAMILIES.add(kind)
+                    with __LOCK__:
+                        __COLUMNFAMILIES__.add(kind)
         except:
             print_exc();
 
@@ -706,7 +698,7 @@ class Lisa(local):
         info = Schema.Get(model)
         namespace = info[0]
         kind = info[1]
-        if kind not in COLUMNFAMILIES and Settings.DEBUG:
+        if kind not in __COLUMNFAMILIES__ and Settings.debug():
             Lisa.create(model)
         meta = MetaModel(model)
         changes = { meta.id() : meta.mutations() }
@@ -748,7 +740,7 @@ class Lisa(local):
             keyspace = info[0]
             assert namespace == keyspace, "All the Models should belong to %s" % namespace
             kind = info[1]
-            if kind not in COLUMNFAMILIES and Settings.DEBUG:
+            if kind not in __COLUMNFAMILIES__ and Settings.debug():
                 Lisa.create(model)
             meta = MetaModel(model)
             key = model.key()
@@ -760,10 +752,10 @@ class Lisa(local):
     def clear():
         '''Clears internal state of @this'''
         logging.info('Clearing internal state of the Datastore Mapper')
-        with LOCK:
-            KEYSPACES.clear()
-            COLUMNFAMILIES.clear()
-            POOLS.clear()
+        with __LOCK__:
+            __KEYSPACES__.clear()
+            __COLUMNFAMILIES__.clear()
+            __POOLS__.clear()
             
 ##
 # MetaModel:
@@ -972,5 +964,5 @@ class MetaModel(object):
         mutations[self.kind].append(deletions) 
         return mutations
 
-# Global Variables
+# GLOBALLY ACCESSED MODULE VARIABLES
 store = Lisa()       

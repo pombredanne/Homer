@@ -21,51 +21,102 @@ License: Apache License 2.0
 Copyright 2011, June Inc.
 
 Description:
-configuration options for Homer; This module was inspired by tornado.options...
-An awesome example of how to use homer.core.commons in day to day development.
+This module is used to configure the global behavior of Homer.
 """
-# Standard library imports.
 import os
 import sys
-import logging
 import time
-from threading import RLock, local
+import yaml
+import copy
+import logging.config
+from threading import local
 
-# BASIC CONCURRENCY PRIMITIVE
-CONFIG = local()
-
-# OPTIONS THAT ARE USED TO CONNECT TO A CASSANDRA CLUSTER BY DEFAULT,
-# WHEN NO OTHER CONFIGURATION IS AVAILABLE
-CONFIG.DEFAULT_OPTIONS = {
-      "size" : 25, "timeout" : 30.0, "recycle" : 8000,
-      "idle" : 10, "servers" : ["localhost:9160",],
-      "username" : "", "password": "", "keyspace": "Test",
-      "strategy" : {
-               "name": "SimpleStrategy", "factor": 1,
-       },
-
+# EXCEPTIONS
+class ConfigurationError(Exception):
+    '''Thrown to signal a problem with Homer's current configuration...'''
+    pass
+    
+# FALL BACK CONFIGURATION OPTIONS USED BY DEFAULT, WHEN NO OTHER CONFIGURATION IS AVAILABLE
+__DEFAULT__ = {
+    "debug" : True,
+    "default" : "Homer",
+    
+    # All the Namespaces that Homer would use and their respective configurations.
+    "namespaces" : {
+        "Homer" : {
+              "size" : 10, 
+              "timeout" : 30.0, 
+              "recycle" : 8000,
+              "idle" : 10, 
+              "servers" : ["localhost:9160",],
+              "username" : "", 
+              "password" : "", 
+              "keyspace" : "Homer",
+              "strategy" : {
+                       "name" : "SimpleStrategy", 
+                       "factor" : 1,
+               },
+        }
+    },
 }
-
-# THE DEFAULT NAMESPACE USED FOR CONNECTING TO CASSANDRA WHEN NO NAMESPACE IS SPECIFIED
-CONFIG.DEFAULT_NAMESPACE = "Test"
-
-# ALL THE NAMESPACES THAT HOMER KNOWS ABOUT.
-CONFIG.NAMESPACES = { "Test": CONFIG.DEFAULT_OPTIONS}
     
 ##
-# Global Configuration Settings                                                                     
+# An object that allows you to configure Homer, and query its
+# configuration and settings.                                                                   
 ##    
-class Settings(object):
+class Settings(local):
     """ Specifies configuration for logging,"""
-    DEBUG = True
-    
+    __configuration__ = __DEFAULT__
+   
     @classmethod
-    def logger(self, name = "Default::Logger"):
-        """Creates a new logger everytime from the attributes that are set in this logger"""
-        log = logging.getLogger(name)
-        handler = logging.StreamHandler() #Maybe we should create a ScribeHandler... :)
-        log.addHandler(handler)
-        if self.DEBUG:
-            log.setLevel(logging.DEBUG)
-        else: log.setLevel(logging.INFO)
-        return log
+    def debug(self):
+        '''Is Homer in debug mode or not ?'''
+        return self.__configuration__.get("debug", False)
+        
+    @classmethod
+    def __initialize__(self):
+        '''Setup the configuration module'''
+        # Configure logging if available
+        if "logging" in self.__configuration__:
+            dictionary = self.__configuration__["logging"]
+            logging.config.dictConfig(dictionary)
+               
+    @classmethod
+    def configure(self, file=None, dict=None):
+        """Configures Homer's behavior globally with the options in @dictionary"""
+        if not file and not dict:
+            raise ConfigurationError("You have to pass in a configuration file or dictionary")
+        if file:
+            with open(file) as f:
+                string = f.read()
+                try:
+                     # PRAGMA: NO COVER; I assume that the {} loaded here properly configured - @Iroiso
+                    self.__configuration__ = yaml.load(string)["Homer"]
+                    self.__initialize__()
+                except KeyError:
+                    raise ConfigurationError("Couldn't find any configuration for Homer in : %s" % file)
+        elif dict:
+            # PRAGMA: NO COVER HERE; I assume that the dictionary that is loaded is properly configured - @Iroiso
+            try:
+                self.__configuration__ = dict["Homer"]
+                self.__initialize__()
+            except KeyError:
+                raise ConfigurationError("Couldn't find any configuration for Homer in : %s" % file)
+            
+    @classmethod
+    def namespaces(self):
+        """Returns a copy of all the namespaces that have been configured for Homer"""
+        try:
+            value = self.__configuration__["namespaces"]
+            return copy.deepcopy(value)
+        except KeyError:
+            raise ConfigurationError("Homer hasn't been properly configured, It can't find the Namespaces dictionary")
+            
+    @classmethod
+    def default(self):
+        """Returns the configuration for the default namespace for Homer"""
+        found = self.__configuration__.get("default", None)
+        if not found:
+            raise ConfigurationError("You haven't configured any default keyspace yet.")
+        else:
+            return found

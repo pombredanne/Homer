@@ -34,19 +34,7 @@ So here we go:
 # Relevant imports.
 from homer.options import CONFIG
 from homer.core import Model, key, Key
-from homer.core.commons import *
-
-# Do configuration for Homer.
-options = {
-            "size" : 25, "timeout" : 30.0, "recycle" : 8000,
-            "idle" : 10, "servers" : ["localhost:9160",],
-            "username" : "", "password": "", "keyspace": "June",
-            "strategy" : {
-               "name": "SimpleStrategy", "factor": 1,
-             },
-}
-CONFIG.NAMESPACES["June"] = options
-CONFIG.DEFAULT_NAMESPACE = "June"
+from homer.core.commons import String, URL
 
 
 '''
@@ -81,7 +69,7 @@ with Level.Quorum:
     person = Profile(name='Yoda', link='http://faceboook.com/yoda')
     person.save()
 
-# You can also save with the default consistency level which is One.  
+# You can also save with the default consistency level which is Consistency Level One.  
 another = Profile(name='Iroiso', link='http://facebook.com/iroiso')
 another.save()
 

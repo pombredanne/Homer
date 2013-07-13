@@ -18,6 +18,7 @@ import time
 import binascii
 from homer.core import *
 from homer.backend import *
+from homer.options import Settings
 from .testdb import BaseTestCase
 
 class TestCqlQuery(BaseTestCase):
@@ -67,7 +68,7 @@ class TestCqlQuery(BaseTestCase):
  
         query = CqlQuery(Book, "SELECT COUNT(*) FROM Book;")
         result = query.fetchone()
-        self.connection.execute("USE Test;")
+        self.connection.execute("USE %s" % Settings.default())
         self.connection.execute("SELECT COUNT(*) FROM Book;")
         correct = self.connection.fetchone()[0]
         print "Results: ", (result, correct)
@@ -82,7 +83,7 @@ class TestCqlQuery(BaseTestCase):
  
         query = CqlQuery(Book, "SELECT COUNT(*) FROM Book;")
         result = query.fetchone()
-        self.connection.execute("USE Test;")
+        self.connection.execute("USE %s" % Settings.default())
         self.connection.execute("SELECT COUNT(*) FROM Book;")
         correct = self.connection.fetchone()[0]
         self.assertTrue(result == correct) 
