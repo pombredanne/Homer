@@ -24,11 +24,14 @@ Description:
 This module is used to configure the global behavior of Homer.
 Use:
 
-```python
 from homer import Settings
 path = "/Users/Iroiso/.Homer/configuration.yaml" # Absolute path to configuration file
-Settings.configure(file=path) # For an example configuration file see docs/configuration.yaml in the project folder.
-```
+Settings.configure(file=path) 
+
+For an example configuration file see "docs/configuration.yaml" in the project 
+folder, you can also pass in the dictionary equivalent of "docs/configuration.yaml"
+to "Settings.configure(dict={})".
+
 """
 import os
 import sys

@@ -24,7 +24,7 @@ from os.path import abspath, join, dirname
 setup(
     name="homer",
     version="0.9.8",
-    description="A Beautiful Python Object Non-Relational Mapper for Cassandra",
+    description="A Beautiful and Fast Python Object Non-Relational Mapper for Cassandra",
     long_description=open(abspath(join(dirname(__file__), 'README.md'))).read(),
     maintainer='Iroiso Ikpokonte',
     maintainer_email='iroiso@live.com',
